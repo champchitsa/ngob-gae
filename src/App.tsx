@@ -173,10 +173,10 @@ function App() {
           <button onClick={() => document.getElementById('data-api')?.scrollIntoView()}>ตารางและ API</button>
           <button onClick={() => document.getElementById('archive')?.scrollIntoView()}>คลัง 694 ไฟล์</button>
           <button onClick={() => document.getElementById('law-workbench')?.scrollIntoView()}>กฎหมายลงมือใช้</button>
-          <button onClick={() => setChatOpen(true)}>ถาม AI</button>
+          <button onClick={() => setChatOpen(true)}>ถามน้องเพนกวิน</button>
         </nav>
         <div className="data-stamp"><i /> DATA CUT 19.09.69</div>
-        <button className="mobile-chat-button" onClick={() => setChatOpen(true)}>ถาม AI</button>
+        <button className="mobile-chat-button" onClick={() => setChatOpen(true)}>ถามน้องเพนกวิน</button>
       </header>
 
       <main id="top">
@@ -189,7 +189,7 @@ function App() {
               <a className="primary-action" href="#signals" onClick={() => window.setTimeout(() => anomalySearchRef.current?.focus(), 500)}>ค้น 179 รายการผิดสังเกต <span>↓</span></a>
               <a className="text-action" href="#archive">ค้นหลักฐานทั้งหมด</a>
               <a className="text-action" href="#data-api">เปิดตารางและ API</a>
-              <button className="text-action" onClick={() => setChatOpen(true)}>ถามข้อมูลกับปทุมมา</button>
+              <button className="text-action" onClick={() => setChatOpen(true)}>ถามข้อมูลกับน้องเพนกวิน</button>
             </div>
             <div className="hero-proof" role="list" aria-label="จุดเด่นเครื่องมือ"><span role="listitem"><b>179</b> รายการจัดอันดับ</span><span role="listitem"><b>7</b> เงื่อนไขคัดกรอง</span><span role="listitem"><b>5</b> ขั้นตามหลักฐาน</span></div>
           </div>
@@ -526,7 +526,18 @@ function App() {
         <div><a href="https://github.com/champchitsa/ngob-gae" target="_blank" rel="noreferrer">GitHub ↗</a><span>สร้างสำหรับ OPEN DATA HACK 2569</span></div>
       </footer>
 
-      <BudgetChat activeItem={activeAnomaly} open={chatOpen} onOpen={() => setChatOpen(true)} onClose={() => setChatOpen(false)} />
+      <BudgetChat
+        activeItem={activeAnomaly}
+        items={analysisItems}
+        open={chatOpen}
+        onOpen={() => setChatOpen(true)}
+        onClose={() => setChatOpen(false)}
+        onSelectItem={(id) => {
+          setActiveSignal('all')
+          setAnomalyQuery('')
+          setActiveAnomalyId(id)
+        }}
+      />
 
       {panel && <div className="panel-backdrop" role="presentation" onMouseDown={() => setPanel(null)}>
         <aside className="info-panel" role="dialog" aria-modal="true" aria-label={panel === 'method' ? 'วิธีแกะ' : panel === 'law' ? 'ตัวบทกฎหมาย' : 'แหล่งข้อมูล'} onMouseDown={(event) => event.stopPropagation()}>

@@ -6,9 +6,11 @@ type Message = { role: 'assistant' | 'user'; content: string; sources?: Source[]
 
 type BudgetChatProps = {
   activeItem: AnomalyItem
+  items: AnomalyItem[]
   open: boolean
   onOpen: () => void
   onClose: () => void
+  onSelectItem: (id: string) => void
 }
 
 const suggestions = [
@@ -20,10 +22,10 @@ const suggestions = [
 
 const welcome: Message = {
   role: 'assistant',
-  content: 'สอบถามข้อมูลจากงบแกะได้ทั้งภาพรวม หน่วยงาน โครงการ ตัวเลขผิดสังเกต เอกสารที่ควรขอ และกฎหมายที่เกี่ยวข้อง คำตอบจะอ้างกลับไปยังข้อมูลที่ใช้ทุกครั้ง',
+  content: 'น้องเพนกวินช่วยค้นข้อมูลได้ทั้งภาพรวม หน่วยงาน โครงการ ตัวเลขที่ควรตรวจต่อ เอกสารที่ควรขอ และกฎหมายที่เกี่ยวข้อง โดยคำตอบจะเชื่อมกลับไปยังข้อมูลที่ใช้ทุกครั้ง',
 }
 
-function BudgetChat({ activeItem, open, onOpen, onClose }: BudgetChatProps) {
+function BudgetChat({ activeItem, items, open, onOpen, onClose, onSelectItem }: BudgetChatProps) {
   const [messages, setMessages] = useState<Message[]>([welcome])
   const [question, setQuestion] = useState('')
   const [loading, setLoading] = useState(false)
@@ -87,18 +89,31 @@ function BudgetChat({ activeItem, open, onOpen, onClose }: BudgetChatProps) {
     }
   }
 
+  const selectItem = (id: string) => {
+    onSelectItem(id)
+    setMessages([welcome])
+    setQuestion('')
+    window.setTimeout(() => inputRef.current?.focus(), 0)
+  }
+
   return <>
-    <button className="chat-launcher" onClick={onOpen} aria-label="เปิดผู้ช่วยถามตอบงบประมาณ"><span>AI</span><strong>ถามงบแกะ</strong></button>
+    <button className="chat-launcher" onClick={onOpen} aria-label="เปิดน้องเพนกวิน ผู้ช่วยถามตอบงบประมาณ"><span>AI</span><strong>ถามน้องเพนกวิน</strong></button>
     {open && <div className="chat-backdrop" onMouseDown={onClose}>
       <aside className="chat-panel" role="dialog" aria-modal="true" aria-labelledby="chat-title" onMouseDown={(event) => event.stopPropagation()}>
         <header className="chat-head">
-          <div><span>PATHUMMA / BUDGET RAG</span><h2 id="chat-title">ผู้ช่วยค้นคว้างบประมาณ</h2><p>ค้นคำตอบจากข้อมูลในงบแกะและแสดงหลักฐานที่เกี่ยวข้อง</p></div>
+          <div><span>น้องเพนกวิน / BUDGET RESEARCH</span><h2 id="chat-title">ผู้ช่วยค้นคว้างบประมาณ</h2><p>ค้นคำตอบจากข้อมูลในงบแกะและแสดงหลักฐานที่เกี่ยวข้อง</p></div>
           <button onClick={onClose} aria-label="ปิดผู้ช่วยถามตอบ">×</button>
         </header>
-        <div className="chat-focus"><span>รายการที่กำลังเปิด</span><strong>{activeItem.item}</strong><small>{activeItem.agency}</small></div>
+        <div className="chat-focus">
+          <label htmlFor="chat-budget-item">เลือกรายการงบที่จะถาม ({items.length.toLocaleString('th-TH')} รายการ)</label>
+          <select id="chat-budget-item" value={activeItem.id} onChange={(event) => selectItem(event.target.value)}>
+            {items.map((item) => <option value={item.id} key={item.id}>{item.score} คะแนน | {item.item} | {item.agency}</option>)}
+          </select>
+          <small>{activeItem.agency} | หลังโอน {activeItem.adjusted.toLocaleString('th-TH')} ล้านบาท | คะแนน {activeItem.score}/100</small>
+        </div>
         <div className="chat-messages" aria-live="polite">
           {messages.map((message, index) => <article className={`chat-message ${message.role}`} key={`${message.role}-${index}`}>
-            <span>{message.role === 'assistant' ? 'ปทุมมา' : 'คำถาม'}</span>
+            <span>{message.role === 'assistant' ? 'น้องเพนกวิน' : 'คำถาม'}</span>
             <p>{message.content}</p>
             {!!message.sources?.length && <div className="chat-sources"><strong>หลักฐานที่ระบบค้นคืน</strong>{message.sources.map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={`${source.label}-${source.url}`}><span>{source.label}</span><small>{source.detail}</small><b>เปิดต้นทาง ↗</b></a>)}</div>}
           </article>)}
@@ -111,7 +126,7 @@ function BudgetChat({ activeItem, open, onOpen, onClose }: BudgetChatProps) {
           <textarea id="budget-question" ref={inputRef} value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={handleKey} placeholder="เช่น งบสำนักงานประกันสังคมมีจุดใดที่ควรกระทบยอด" rows={3} maxLength={1800} />
           <div><small>Enter เพื่อส่งคำถาม และ Shift + Enter เพื่อขึ้นบรรทัดใหม่</small><button disabled={!question.trim() || loading} type="submit">{loading ? 'กำลังตอบ' : 'ส่งคำถาม'} <span>↗</span></button></div>
         </form>
-        <footer className="chat-foot"><span>ประมวลผลด้วย Pathumma โดย NECTEC</span><span>อ้างอิงข้อมูล ณ 19 ก.ย. 2569</span></footer>
+        <footer className="chat-foot"><span>เทคโนโลยีภาษา Pathumma โดย NECTEC</span><span>อ้างอิงข้อมูล ณ 19 ก.ย. 2569</span></footer>
       </aside>
     </div>}
   </>

@@ -51,6 +51,18 @@ const datasets: { id: DatasetId; label: string; count: string; detail: string }[
   { id: 'history', label: 'PBO รายปี', count: '11', detail: 'จำนวนแถว วงเงิน และอัตราเบิกจ่ายตั้งแต่ 2558 ถึง 2568' },
 ]
 
+const signalLabels: Record<string, string> = {
+  new_after_act: 'มีวงเงินหลังโอนจากฐานตั้งต้นศูนย์',
+  transfer_up: 'วงเงินเพิ่มจากกรอบตั้งต้น',
+  transfer_down: 'วงเงินลดจากกรอบตั้งต้น',
+  missing_execution: 'ไม่พบตัวเลขใช้จ่ายระดับแถว',
+  low_execution: 'ใช้จ่ายรวมยอดผูกพันต่ำกว่า 35%',
+  over_execution: 'ยอดรายงานสูงกว่าวงเงินหลังโอน',
+  vague_title: 'ชื่อรายการกว้างหรือเป็นรหัส',
+}
+
+const signalLabel = (value: string) => signalLabels[value] ?? value
+
 const number = (value?: number | null, digits = 1) => value === undefined || value === null ? 'ไม่มีค่า' : new Intl.NumberFormat('th-TH', { maximumFractionDigits: digits }).format(value)
 const bytes = (value?: number) => {
   if (value === undefined) return 'ไม่มีค่า'
@@ -135,7 +147,7 @@ function DataExplorer() {
 
     <div className="data-controls">
       <label><span>ค้นในตาราง</span><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(0) }} placeholder="ชื่อรายการ หน่วยงาน พื้นที่ หรือคำสำคัญ" /></label>
-      <label><span>กรองหมวด</span><select value={filter} onChange={(event) => { setFilter(event.target.value); setPage(0) }} disabled={!data?.facets.length}><option value="">ทุกหมวด</option>{data?.facets.map((facet) => <option value={facet.value} key={facet.value}>{facet.value} ({facet.count.toLocaleString('th-TH')})</option>)}</select></label>
+      <label><span>{dataset === 'anomalies' ? 'กรองเหตุที่ควรตรวจ' : 'กรองหมวด'}</span><select value={filter} onChange={(event) => { setFilter(event.target.value); setPage(0) }} disabled={!data?.facets.length}><option value="">{dataset === 'anomalies' ? 'ทุกเหตุ' : 'ทุกหมวด'}</option>{data?.facets.map((facet) => <option value={facet.value} key={facet.value}>{signalLabel(facet.value)} ({facet.count.toLocaleString('th-TH')})</option>)}</select></label>
       <div className="data-total"><strong>{(data?.meta.filtered ?? 0).toLocaleString('th-TH')}</strong><span>แถวที่ค้นพบ</span></div>
     </div>
 
@@ -143,7 +155,7 @@ function DataExplorer() {
       {loading && <div className="data-state">กำลังอ่านข้อมูลจาก API</div>}
       {error && <div className="data-state error">{error}</div>}
       {!loading && !error && <table className="data-table">
-        {dataset === 'anomalies' && <><thead><tr><th>รายการและหน่วยงาน</th><th>หลังโอน</th><th>เบิกจ่ายรวม PO</th><th>อัตรา</th><th>คะแนน</th></tr></thead><tbody>{data?.rows.map((row, index) => <tr key={row.id ?? index}><td><strong>{row.item}</strong><small>{row.agency}<br />{row.signals?.join(', ')}</small></td><td>{number(row.adjusted)}<small>ล้านบาท</small></td><td>{number(row.committed)}<small>ล้านบาท</small></td><td>{number(row.rate)}<small>ร้อยละ</small></td><td><b>{row.score}</b><small>จาก 100</small></td></tr>)}</tbody></>}
+        {dataset === 'anomalies' && <><thead><tr><th>รายการและหน่วยงาน</th><th>หลังโอน</th><th>เบิกจ่ายรวม PO</th><th>อัตรา</th><th>คะแนน</th></tr></thead><tbody>{data?.rows.map((row, index) => <tr key={row.id ?? index}><td><strong>{row.item}</strong><small>{row.agency}<br />{row.signals?.map(signalLabel).join(', ')}</small></td><td>{number(row.adjusted)}<small>ล้านบาท</small></td><td>{number(row.committed)}<small>ล้านบาท</small></td><td>{number(row.rate)}<small>ร้อยละ</small></td><td><b>{row.score}</b><small>จาก 100</small></td></tr>)}</tbody></>}
         {dataset === 'cases' && <><thead><tr><th>แฟ้มและหน่วยงาน</th><th>วงเงิน</th><th>อัตรา</th><th>ลำดับอ่าน</th><th>ความพร้อมข้อมูล</th></tr></thead><tbody>{data?.rows.map((row, index) => <tr key={row.id ?? index}><td>{row.sourceUrl ? <a href={row.sourceUrl} target="_blank" rel="noreferrer"><strong>{row.title}</strong></a> : <strong>{row.title}</strong>}<small>{row.agency}<br />{row.statusLabel}</small></td><td>{number(row.budget)}<small>ล้านบาท</small></td><td>{number(row.rate)}<small>ร้อยละ</small></td><td><b>{row.priority}</b><small>จาก 100</small></td><td>{row.completeness}</td></tr>)}</tbody></>}
         {dataset === 'files' && <><thead><tr><th>ชื่อหลักฐาน</th><th>หมวด</th><th>ตำแหน่งในคลัง</th><th>ขนาด</th></tr></thead><tbody>{data?.rows.map((row, index) => <tr key={row.id ?? index}><td>{row.url ? <a href={row.url} target="_blank" rel="noreferrer"><strong>{row.title}</strong></a> : <strong>{row.title}</strong>}<small>{row.mimeType}</small></td><td>{row.category}</td><td className="path-cell">{row.path || 'โฟลเดอร์หลัก'}</td><td>{bytes(row.size)}</td></tr>)}</tbody></>}
         {dataset === 'history' && <><thead><tr><th>ปีงบประมาณ</th><th>จำนวนแถว</th><th>ตาม พ.ร.บ.</th><th>หลังโอน</th><th>เบิกจ่าย</th><th>อัตรา</th></tr></thead><tbody>{data?.rows.map((row) => <tr key={row.year}><td><strong>{row.year}</strong></td><td>{number(row.rows, 0)}</td><td>{number(row.act)}<small>ล้านบาท</small></td><td>{number(row.adjusted)}<small>ล้านบาท</small></td><td>{number(row.paid)}<small>ล้านบาท</small></td><td>{number(row.paid_rate)}<small>ร้อยละ</small></td></tr>)}</tbody></>}
