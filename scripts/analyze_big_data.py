@@ -276,18 +276,15 @@ def main() -> None:
         for key in labels
     ]
     ranked_candidates = sorted(candidates, key=lambda item: (-item["score"], -item["adjusted"], item["item"]))
-    highlighted = {item["id"]: item for item in ranked_candidates[:160]}
-    for key in labels:
-        matches = [item for item in ranked_candidates if key in item["signals"]][:12]
-        highlighted.update({item["id"]: item for item in matches})
-
     output = {
         "meta": {
             "source": "PBO ผลการเบิกจ่ายงบประมาณปี 2568",
             "source_url": "https://drive.google.com/file/d/1f-lfPEsutobU6iB8W4LY1bThfhvYheHJ/view",
             "rows": row_count,
+            "candidate_count": len(ranked_candidates),
             "unit": "ล้านบาท",
             "generated": "2569-09-19",
+            "methodology_version": "1.1",
         },
         "overview": {
             "act": rounded(totals["act"]),
@@ -305,7 +302,7 @@ def main() -> None:
             "gini": round(gini(positive_amounts), 3),
         },
         "flags": flags,
-        "items": sorted(highlighted.values(), key=lambda item: (-item["score"], -item["adjusted"], item["item"])),
+        "items": ranked_candidates,
         "agencies": sorted(agency_rows, key=lambda item: -item["adjusted"])[:30],
         "themes": {
             key: {

@@ -11,7 +11,7 @@ type DriveFile = {
   category: string
   url: string
   size: number
-  mimeType: string
+  type: string
 }
 
 type DriveInventory = {
@@ -60,6 +60,7 @@ function App() {
   const [fullAnomalies, setFullAnomalies] = useState<AnomalyItem[]>([])
   const [anomalyQuery, setAnomalyQuery] = useState('')
   const [anomalySort, setAnomalySort] = useState<SignalSort>('score')
+  const [anomalyLimit, setAnomalyLimit] = useState(100)
   const [anomalyCopied, setAnomalyCopied] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -110,6 +111,12 @@ function App() {
       return b.score - a.score
     })
   }, [activeSignal, analysisItems, anomalyQuery, anomalySort])
+
+  useEffect(() => {
+    setAnomalyLimit(100)
+  }, [activeSignal, anomalyQuery, anomalySort])
+
+  const visibleAnomalyItems = anomalyItems.slice(0, anomalyLimit)
 
   useEffect(() => {
     if (anomalyItems.length && !anomalyItems.some((item) => item.id === activeAnomalyId)) {
@@ -175,7 +182,7 @@ function App() {
           <button onClick={() => document.getElementById('law-workbench')?.scrollIntoView()}>กฎหมายลงมือใช้</button>
           <button onClick={() => setChatOpen(true)}>ถามน้องเพนกวิน</button>
         </nav>
-        <div className="data-stamp"><i /> DATA CUT 19.09.69</div>
+        <div className="data-stamp"><i /> ประมวลผล 19.09.69</div>
         <button className="mobile-chat-button" onClick={() => setChatOpen(true)}>ถามน้องเพนกวิน</button>
       </header>
 
@@ -186,12 +193,12 @@ function App() {
             <h1><span>งบก้อนนี้</span><mark>ใช้ทำอะไร</mark><span>ได้ผลแค่ไหน</span></h1>
             <p>ค้นและวิเคราะห์งบจากหลักฐาน 694 ไฟล์ ตั้งแต่ภาพรวมประเทศถึงรายการโครงการ พร้อมตัวเลขผิดสังเกต เอกสารต้นทาง และคำถามสำหรับตรวจต่อ</p>
             <div className="hero-actions">
-              <a className="primary-action" href="#signals" onClick={() => window.setTimeout(() => anomalySearchRef.current?.focus(), 500)}>ค้น 179 รายการผิดสังเกต <span>↓</span></a>
+              <a className="primary-action" href="#signals" onClick={() => window.setTimeout(() => anomalySearchRef.current?.focus(), 500)}>ค้น {bigData.meta.candidateCount.toLocaleString('th-TH')} รายการที่ควรตรวจต่อ <span>↓</span></a>
               <a className="text-action" href="#archive">ค้นหลักฐานทั้งหมด</a>
               <a className="text-action" href="#data-api">เปิดตารางและ API</a>
               <button className="text-action" onClick={() => setChatOpen(true)}>ถามข้อมูลกับน้องเพนกวิน</button>
             </div>
-            <div className="hero-proof" role="list" aria-label="จุดเด่นเครื่องมือ"><span role="listitem"><b>179</b> รายการจัดอันดับ</span><span role="listitem"><b>7</b> เงื่อนไขคัดกรอง</span><span role="listitem"><b>5</b> ขั้นตามหลักฐาน</span></div>
+            <div className="hero-proof" role="list" aria-label="จุดเด่นเครื่องมือ"><span role="listitem"><b>{bigData.meta.candidateCount.toLocaleString('th-TH')}</b> รายการจัดอันดับ</span><span role="listitem"><b>7</b> เงื่อนไขคัดกรอง</span><span role="listitem"><b>5</b> ขั้นตามหลักฐาน</span></div>
           </div>
           <div className="evidence-board" role="region" aria-label="สรุปชุดข้อมูล">
             <div className="board-label">คลังหลักฐาน / สำรวจครบทั้ง Drive</div>
@@ -257,11 +264,12 @@ function App() {
           <div className="signal-desk">
             <aside className="anomaly-list" aria-label="รายการผิดสังเกตจากข้อมูลขนาดใหญ่">
               <div className="list-head"><span>รายการสำหรับเปิดหลักฐาน</span><strong>{anomalyItems.length} รายการ</strong></div>
-              {anomalyItems.map((item) => <button key={item.id} className={`anomaly-row ${activeAnomaly.id === item.id ? 'active' : ''}`} onClick={() => setActiveAnomalyId(item.id)}>
+              {visibleAnomalyItems.map((item) => <button key={item.id} className={`anomaly-row ${activeAnomaly.id === item.id ? 'active' : ''}`} onClick={() => setActiveAnomalyId(item.id)}>
                 <span className="anomaly-score">{item.score}</span>
                 <span className="anomaly-copy"><strong>{item.item}</strong><small>{item.agency}</small></span>
                 <span className="anomaly-money">{formatMoney(item.adjusted)}<small>ล้าน</small></span>
               </button>)}
+              {visibleAnomalyItems.length < anomalyItems.length && <button className="anomaly-more" onClick={() => setAnomalyLimit((value) => value + 100)}>แสดงเพิ่มอีก {Math.min(100, anomalyItems.length - visibleAnomalyItems.length).toLocaleString('th-TH')} รายการ</button>}
               {anomalyItems.length === 0 && <div className="anomaly-empty"><strong>ไม่พบรายการที่ตรงกัน</strong><button onClick={() => { setAnomalyQuery(''); setActiveSignal('all') }}>ล้างคำค้นและเงื่อนไข</button></div>}
             </aside>
 
@@ -288,7 +296,7 @@ function App() {
               </div>
               <div className="anomaly-law-row"><strong>กฎหมายที่ใช้เดินต่อ</strong><div>{activeAnomalyLaws.map((law) => <button key={law} onClick={() => document.getElementById('law-workbench')?.scrollIntoView()}>{law}</button>)}</div></div>
               <div className="anomaly-source"><span>แหล่งข้อมูล PBO ปี 2568</span><a href={bigData.meta.sourceUrl} target="_blank" rel="noreferrer">เปิดไฟล์ต้นทาง ↗</a></div>
-            </article> : <article className="anomaly-file anomaly-file-empty"><span>NO MATCH</span><h3>ยังไม่มีรายการที่ตรงทั้งคำค้นและเงื่อนไข</h3><p>ลองล้างคำค้นหรือเลือกทุกเงื่อนไข แล้วเริ่มจากรายการที่คะแนนสูงสุด</p><button onClick={() => { setAnomalyQuery(''); setActiveSignal('all') }}>แสดง 179 รายการทั้งหมด</button></article>}
+            </article> : <article className="anomaly-file anomaly-file-empty"><span>NO MATCH</span><h3>ยังไม่มีรายการที่ตรงทั้งคำค้นและเงื่อนไข</h3><p>ลองล้างคำค้นหรือเลือกทุกเงื่อนไข แล้วเริ่มจากรายการที่คะแนนสูงสุด</p><button onClick={() => { setAnomalyQuery(''); setActiveSignal('all') }}>แสดงรายการทั้งหมด</button></article>}
           </div>
 
           <section className="evidence-path" aria-labelledby="evidence-path-title">
@@ -460,7 +468,7 @@ function App() {
                 <button className={archiveCategory === 'all' ? 'active' : ''} onClick={() => setArchiveCategory('all')}>ทุกหมวด</button>
                 <a href="/data/drive-inventory.json" download>ดาวน์โหลดบัญชี .JSON</a>
               </div>
-              <div className="archive-result-head"><strong>{archiveFiles.length.toLocaleString('th-TH')} ไฟล์</strong><span>สำรวจข้อมูล ณ 19 ก.ย. 2569</span></div>
+              <div className="archive-result-head"><strong>{archiveFiles.length.toLocaleString('th-TH')} ไฟล์</strong><span>สำรวจคลังเมื่อ 19 ก.ย. 2569</span></div>
               <div className="file-ledger">
                 {inventory ? archiveFiles.slice(0, archiveLimit).map((file) => (
                   <a href={file.url} target="_blank" rel="noreferrer" key={file.id}>

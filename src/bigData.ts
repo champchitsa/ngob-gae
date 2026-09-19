@@ -104,7 +104,7 @@ export const legalActionMap = [
 ]
 
 export const bigData: {
-  meta: { rows: number; sourceUrl: string }
+  meta: { rows: number; candidateCount: number; sourceUrl: string }
   overview: { positiveRows: number; rowsOver20m: number; median: number; topOnePercentShare: number; gini: number }
   flags: { id: SignalKey; label: string; definition: string; count: number; amount: number }[]
   themes: { id: string; label: string; rows: number; adjusted: number; rate: number }[]
@@ -114,6 +114,7 @@ export const bigData: {
 } = {
   meta: {
     rows: 241159,
+    candidateCount: 3194,
     sourceUrl: 'https://drive.google.com/file/d/1f-lfPEsutobU6iB8W4LY1bThfhvYheHJ/view',
   },
   overview: {

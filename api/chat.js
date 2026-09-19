@@ -4,7 +4,7 @@ import { join } from 'node:path'
 const SOURCE_URL = 'https://drive.google.com/file/d/1f-lfPEsutobU6iB8W4LY1bThfhvYheHJ/view'
 const requestLog = new Map()
 let knowledgeCache
-const stopWords = new Set(['งบ', 'รายการ', 'ราย', 'การ', 'งาน', 'โครงการ', 'ใด', 'ไหน', 'อะไร', 'อย่างไร', 'เกี่ยวกับ', 'ควร', 'เปิด', 'ก่อน', 'พร้อม', 'บอก', 'ด้วย', 'เหตุผล', 'หลักฐาน', 'เอกสาร', 'ขอ', 'และ', 'หรือ', 'ของ', 'ที่', 'มี', 'เป็น', 'จาก', 'ให้', 'ช่วย', 'ใช้', 'เรื่อง', 'สรุป', 'กรุณา', 'ตรวจสอบ', 'ข้อมูล', 'คำถาม', 'มาก', 'ที่สุด'])
+const stopWords = new Set(['งบ', 'รายการ', 'ราย', 'การ', 'งาน', 'โครงการ', 'ใด', 'ไหน', 'อะไร', 'อย่างไร', 'เกี่ยวกับ', 'ควร', 'เปิด', 'ก่อน', 'พร้อม', 'บอก', 'ด้วย', 'เหตุผล', 'หลักฐาน', 'เอกสาร', 'ไฟล์', 'สำนักงาน', 'ขอ', 'และ', 'หรือ', 'ของ', 'ที่', 'มี', 'เป็น', 'จาก', 'ให้', 'ช่วย', 'ใช้', 'เรื่อง', 'สรุป', 'กรุณา', 'ตรวจสอบ', 'ข้อมูล', 'คำถาม', 'มาก', 'ที่สุด'])
 
 const laws = [
   { label: 'จัดซื้อจัดจ้าง ม.8', text: 'ใช้ถามความคุ้มค่า ความโปร่งใส ประสิทธิผล การแข่งขัน ราคา TOR สัญญา และการตรวจรับ', docs: ['TOR และราคากลาง', 'ประกาศเชิญชวนและรายชื่อผู้ยื่นข้อเสนอ', 'ประกาศผลผู้ชนะและสัญญา', 'รายงานตรวจรับและเอกสารแก้ไขสัญญา'], url: 'https://www.cgd.go.th/cs/Satellite?blobcol=urldata&blobkey=id&blobtable=MungoBlobs&blobwhere=1438171618792&ssbinary=true' },
@@ -17,6 +17,7 @@ const laws = [
 const siteFacts = [
   'คลังหลักฐานมี 694 ไฟล์ 113 โฟลเดอร์ รวม 6.67 GB เปิดอ่าน workbook 124 ไฟล์ครบ 856 ชีต และมีข้อมูล PBO 11 ปีตั้งแต่ 2558 ถึง 2568',
   'PBO ปี 2568 มี 241,159 แถว วงเงินหลังโอนรวม 3.7527 ล้านล้านบาท มี 193,783 แถวที่วงเงินเป็นบวก มัธยฐาน 0.499 ล้านบาท และรายการ 1% แรกถือวงเงิน 80.3%',
+  'ระบบคัดกรองข้อมูล PBO ปี 2568 ได้ 3,194 รายการตาม 7 เงื่อนไขเพื่อจัดลำดับการตรวจเอกสาร โดยทุกเงื่อนไขเป็นสัญญาณให้ตรวจต่อ ไม่ใช่ข้อสรุปว่ามีความผิด',
   'ร่างงบกรุงเทพมหานครและการพาณิชย์รวม 93,918.922 ล้านบาท งานบริการสำนักงานเขต 21,842.92229 ล้านบาท และงบกลาง 17,721.61045 ล้านบาท',
   'ร่างงบเทศบาลนครเชียงใหม่มี 700 รายการ รวม 1,995 ล้านบาท ค่าจ้างเอกชนกำจัดขยะ 166.075 ล้านบาทและจัดเก็บขยะ 121.80142 ล้านบาท รวม 287.87642 ล้านบาท',
   'ราชาเทวะมีตารางสรุป 36 กลุ่มงบรวม 615.172 ล้านบาท งานกำจัดขยะ 97 ล้านบาท และงบลงทุนงานก่อสร้าง 90.18 ล้านบาท',
@@ -54,6 +55,8 @@ function loadKnowledge() {
   knowledgeCache = {
     big: JSON.parse(readFileSync(join(process.cwd(), 'public', 'data', 'big-data-findings.json'), 'utf8')),
     cases: JSON.parse(readFileSync(join(process.cwd(), 'public', 'data', 'case-files.json'), 'utf8')),
+    inventory: JSON.parse(readFileSync(join(process.cwd(), 'public', 'data', 'drive-inventory.json'), 'utf8')),
+    history: JSON.parse(readFileSync(join(process.cwd(), 'public', 'data', 'pbo-history.json'), 'utf8')),
   }
   return knowledgeCache
 }
@@ -110,8 +113,35 @@ function topicalText(item) {
   return [item.item, item.title, item.project, item.plan, item.eyebrow, item.lead, item.finding, ...(item.questions ?? []), ...(item.requestDocs ?? [])].join(' ')
 }
 
+function fileScore(file, terms) {
+  const title = String(file.title ?? '').toLocaleLowerCase('th')
+  const path = String(file.path ?? '').toLocaleLowerCase('th')
+  const category = String(file.category ?? '').toLocaleLowerCase('th')
+  const matchedTerms = terms.filter((term) => title.includes(term) || path.includes(term) || category.includes(term))
+  const score = terms.reduce((total, term) => total + (title.includes(term) ? 6 : 0) + (path.includes(term) ? 3 : 0) + (category.includes(term) ? 1 : 0), 0)
+  return { score, matches: matchedTerms.length }
+}
+
+function fileTopicPattern(question) {
+  const normalized = question.toLocaleLowerCase('th')
+  if (/ประกันสังคม|สปส/.test(normalized)) return /ประกันสังคม|สปส/i
+  if (/กรุงเทพ|กทม|bma/.test(normalized)) return /กรุงเทพ|กทม|bma/i
+  if (/เชียงใหม่/.test(normalized)) return /เชียงใหม่/i
+  if (/สมุทรปราการ|ราชาเทวะ/.test(normalized)) return /สมุทรปราการ|ราชาเทวะ/i
+  if (/กองทุน.{0,12}อนุรักษ์พลังงาน/.test(normalized)) return /กองทุน.{0,12}อนุรักษ์พลังงาน/i
+  if (/กรรมาธิการ|กมธ/.test(normalized)) return /กรรมาธิการ|กมธ/i
+  if (/(^|\s)pbo($|\s)|ผลเบิกจ่าย|เบิกจ่ายงบประมาณ/.test(normalized)) return /pbo|ผลเบิกจ่าย|เบิกจ่ายงบประมาณ/i
+  return null
+}
+
+function formatBytes(value) {
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)} GB`
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)} MB`
+  return `${Math.max(1, Math.round(value / 1000))} KB`
+}
+
 function retrieve(question, focusId) {
-  const { big: data, cases } = loadKnowledge()
+  const { big: data, cases, inventory, history } = loadKnowledge()
   const terms = termsFor(question)
   const topicPattern = topicPatternFor(question)
   const matchedSignal = signalFor(question, data.flags)
@@ -158,17 +188,51 @@ function retrieve(question, focusId) {
     .sort((a, b) => b.score - a.score)
     .slice(0, 3)
 
+  const fileTerms = terms.filter((term) => term.length >= 3)
+  const requiredFileMatches = fileTerms.length > 1 ? 2 : 1
+  const requiredFileTopic = fileTopicPattern(question)
+  const rankedFiles = inventory.files
+    .map((file) => ({ file, ...fileScore(file, fileTerms) }))
+    .filter((entry) => {
+      const searchable = `${entry.file.title} ${entry.file.path} ${entry.file.category}`
+      return entry.score > 0 && entry.matches >= requiredFileMatches && (!requiredFileTopic || requiredFileTopic.test(searchable))
+    })
+    .sort((a, b) => b.score - a.score || b.file.size - a.file.size)
+  const bestFileScore = rankedFiles[0]?.score ?? 0
+  const relevantFiles = rankedFiles
+    .filter((entry) => entry.score >= Math.max(3, bestFileScore * 0.45))
+    .slice(0, 6)
+    .map(({ file }) => file)
+  const asksHistory = /ย้อนหลัง|แนวโน้ม|เทียบปี|เปรียบเทียบปี|อนุกรมเวลา|ตั้งแต่ปี|ปี\s*(?:25|20)\d{2}/.test(question)
+  const requestedYears = [...question.matchAll(/(?:25|20)\d{2}/g)].map((match) => Number(match[0]))
+  const yearRange = question.match(/((?:25|20)\d{2})\s*(?:ถึง|-)\s*((?:25|20)\d{2})/)
+  const relevantHistory = asksHistory ? history.series.filter((row) => {
+    if (yearRange) {
+      const start = Math.min(Number(yearRange[1]), Number(yearRange[2]))
+      const end = Math.max(Number(yearRange[1]), Number(yearRange[2]))
+      return row.year >= start && row.year <= end
+    }
+    return !requestedYears.length || requestedYears.includes(row.year)
+  }) : []
+
   const itemText = selected.map(({ item }, index) => `[รายการ ${index + 1}] ${item.item}\nหน่วยงาน: ${item.agency}\nกระทรวง: ${item.ministry}\nโครงการ: ${item.project}\nตาม พ.ร.บ.: ${item.act} ล้านบาท | หลังโอน: ${item.adjusted} ล้านบาท | เปลี่ยนแปลง: ${item.delta} ล้านบาท | เบิกจ่ายรวม PO: ${item.committed} ล้านบาท | อัตรา: ${item.rate ?? 'ไม่มีค่า'}%\nสัญญาณ: ${item.signals.join(', ')}\nที่มา: ${SOURCE_URL}`).join('\n\n')
   const caseText = selectedCases.map(({ item }, index) => `[แฟ้ม ${index + 1}] ${item.title}\nหน่วยงาน: ${item.agency}\nประเด็น: ${item.lead}\nสิ่งที่ข้อมูลบอก: ${item.finding}\nข้อควรระวัง: ${item.caution}\nระดับข้อมูล: ${item.dataLevel}\nความครบถ้วน: ${item.completeness}\nคำถามตรวจต่อ: ${item.questions.join(' | ')}\nเอกสารที่ควรขอ: ${item.requestDocs.join(' | ')}\nกฎหมาย: ${item.laws.join(' | ')}\nที่มา: ${item.sourceUrl}`).join('\n\n')
+  const fileText = relevantFiles.map((file, index) => `[ไฟล์ ${index + 1}] ${file.title}\nหมวด: ${file.category}\nตำแหน่งในคลัง: ${file.path || 'โฟลเดอร์หลัก'}\nชนิด: ${file.type}\nขนาด: ${formatBytes(file.size)}\nที่มา: ${file.url}`).join('\n\n')
+  const historyText = relevantHistory.map((row) => `[ปี ${row.year}] จำนวน ${row.rows.toLocaleString('th-TH')} แถว | ตาม พ.ร.บ. ${row.act.toLocaleString('th-TH')} ล้านบาท | หลังโอน ${row.adjusted.toLocaleString('th-TH')} ล้านบาท | เบิกจ่าย ${row.paid.toLocaleString('th-TH')} ล้านบาท | อัตรา ${row.paid_rate ?? 'ไม่มีค่า'}%`).join('\n')
   const focusText = focus ? `\nรายการที่ผู้ใช้กำลังเปิดดูและถามถึงโดยตรง:\n${JSON.stringify(focus)}` : ''
-  const context = `ข้อมูลภาพรวม:\n${relevantFacts.length ? relevantFacts.map((fact, index) => `[ข้อมูล ${index + 1}] ${fact.text}`).join('\n') : 'ไม่พบตัวเลขภาพรวมที่ตรงคำค้นโดยตรง'}\n\nแฟ้มวิเคราะห์ที่ค้นคืนจากเว็บ:\n${caseText || 'ไม่พบแฟ้มเฉพาะที่ตรงคำค้น'}\n\nรายการที่ค้นคืนจาก PBO 2568:\n${itemText || 'ไม่พบรายการ PBO ที่ตรงคำค้นโดยตรง'}\n\nกฎหมายที่เกี่ยวข้อง:\n${relevantLaws.map((law) => `${law.label}: ${law.text}\nที่มา: ${law.url}`).join('\n\n')}${focusText}`
+  const context = `ข้อมูลภาพรวม:\n${relevantFacts.length ? relevantFacts.map((fact, index) => `[ข้อมูล ${index + 1}] ${fact.text}`).join('\n') : 'ไม่พบตัวเลขภาพรวมที่ตรงคำค้นโดยตรง'}\n\nอนุกรมเวลา PBO:\n${historyText}\n\nแฟ้มวิเคราะห์ที่ค้นคืนจากเว็บ:\n${caseText || 'ไม่พบแฟ้มเฉพาะที่ตรงคำค้น'}\n\nรายการที่ค้นคืนจาก PBO 2568:\n${itemText || 'ไม่พบรายการ PBO ที่ตรงคำค้นโดยตรง'}\n\nหลักฐานในคลังที่ค้นคืน:\n${fileText || 'ไม่พบชื่อไฟล์ที่ตรงคำค้นโดยตรง'}\n\nกฎหมายที่เกี่ยวข้อง:\n${relevantLaws.map((law) => `${law.label}: ${law.text}\nที่มา: ${law.url}`).join('\n\n')}${focusText}`
 
   const sources = [
     ...selectedCases.map(({ item }, index) => ({ ref: `[แฟ้ม ${index + 1}]`, label: item.title, detail: `${item.agency} | ${item.sourceLabel}`, url: item.sourceUrl })),
     ...selected.map(({ item }, index) => ({ ref: `[รายการ ${index + 1}]`, label: item.item, detail: `${item.agency} | ${item.adjusted.toLocaleString('th-TH')} ล้านบาท`, url: SOURCE_URL })),
+    ...relevantFiles.map((file, index) => ({ ref: `[ไฟล์ ${index + 1}]`, label: file.title, detail: `${file.category} | ${file.path || 'โฟลเดอร์หลัก'} | ${formatBytes(file.size)}`, url: file.url })),
+    ...relevantHistory.map((row) => {
+      const sourceFile = inventory.files.find((file) => file.category === 'PBO' && file.title === `${row.year}.xlsx`)
+      return { ref: `[ปี ${row.year}]`, label: `PBO ปี ${row.year}`, detail: `${row.rows.toLocaleString('th-TH')} แถว | เบิกจ่าย ${row.paid_rate ?? 'ไม่มีค่า'}%`, url: sourceFile?.url ?? SOURCE_URL }
+    }),
     ...relevantLaws.filter((law) => law.score > 0).map((law) => ({ ref: law.label, label: law.label, detail: 'ตัวบทจากหน่วยงานทางการ', url: law.url })),
-  ].filter((source, index, all) => all.findIndex((candidate) => candidate.label === source.label && candidate.url === source.url) === index).slice(0, 6)
-  return { context, sources, selectedCases: selectedCases.map(({ item }) => item), selectedItems: selected.map(({ item }) => item), relevantFacts, relevantLaws, matchedSignal }
+  ].filter((source, index, all) => all.findIndex((candidate) => candidate.label === source.label && candidate.url === source.url) === index)
+  return { context, sources, selectedCases: selectedCases.map(({ item }) => item), selectedItems: selected.map(({ item }) => item), relevantFacts, relevantLaws, relevantFiles, relevantHistory, matchedSignal }
 }
 
 function rateLimited(request) {
@@ -218,7 +282,7 @@ function buildEvidenceAnswer(question, selectedCases, selectedItems) {
 
 function visibleSourcesFor(answer, sources) {
   const citedSources = sources.filter((source) => answer.includes(source.ref))
-  return (citedSources.length ? citedSources : sources).slice(0, 6).map(({ ref, ...source }) => source)
+  return (citedSources.length ? citedSources : sources).slice(0, 12).map(({ ref, ...source }) => source)
 }
 
 function buildLawAnswer(relevantLaws) {
@@ -235,6 +299,23 @@ function buildOverviewAnswer(relevantFacts, selectedCases) {
   if (facts.length) sections.push(`ตัวเลขภาพรวม\n${facts.join('\n')}`)
   if (cases.length) sections.push(`แฟ้มสำหรับตรวจต่อ\n${cases.join('\n\n')}`)
   return sections.length ? sections.join('\n\n') : 'ยังไม่มีตัวเลขภาพรวมที่ตรงกับคำค้นนี้ กรุณาระบุหัวข้อ หน่วยงาน หรือปีงบประมาณให้ชัดขึ้น'
+}
+
+function buildFileAnswer(relevantFiles) {
+  if (!relevantFiles.length) return 'ยังไม่พบชื่อไฟล์ที่ตรงคำค้น กรุณาระบุหน่วยงาน ปีงบประมาณ พื้นที่ หรือชนิดเอกสารให้ชัดขึ้น'
+  const files = relevantFiles.map((file, index) => `${index + 1}. ${file.title} [ไฟล์ ${index + 1}]\nหมวด: ${file.category}\nตำแหน่งในคลัง: ${file.path || 'โฟลเดอร์หลัก'}\nชนิดไฟล์: ${file.type}\nขนาด: ${formatBytes(file.size)}`)
+  return `ไฟล์ในคลังที่ตรงคำค้นมากที่สุด\n\n${files.join('\n\n')}\n\nเลือก “เปิดต้นทาง” ใต้คำตอบเพื่อดูไฟล์จริงใน Google Drive`
+}
+
+function buildHistoryAnswer(rows) {
+  if (!rows.length) return 'ยังไม่พบปีงบประมาณที่ระบุในอนุกรมเวลา PBO ซึ่งครอบคลุมปี 2558 ถึง 2568'
+  const ordered = [...rows].sort((a, b) => a.year - b.year)
+  const lines = ordered.map((row) => `${row.year} [ปี ${row.year}]\nตาม พ.ร.บ. ${row.act.toLocaleString('th-TH')} ล้านบาท | หลังโอน ${row.adjusted.toLocaleString('th-TH')} ล้านบาท | เบิกจ่าย ${row.paid.toLocaleString('th-TH')} ล้านบาท | อัตรา ${row.paid_rate ?? 'ไม่มีค่า'}%`)
+  const comparable = ordered.filter((row) => row.paid_rate !== null)
+  const highest = comparable.reduce((best, row) => !best || row.paid_rate > best.paid_rate ? row : best, null)
+  const lowest = comparable.reduce((best, row) => !best || row.paid_rate < best.paid_rate ? row : best, null)
+  const observation = highest && lowest ? `\n\nจุดที่เห็นจากชุดข้อมูล\nอัตราเบิกจ่ายสูงสุดอยู่ที่ปี ${highest.year} จำนวน ${highest.paid_rate}% [ปี ${highest.year}] และต่ำสุดอยู่ที่ปี ${lowest.year} จำนวน ${lowest.paid_rate}% [ปี ${lowest.year}] ควรอ่านร่วมกับช่วงตัดข้อมูลและนิยามของไฟล์แต่ละปี` : ''
+  return `อนุกรมเวลาผลการใช้จ่ายงบประมาณ PBO\n\n${lines.join('\n\n')}${observation}`
 }
 
 function buildSignalAnswer(signal, selectedItems) {
@@ -263,8 +344,9 @@ export default async function handler(request, response) {
   const apiKey = process.env.PATHUMMA_API_KEY
   if (!apiKey) return response.status(503).json({ error: 'ระบบถามตอบยังรอการเชื่อมต่อ Pathumma API' })
 
-  const { context, sources, selectedCases, selectedItems, relevantFacts, relevantLaws, matchedSignal } = retrieve(question, String(request.body?.focusId ?? ''))
+  const { context, sources, selectedCases, selectedItems, relevantFacts, relevantLaws, relevantFiles, relevantHistory, matchedSignal } = retrieve(question, String(request.body?.focusId ?? ''))
   const history = Array.isArray(request.body?.history) ? request.body.history.slice(-6).map((message) => ({ role: message.role === 'assistant' ? 'assistant' : 'user', content: String(message.content ?? '').slice(0, 2500) })) : []
+  const asksAboutFocus = /(รายการนี้|โครงการนี้|หน้านี้|ที่กำลังเปิด|แฟ้มนี้)/.test(question)
   const asksLegalQuestion = /มาตรา\s*\d+|กฎหมาย|รัฐธรรมนูญ|พ\.ร\.บ\.\s*(การจัดซื้อ|วินัย|วิธีการงบประมาณ|ข้อมูลข่าวสาร)/.test(question)
   if (asksLegalQuestion) {
     const answer = buildLawAnswer(relevantLaws)
@@ -274,17 +356,27 @@ export default async function handler(request, response) {
     const answer = buildSignalAnswer(matchedSignal, selectedItems)
     return response.status(200).json({ answer, sources: visibleSourcesFor(answer, sources), model: process.env.PATHUMMA_MODEL ?? 'pathumma' })
   }
+  const asksForHistory = /ย้อนหลัง|แนวโน้ม|เทียบปี|เปรียบเทียบปี|อนุกรมเวลา|ตั้งแต่ปี|ปี\s*(?:25|20)\d{2}/.test(question)
+  if (asksForHistory) {
+    const answer = buildHistoryAnswer(relevantHistory)
+    return response.status(200).json({ answer, sources: visibleSourcesFor(answer, sources), model: process.env.PATHUMMA_MODEL ?? 'pathumma' })
+  }
+  const asksForFiles = /มี.{0,8}(ไฟล์|เอกสาร)|(ไฟล์|เอกสาร).{0,24}(อะไร|ใด|ไหน|เกี่ยว|ค้น|หา|เปิด)|ค้น.{0,16}(ไฟล์|เอกสาร|หลักฐาน)/.test(question)
+  if (asksForFiles && !asksAboutFocus) {
+    const answer = buildFileAnswer(relevantFiles)
+    return response.status(200).json({ answer, sources: visibleSourcesFor(answer, sources), model: process.env.PATHUMMA_MODEL ?? 'pathumma' })
+  }
   const asksForOverview = /(ภาพรวม|ทั้งหมด|รวมเท่าไร|กี่รายการ|กี่แถว|สัดส่วน|ขนาดของ|แนวโน้ม)/.test(question)
   if (asksForOverview) {
     const answer = buildOverviewAnswer(relevantFacts, selectedCases)
     return response.status(200).json({ answer, sources: visibleSourcesFor(answer, sources), model: process.env.PATHUMMA_MODEL ?? 'pathumma' })
   }
-  const needsEvidenceFormat = /(รายการใด|รายการไหน|โครงการใด|โครงการไหน|ควร.{0,20}(ตรวจ|เปิด).{0,20}(ก่อน|ลำดับแรก))/.test(question)
+  const needsEvidenceFormat = /(รายการใด|รายการไหน|โครงการใด|โครงการไหน|ควร.{0,20}(ตรวจ|เปิด).{0,20}(ก่อน|ลำดับแรก)|รายการนี้.{0,20}(เอกสาร|หลักฐาน))/.test(question)
   if (needsEvidenceFormat) {
     const answer = buildEvidenceAnswer(question, selectedCases, selectedItems)
     return response.status(200).json({ answer, sources: visibleSourcesFor(answer, sources), model: process.env.PATHUMMA_MODEL ?? 'pathumma' })
   }
-  const system = `คุณคือผู้ช่วยค้นคว้างบประมาณชื่อ น้องเพนกวิน ใช้โมเดล Pathumma ตอบภาษาไทยแบบทางการ ชัดเจน และตรงคำถาม\nใช้เฉพาะข้อมูลในบริบทที่ให้มา ห้ามสร้างตัวเลข ชื่อโครงการ ข้อกฎหมาย เหตุผล ความเสี่ยง หรือคำอธิบายที่ข้อมูลไม่ได้ระบุ และห้ามคำนวณตัวเลขใหม่ที่บริบทไม่มี\nตอบคำถามปัจจุบันเป็นหลัก รายการที่ผู้ใช้กำลังเปิดจะปรากฏเฉพาะเมื่อผู้ใช้ถามถึงรายการนั้นโดยตรง\nเลือกตอบไม่เกิน 3 รายการที่สัมพันธ์กับคำถามมากที่สุด เว้นแต่ผู้ใช้ขอจำนวนอื่น และห้ามนำรายการนอกหัวข้อมาเติมให้ครบจำนวน\nสำหรับแต่ละรายการ ใช้เฉพาะข้อความในหัวข้อ สิ่งที่ข้อมูลบอก ข้อมูลที่ยังขาด คำถามตรวจต่อ เอกสารที่ควรขอ และข้อควรระวังของแฟ้มนั้น ห้ามคิดเหตุผลเพิ่มเอง\nแยกให้ชัดระหว่างข้อเท็จจริง เหตุที่ควรตรวจต่อ และเอกสารที่ควรขอ\nห้ามแสดงรหัสสัญญาณภาษาอังกฤษ ให้แปลเป็นภาษาไทยที่ประชาชนทั่วไปเข้าใจได้\nห้ามกล่าวหาหรือคาดเดาว่ามีการทุจริต ใช้จ่ายซ้ำซ้อน ผิดวัตถุประสงค์ จงใจปกปิด ขาดการวางแผน มีช่องโหว่ หรือไม่คุ้มค่า เว้นแต่บริบทระบุข้อเท็จจริงนั้นโดยตรง\nสัญญาณในบริบทเป็นกฎคัดกรองเชิงตัวเลข ใช้เพื่อจัดลำดับการตรวจหลักฐานเท่านั้น ห้ามแปลสัญญาณเป็นเหตุการณ์จริงโดยไม่มีเอกสารยืนยัน\nเมื่อข้อมูลไม่พอ ให้บอกว่าขาดข้อมูลอะไรและควรเปิดเอกสารใด\nทุกประโยคที่ใช้ตัวเลขหรือข้อค้นพบเฉพาะต้องอ้าง [ข้อมูล n], [แฟ้ม n] หรือ [รายการ n] จากบริบท โดยคงวงเล็บเหลี่ยมไว้ตามตัวอย่าง\nสัญญาณคัดกรองเป็นจุดเริ่มตรวจหลักฐาน ไม่ใช่ข้อสรุปความผิด\nใช้แฟ้มวิเคราะห์เป็นแหล่งหลักเมื่อมีแฟ้มตรงหัวข้อ เพราะมีคำถามตรวจต่อและรายการเอกสารครบกว่า\nตอบไม่เกินประมาณ 350 คำ อ่านง่าย ใช้หัวข้อและรายการลำดับได้ แต่ไม่ใช้เครื่องหมายดอกจัน เครื่องหมาย # หรือเส้นคั่นเพื่อตกแต่งข้อความ\n\nบริบทจากเว็บงบแกะ:\n${context}`
+  const system = `คุณคือผู้ช่วยค้นคว้างบประมาณชื่อ น้องเพนกวิน ใช้โมเดล Pathumma ตอบภาษาไทยแบบทางการ ชัดเจน และตรงคำถาม\nใช้เฉพาะข้อมูลในบริบทที่ให้มา ห้ามสร้างตัวเลข ชื่อโครงการ ข้อกฎหมาย เหตุผล ความเสี่ยง หรือคำอธิบายที่ข้อมูลไม่ได้ระบุ และห้ามคำนวณตัวเลขใหม่ที่บริบทไม่มี\nตอบคำถามปัจจุบันเป็นหลัก รายการที่ผู้ใช้กำลังเปิดจะปรากฏเฉพาะเมื่อผู้ใช้ถามถึงรายการนั้นโดยตรง\nเลือกตอบไม่เกิน 3 รายการที่สัมพันธ์กับคำถามมากที่สุด เว้นแต่ผู้ใช้ขอจำนวนอื่น และห้ามนำรายการนอกหัวข้อมาเติมให้ครบจำนวน\nสำหรับแต่ละรายการ ใช้เฉพาะข้อความในหัวข้อ สิ่งที่ข้อมูลบอก ข้อมูลที่ยังขาด คำถามตรวจต่อ เอกสารที่ควรขอ และข้อควรระวังของแฟ้มนั้น ห้ามคิดเหตุผลเพิ่มเอง\nแยกให้ชัดระหว่างข้อเท็จจริง เหตุที่ควรตรวจต่อ และเอกสารที่ควรขอ\nห้ามแสดงรหัสสัญญาณภาษาอังกฤษ ให้แปลเป็นภาษาไทยที่ประชาชนทั่วไปเข้าใจได้\nห้ามกล่าวหาหรือคาดเดาว่ามีการทุจริต ใช้จ่ายซ้ำซ้อน ผิดวัตถุประสงค์ จงใจปกปิด ขาดการวางแผน มีช่องโหว่ หรือไม่คุ้มค่า เว้นแต่บริบทระบุข้อเท็จจริงนั้นโดยตรง\nสัญญาณในบริบทเป็นกฎคัดกรองเชิงตัวเลข ใช้เพื่อจัดลำดับการตรวจหลักฐานเท่านั้น ห้ามแปลสัญญาณเป็นเหตุการณ์จริงโดยไม่มีเอกสารยืนยัน\nเมื่อข้อมูลไม่พอ ให้บอกว่าขาดข้อมูลอะไรและควรเปิดเอกสารใด\nทุกประโยคที่ใช้ตัวเลขหรือข้อค้นพบเฉพาะต้องอ้าง [ข้อมูล n], [แฟ้ม n], [รายการ n], [ไฟล์ n] หรือ [ปี n] จากบริบท โดยคงวงเล็บเหลี่ยมไว้ตามตัวอย่าง\nสัญญาณคัดกรองเป็นจุดเริ่มตรวจหลักฐาน ไม่ใช่ข้อสรุปความผิด\nใช้แฟ้มวิเคราะห์เป็นแหล่งหลักเมื่อมีแฟ้มตรงหัวข้อ เพราะมีคำถามตรวจต่อและรายการเอกสารครบกว่า\nตอบไม่เกินประมาณ 350 คำ อ่านง่าย ใช้หัวข้อและรายการลำดับได้ แต่ไม่ใช้เครื่องหมายดอกจัน เครื่องหมาย # หรือเส้นคั่นเพื่อตกแต่งข้อความ\n\nบริบทจากเว็บงบแกะ:\n${context}`
 
   try {
     const upstream = await fetch(process.env.PATHUMMA_API_URL ?? 'https://thaillm.or.th/api/v1/chat/completions', {

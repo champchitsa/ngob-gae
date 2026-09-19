@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
-type DatasetId = 'anomalies' | 'cases' | 'files' | 'history'
+type DatasetId = 'anomalies' | 'agencies' | 'patterns' | 'cases' | 'files' | 'history'
 type DataRow = {
   id?: string
   item?: string
@@ -20,6 +20,7 @@ type DataRow = {
   category?: string
   size?: number
   mimeType?: string
+  type?: string
   url?: string
   sourceUrl?: string
   year?: number
@@ -27,6 +28,10 @@ type DataRow = {
   act?: number
   paid?: number
   paid_rate?: number | null
+  share?: number
+  pattern?: string
+  count?: number
+  agencies?: number
 }
 
 type ApiResponse = {
@@ -45,7 +50,9 @@ type ApiResponse = {
 }
 
 const datasets: { id: DatasetId; label: string; count: string; detail: string }[] = [
-  { id: 'anomalies', label: 'รายการคัดกรอง', count: '179', detail: 'ตัวเลขก่อนและหลังโอน ผลใช้จ่าย คะแนน และสัญญาณ' },
+  { id: 'anomalies', label: 'รายการคัดกรอง', count: '3,194', detail: 'ตัวเลขก่อนและหลังโอน ผลใช้จ่าย คะแนน และสัญญาณ' },
+  { id: 'agencies', label: 'ภาพรวมหน่วยงาน', count: '30', detail: 'วงเงิน สัดส่วน จำนวนแถว และอัตราใช้จ่ายของหน่วยงานวงเงินสูง' },
+  { id: 'patterns', label: 'ชื่อรายการที่พบซ้ำ', count: '30', detail: 'ชื่อรวม จำนวนแถว จำนวนหน่วยงาน และวงเงินที่เชื่อมโยง' },
   { id: 'cases', label: 'แฟ้มวิเคราะห์', count: '19', detail: 'ข้อค้นพบ คำถาม เอกสาร และขอบเขตการตีความ' },
   { id: 'files', label: 'บัญชีหลักฐาน', count: '694', detail: 'ชื่อไฟล์ เส้นทาง หมวด ขนาด และลิงก์ต้นทาง' },
   { id: 'history', label: 'PBO รายปี', count: '11', detail: 'จำนวนแถว วงเงิน และอัตราเบิกจ่ายตั้งแต่ 2558 ถึง 2568' },
@@ -156,8 +163,10 @@ function DataExplorer() {
       {error && <div className="data-state error">{error}</div>}
       {!loading && !error && <table className="data-table">
         {dataset === 'anomalies' && <><thead><tr><th>รายการและหน่วยงาน</th><th>หลังโอน</th><th>เบิกจ่ายรวม PO</th><th>อัตรา</th><th>คะแนน</th></tr></thead><tbody>{data?.rows.map((row, index) => <tr key={row.id ?? index}><td><strong>{row.item}</strong><small>{row.agency}<br />{row.signals?.map(signalLabel).join(', ')}</small></td><td>{number(row.adjusted)}<small>ล้านบาท</small></td><td>{number(row.committed)}<small>ล้านบาท</small></td><td>{number(row.rate)}<small>ร้อยละ</small></td><td><b>{row.score}</b><small>จาก 100</small></td></tr>)}</tbody></>}
+        {dataset === 'agencies' && <><thead><tr><th>หน่วยงาน</th><th>จำนวนแถว</th><th>วงเงินหลังโอน</th><th>อัตราใช้จ่าย</th><th>สัดส่วน</th></tr></thead><tbody>{data?.rows.map((row, index) => <tr key={`${row.agency}-${index}`}><td><strong>{row.agency}</strong><small>{row.ministry}</small></td><td>{number(row.rows, 0)}<small>แถว</small></td><td>{number(row.adjusted)}<small>ล้านบาท</small></td><td>{number(row.rate)}<small>ร้อยละ</small></td><td><b>{number(row.share, 2)}</b><small>ร้อยละของทั้งชุด</small></td></tr>)}</tbody></>}
+        {dataset === 'patterns' && <><thead><tr><th>ชื่อรายการที่พบซ้ำ</th><th>จำนวนแถว</th><th>จำนวนหน่วยงาน</th><th>วงเงินหลังโอน</th></tr></thead><tbody>{data?.rows.map((row, index) => <tr key={`${row.pattern}-${index}`}><td><strong>{row.pattern}</strong></td><td>{number(row.count, 0)}<small>แถว</small></td><td>{number(row.agencies, 0)}<small>หน่วยงาน</small></td><td>{number(row.adjusted)}<small>ล้านบาท</small></td></tr>)}</tbody></>}
         {dataset === 'cases' && <><thead><tr><th>แฟ้มและหน่วยงาน</th><th>วงเงิน</th><th>อัตรา</th><th>ลำดับอ่าน</th><th>ความพร้อมข้อมูล</th></tr></thead><tbody>{data?.rows.map((row, index) => <tr key={row.id ?? index}><td>{row.sourceUrl ? <a href={row.sourceUrl} target="_blank" rel="noreferrer"><strong>{row.title}</strong></a> : <strong>{row.title}</strong>}<small>{row.agency}<br />{row.statusLabel}</small></td><td>{number(row.budget)}<small>ล้านบาท</small></td><td>{number(row.rate)}<small>ร้อยละ</small></td><td><b>{row.priority}</b><small>จาก 100</small></td><td>{row.completeness}</td></tr>)}</tbody></>}
-        {dataset === 'files' && <><thead><tr><th>ชื่อหลักฐาน</th><th>หมวด</th><th>ตำแหน่งในคลัง</th><th>ขนาด</th></tr></thead><tbody>{data?.rows.map((row, index) => <tr key={row.id ?? index}><td>{row.url ? <a href={row.url} target="_blank" rel="noreferrer"><strong>{row.title}</strong></a> : <strong>{row.title}</strong>}<small>{row.mimeType}</small></td><td>{row.category}</td><td className="path-cell">{row.path || 'โฟลเดอร์หลัก'}</td><td>{bytes(row.size)}</td></tr>)}</tbody></>}
+        {dataset === 'files' && <><thead><tr><th>ชื่อหลักฐาน</th><th>หมวด</th><th>ตำแหน่งในคลัง</th><th>ขนาด</th></tr></thead><tbody>{data?.rows.map((row, index) => <tr key={row.id ?? index}><td>{row.url ? <a href={row.url} target="_blank" rel="noreferrer"><strong>{row.title}</strong></a> : <strong>{row.title}</strong>}<small>{row.type ?? row.mimeType}</small></td><td>{row.category}</td><td className="path-cell">{row.path || 'โฟลเดอร์หลัก'}</td><td>{bytes(row.size)}</td></tr>)}</tbody></>}
         {dataset === 'history' && <><thead><tr><th>ปีงบประมาณ</th><th>จำนวนแถว</th><th>ตาม พ.ร.บ.</th><th>หลังโอน</th><th>เบิกจ่าย</th><th>อัตรา</th></tr></thead><tbody>{data?.rows.map((row) => <tr key={row.year}><td><strong>{row.year}</strong></td><td>{number(row.rows, 0)}</td><td>{number(row.act)}<small>ล้านบาท</small></td><td>{number(row.adjusted)}<small>ล้านบาท</small></td><td>{number(row.paid)}<small>ล้านบาท</small></td><td>{number(row.paid_rate)}<small>ร้อยละ</small></td></tr>)}</tbody></>}
       </table>}
     </div>

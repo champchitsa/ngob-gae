@@ -114,6 +114,8 @@ a { color: inherit; }
 .anomaly-row { width: 100%; display: grid; grid-template-columns: 48px minmax(0, 1fr) 76px; gap: 12px; padding: 16px 13px; border: 0; border-bottom: 1px solid rgba(25,25,22,.24); background: transparent; text-align: left; cursor: pointer; align-items: start; }
 .anomaly-row:hover { background: rgba(255,255,255,.7); }
 .anomaly-row.active { background: white; box-shadow: inset 6px 0 0 var(--orange); }
+.anomaly-more { width: 100%; border: 0; border-bottom: 1px solid var(--ink); background: var(--yellow); padding: 14px; font-size: 12px; font-weight: 900; cursor: pointer; }
+.anomaly-more:hover { background: #ffea2c; }
 .anomaly-score { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--ink); background: var(--yellow); font: 600 15px 'IBM Plex Mono', monospace; }
 .anomaly-copy { min-width: 0; }
 .anomaly-copy strong { display: block; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
@@ -367,7 +369,7 @@ a { color: inherit; }
 
 .data-explorer { padding: 100px 4vw 110px; background: #dcd8ce; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); }
 .data-explorer .workspace-head { margin-bottom: 38px; }
-.dataset-tabs { max-width: 1600px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--ink); border-left: 1px solid var(--ink); }
+.dataset-tabs { max-width: 1600px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--ink); border-left: 1px solid var(--ink); }
 .dataset-tabs button { min-width: 0; min-height: 150px; padding: 18px; border: 0; border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); background: var(--paper); text-align: left; display: grid; grid-template-columns: 1fr auto; align-content: space-between; gap: 12px; cursor: pointer; }
 .dataset-tabs button:hover { background: white; }
 .dataset-tabs button.active { background: var(--yellow); box-shadow: inset 0 -6px 0 var(--orange); }
@@ -447,9 +449,10 @@ a { color: inherit; }
 .chat-head button { flex: 0 0 auto; width: 36px; height: 36px; border: 1px solid #777; background: transparent; color: white; font-size: 24px; line-height: 1; cursor: pointer; }
 .chat-head button:hover { background: var(--yellow); color: var(--ink); border-color: var(--yellow); }
 .chat-focus { padding: 11px 16px 12px; border-bottom: 1px solid var(--ink); background: var(--yellow); display: grid; grid-template-columns: 1fr; gap: 6px; }
-.chat-focus label { font: 700 9px 'IBM Plex Mono', monospace; letter-spacing: .02em; }
+.chat-focus label { font: 700 11px 'IBM Plex Mono', monospace; letter-spacing: .02em; }
+.chat-focus input { width: 100%; min-width: 0; height: 38px; border: 1px solid var(--ink); background: #fffdf6; padding: 0 10px; font-size: 13px; }
 .chat-focus select { width: 100%; min-width: 0; height: 39px; border: 1px solid var(--ink); background: white; padding: 0 34px 0 10px; font-size: 12px; font-weight: 700; text-overflow: ellipsis; }
-.chat-focus small { color: #4e4e48; font-size: 9px; line-height: 1.4; overflow-wrap: anywhere; }
+.chat-focus small { color: #4e4e48; font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
 .chat-messages { min-height: 0; overflow-y: auto; padding: 18px 16px; display: grid; align-content: start; gap: 13px; }
 .chat-message { max-width: 92%; border: 1px solid var(--ink); padding: 13px 14px; background: white; }
 .chat-message.user { justify-self: end; background: var(--blue); color: white; border-color: var(--blue); }
@@ -477,7 +480,7 @@ a { color: inherit; }
 .chat-form button { border: 1px solid var(--ink); background: var(--yellow); min-width: 104px; padding: 9px 11px; font-size: 12px; font-weight: 800; cursor: pointer; }
 .chat-form button:disabled { opacity: .45; cursor: not-allowed; }
 .chat-form button span { margin-left: 9px; }
-.chat-foot { min-height: 30px; padding: 7px 14px; background: var(--ink); color: #aaa; display: flex; justify-content: space-between; gap: 10px; font: 500 8px 'IBM Plex Mono', monospace; }
+.chat-foot { min-height: 34px; padding: 8px 14px; background: var(--ink); color: #bdbdb6; display: flex; justify-content: space-between; gap: 10px; font: 500 10px 'IBM Plex Mono', monospace; }
 
 @media (min-width: 1101px) {
   .app-shell { padding-right: 62px; }

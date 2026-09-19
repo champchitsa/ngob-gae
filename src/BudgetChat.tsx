@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import type { AnomalyItem } from './bigData'
 
 type Source = { label: string; detail: string; url: string }
@@ -28,6 +28,7 @@ const welcome: Message = {
 function BudgetChat({ activeItem, items, open, onOpen, onClose, onSelectItem }: BudgetChatProps) {
   const [messages, setMessages] = useState<Message[]>([welcome])
   const [question, setQuestion] = useState('')
+  const [itemQuery, setItemQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -48,6 +49,14 @@ function BudgetChat({ activeItem, items, open, onOpen, onClose, onSelectItem }: 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  const matchingItems = useMemo(() => {
+    const needle = itemQuery.trim().toLocaleLowerCase('th')
+    return items
+      .filter((item) => !needle || `${item.item} ${item.agency} ${item.ministry} ${item.project}`.toLocaleLowerCase('th').includes(needle))
+      .slice(0, 200)
+  }, [itemQuery, items])
+  const activeItemIsListed = matchingItems.some((item) => item.id === activeItem.id)
 
   const ask = async (value = question) => {
     const nextQuestion = value.trim()
@@ -93,6 +102,7 @@ function BudgetChat({ activeItem, items, open, onOpen, onClose, onSelectItem }: 
     onSelectItem(id)
     setMessages([welcome])
     setQuestion('')
+    setItemQuery('')
     window.setTimeout(() => inputRef.current?.focus(), 0)
   }
 
@@ -105,11 +115,15 @@ function BudgetChat({ activeItem, items, open, onOpen, onClose, onSelectItem }: 
           <button onClick={onClose} aria-label="ปิดผู้ช่วยถามตอบ">×</button>
         </header>
         <div className="chat-focus">
-          <label htmlFor="chat-budget-item">เลือกรายการงบที่จะถาม ({items.length.toLocaleString('th-TH')} รายการ)</label>
+          <label htmlFor="chat-budget-search">ค้นและเลือกรายการงบ ({items.length.toLocaleString('th-TH')} รายการ)</label>
+          <input id="chat-budget-search" value={itemQuery} onChange={(event) => setItemQuery(event.target.value)} placeholder="พิมพ์ชื่อรายการ หน่วยงาน หรือโครงการ" />
           <select id="chat-budget-item" value={activeItem.id} onChange={(event) => selectItem(event.target.value)}>
-            {items.map((item) => <option value={item.id} key={item.id}>{item.score} คะแนน | {item.item} | {item.agency}</option>)}
+            {!activeItemIsListed && <optgroup label="รายการที่เลือกอยู่"><option value={activeItem.id}>{activeItem.score} คะแนน | {activeItem.item} | {activeItem.agency}</option></optgroup>}
+            <optgroup label={itemQuery ? `ผลค้นหา ${matchingItems.length.toLocaleString('th-TH')} รายการ` : 'รายการคะแนนสูงสุด 200 รายการ'}>
+              {matchingItems.map((item) => <option value={item.id} key={item.id}>{item.score} คะแนน | {item.item} | {item.agency}</option>)}
+            </optgroup>
           </select>
-          <small>{activeItem.agency} | หลังโอน {activeItem.adjusted.toLocaleString('th-TH')} ล้านบาท | คะแนน {activeItem.score}/100</small>
+          <small>{itemQuery ? `พบและแสดงไม่เกิน 200 รายการ | ` : ''}{activeItem.agency} | หลังโอน {activeItem.adjusted.toLocaleString('th-TH')} ล้านบาท | คะแนน {activeItem.score}/100</small>
         </div>
         <div className="chat-messages" aria-live="polite">
           {messages.map((message, index) => <article className={`chat-message ${message.role}`} key={`${message.role}-${index}`}>
@@ -126,7 +140,7 @@ function BudgetChat({ activeItem, items, open, onOpen, onClose, onSelectItem }: 
           <textarea id="budget-question" ref={inputRef} value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={handleKey} placeholder="เช่น งบสำนักงานประกันสังคมมีจุดใดที่ควรกระทบยอด" rows={3} maxLength={1800} />
           <div><small>Enter เพื่อส่งคำถาม และ Shift + Enter เพื่อขึ้นบรรทัดใหม่</small><button disabled={!question.trim() || loading} type="submit">{loading ? 'กำลังตอบ' : 'ส่งคำถาม'} <span>↗</span></button></div>
         </form>
-        <footer className="chat-foot"><span>เทคโนโลยีภาษา Pathumma โดย NECTEC</span><span>อ้างอิงข้อมูล ณ 19 ก.ย. 2569</span></footer>
+        <footer className="chat-foot"><span>เทคโนโลยีภาษา Pathumma โดย NECTEC</span><span>ประมวลผลคลังเมื่อ 19 ก.ย. 2569</span></footer>
       </aside>
     </div>}
   </>

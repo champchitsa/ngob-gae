@@ -17,6 +17,8 @@ function loadData() {
 
 const datasetLabels = {
   anomalies: 'รายการคัดกรอง PBO 2568',
+  agencies: 'ภาพรวมหน่วยงานวงเงินสูง',
+  patterns: 'ชื่อรายการที่พบซ้ำ',
   cases: 'แฟ้มวิเคราะห์พร้อมใช้',
   files: 'บัญชีหลักฐานทั้งหมด',
   history: 'อนุกรมเวลา PBO 11 ปี',
@@ -42,6 +44,18 @@ function selectDataset(name, source) {
     source: source.big.meta.source_url,
     columns: ['item', 'agency', 'ministry', 'adjusted', 'committed', 'rate', 'score', 'signals'],
   }
+  if (name === 'agencies') return {
+    rows: source.big.agencies,
+    filterField: 'ministry',
+    source: source.big.meta.source_url,
+    columns: ['agency', 'ministry', 'rows', 'adjusted', 'committed', 'rate', 'share'],
+  }
+  if (name === 'patterns') return {
+    rows: source.big.repeated_patterns,
+    filterField: null,
+    source: source.big.meta.source_url,
+    columns: ['pattern', 'count', 'agencies', 'adjusted'],
+  }
   if (name === 'cases') return {
     rows: source.cases,
     filterField: 'themes',
@@ -52,7 +66,7 @@ function selectDataset(name, source) {
     rows: source.inventory.files,
     filterField: 'category',
     source: source.inventory.rootUrl,
-    columns: ['title', 'path', 'category', 'size', 'mimeType', 'url'],
+    columns: ['title', 'path', 'category', 'size', 'type', 'url'],
   }
   if (name === 'history') return {
     rows: source.history.series,
@@ -87,6 +101,8 @@ export default function handler(request, response) {
   if (filter && selected.filterField) rows = rows.filter((row) => Array.isArray(row[selected.filterField]) ? row[selected.filterField].includes(filter) : row[selected.filterField] === filter)
 
   if (dataset === 'anomalies') rows = [...rows].sort((a, b) => b.score - a.score || b.adjusted - a.adjusted)
+  if (dataset === 'agencies') rows = [...rows].sort((a, b) => b.adjusted - a.adjusted)
+  if (dataset === 'patterns') rows = [...rows].sort((a, b) => b.adjusted - a.adjusted || b.count - a.count)
   if (dataset === 'cases') rows = [...rows].sort((a, b) => b.priority - a.priority)
   if (dataset === 'history') rows = [...rows].sort((a, b) => a.year - b.year)
 
@@ -101,6 +117,8 @@ export default function handler(request, response) {
       columns: selected.columns,
       source: selected.source,
       dataCut: '2569-09-19',
+      processedAt: '2569-09-19',
+      sourcePeriod: 'ตามปีและวันที่ที่ระบุในเอกสารต้นทาง',
       units: { money: 'ล้านบาท', size: 'ไบต์' },
     },
     facets,
