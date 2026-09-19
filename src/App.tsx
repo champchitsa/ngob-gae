@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { cases, corpusCollections, lawCards, methodology, sourceNotes, themes, type CaseFile, type ThemeId } from './data'
-import { bigData, signalQuestions, type SignalId } from './bigData'
+import { bigData, investigationPath, legalActionMap, signalLawMap, signalQuestions, type AnomalyItem, type SignalId } from './bigData'
 
 type DriveFile = {
   id: string
@@ -23,6 +23,7 @@ type DriveInventory = {
 
 type PboYear = { year: number; rows: number; act: number; adjusted: number; paid: number; paid_rate: number | null }
 type PboHistory = { years: number; row_count: number; series: PboYear[] }
+type SignalSort = 'score' | 'amount' | 'movement' | 'execution'
 
 const formatMoney = (value: number) =>
   new Intl.NumberFormat('th-TH', { maximumFractionDigits: value < 100 ? 1 : 0 }).format(value)
@@ -54,7 +55,12 @@ function App() {
   const [archiveQuery, setArchiveQuery] = useState('')
   const [archiveCategory, setArchiveCategory] = useState('all')
   const [archiveLimit, setArchiveLimit] = useState(18)
+  const [fullAnomalies, setFullAnomalies] = useState<AnomalyItem[]>([])
+  const [anomalyQuery, setAnomalyQuery] = useState('')
+  const [anomalySort, setAnomalySort] = useState<SignalSort>('score')
+  const [anomalyCopied, setAnomalyCopied] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
+  const anomalySearchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -71,6 +77,7 @@ function App() {
   useEffect(() => {
     fetch('/data/drive-inventory.json').then((response) => response.json()).then(setInventory).catch(() => undefined)
     fetch('/data/pbo-history.json').then((response) => response.json()).then(setHistory).catch(() => undefined)
+    fetch('/data/big-data-findings.json').then((response) => response.json()).then((data) => setFullAnomalies(data.items ?? [])).catch(() => undefined)
   }, [])
 
   const filtered = useMemo(() => {
@@ -87,10 +94,19 @@ function App() {
 
   const active = cases.find((item) => item.id === activeId) ?? filtered[0] ?? cases[0]
 
-  const anomalyItems = useMemo(
-    () => bigData.items.filter((item) => activeSignal === 'all' || item.signals.includes(activeSignal)),
-    [activeSignal],
-  )
+  const analysisItems = fullAnomalies.length ? fullAnomalies : bigData.items
+  const anomalyItems = useMemo(() => {
+    const needle = anomalyQuery.trim().toLocaleLowerCase('th')
+    const items = analysisItems
+      .filter((item) => activeSignal === 'all' || item.signals.includes(activeSignal))
+      .filter((item) => !needle || [item.item, item.agency, item.ministry, item.project].join(' ').toLocaleLowerCase('th').includes(needle))
+    return [...items].sort((a, b) => {
+      if (anomalySort === 'amount') return b.adjusted - a.adjusted
+      if (anomalySort === 'movement') return Math.abs(b.delta) - Math.abs(a.delta)
+      if (anomalySort === 'execution') return (a.rate ?? Number.POSITIVE_INFINITY) - (b.rate ?? Number.POSITIVE_INFINITY)
+      return b.score - a.score
+    })
+  }, [activeSignal, analysisItems, anomalyQuery, anomalySort])
 
   useEffect(() => {
     if (anomalyItems.length && !anomalyItems.some((item) => item.id === activeAnomalyId)) {
@@ -98,8 +114,9 @@ function App() {
     }
   }, [anomalyItems, activeAnomalyId])
 
-  const activeAnomaly = bigData.items.find((item) => item.id === activeAnomalyId) ?? anomalyItems[0] ?? bigData.items[0]
+  const activeAnomaly = analysisItems.find((item) => item.id === activeAnomalyId) ?? anomalyItems[0] ?? bigData.items[0]
   const activeAnomalyQuestions = [...new Set(activeAnomaly.signals.flatMap((signal) => signalQuestions[signal]))].slice(0, 6)
+  const activeAnomalyLaws = [...new Set(activeAnomaly.signals.flatMap((signal) => signalLawMap[signal]))]
 
   const archiveFiles = useMemo(() => {
     if (!inventory) return []
@@ -122,6 +139,13 @@ function App() {
     window.setTimeout(() => setCopied(false), 1600)
   }
 
+  const copyAnomalyBrief = async () => {
+    const text = `${activeAnomaly.item}\nหน่วยงาน: ${activeAnomaly.agency}\nโครงการ: ${activeAnomaly.project}\nตาม พ.ร.บ.: ${formatMoney(activeAnomaly.act)} ล้านบาท\nหลังโอน: ${formatMoney(activeAnomaly.adjusted)} ล้านบาท\nเปลี่ยนแปลง: ${formatMoney(activeAnomaly.delta)} ล้านบาท\nเบิกจ่ายรวม PO: ${activeAnomaly.rate === null ? 'ไม่มีค่าระดับรายการ' : `${formatMoney(activeAnomaly.committed)} ล้านบาท (${activeAnomaly.rate}%)`}\n\nเงื่อนไขคัดกรอง\n${activeAnomaly.signals.map((signal) => `- ${bigData.flags.find((flag) => flag.id === signal)?.label}`).join('\n')}\n\nคำถามตรวจต่อ\n${activeAnomalyQuestions.map((question, index) => `${index + 1}. ${question}`).join('\n')}\n\nกฎหมายที่เกี่ยวข้อง\n${activeAnomalyLaws.map((law) => `- ${law}`).join('\n')}\n\nที่มา: ${bigData.meta.sourceUrl}`
+    await navigator.clipboard.writeText(text)
+    setAnomalyCopied(true)
+    window.setTimeout(() => setAnomalyCopied(false), 1600)
+  }
+
   const downloadData = () => {
     const blob = new Blob([JSON.stringify(filtered, null, 2)], { type: 'application/json;charset=utf-8' })
     const url = URL.createObjectURL(blob)
@@ -142,7 +166,7 @@ function App() {
           <button onClick={() => document.getElementById('signals')?.scrollIntoView()}>Big Data</button>
           <button onClick={() => document.getElementById('workspace')?.scrollIntoView()}>โต๊ะแกะ</button>
           <button onClick={() => document.getElementById('archive')?.scrollIntoView()}>คลัง 694 ไฟล์</button>
-          <button onClick={() => setPanel('law')}>ตัวบทกฎหมาย</button>
+          <button onClick={() => document.getElementById('law-workbench')?.scrollIntoView()}>กฎหมายลงมือใช้</button>
         </nav>
         <div className="data-stamp"><i /> DATA CUT 19.09.69</div>
       </header>
@@ -154,9 +178,10 @@ function App() {
             <h1><span>งบก้อนนี้</span><mark>ใช้ทำอะไร</mark><span>ได้ผลแค่ไหน</span></h1>
             <p>ค้นและวิเคราะห์งบจากหลักฐาน 694 ไฟล์ ตั้งแต่ภาพรวมประเทศถึงรายการโครงการ พร้อมตัวเลขผิดสังเกต เอกสารต้นทาง และคำถามสำหรับตรวจต่อ</p>
             <div className="hero-actions">
-              <a className="primary-action" href="#signals">ดูรายการผิดสังเกต <span>↓</span></a>
+              <a className="primary-action" href="#signals" onClick={() => window.setTimeout(() => anomalySearchRef.current?.focus(), 500)}>ค้น 179 รายการผิดสังเกต <span>↓</span></a>
               <a className="text-action" href="#archive">ค้นหลักฐานทั้งหมด</a>
             </div>
+            <div className="hero-proof" role="list" aria-label="จุดเด่นเครื่องมือ"><span role="listitem"><b>179</b> รายการจัดอันดับ</span><span role="listitem"><b>7</b> เงื่อนไขคัดกรอง</span><span role="listitem"><b>5</b> ขั้นตามหลักฐาน</span></div>
           </div>
           <div className="evidence-board" role="region" aria-label="สรุปชุดข้อมูล">
             <div className="board-label">คลังหลักฐาน / สำรวจครบทั้ง Drive</div>
@@ -205,28 +230,35 @@ function App() {
 
           <div className="flag-rack" role="tablist" aria-label="เงื่อนไขคัดกรอง">
             <button className={activeSignal === 'all' ? 'active' : ''} onClick={() => setActiveSignal('all')} role="tab" aria-selected={activeSignal === 'all'}>
-              <span>ทุกเงื่อนไข</span><strong>{bigData.items.length}</strong><small>รายการตัวอย่างจัดอันดับ</small>
+              <span>ทุกเงื่อนไข</span><strong>{analysisItems.length}</strong><small>รายการจัดอันดับที่เปิดดูได้</small>
             </button>
             {bigData.flags.map((flag) => <button key={flag.id} className={activeSignal === flag.id ? 'active' : ''} onClick={() => setActiveSignal(flag.id)} role="tab" aria-selected={activeSignal === flag.id} title={flag.definition}>
               <span>{flag.label}</span><strong>{flag.count.toLocaleString('th-TH')}</strong><small>{formatMoney(flag.amount)} ล้านบาท</small>
             </button>)}
           </div>
-          <div className="flag-tools"><p className="flag-note">รายการหนึ่งอาจเข้าได้หลายเงื่อนไข จำนวนจึงนำมาบวกกันตรงๆ ไม่ได้</p><a href="/data/big-data-findings.json" download>ดาวน์โหลดผลเต็ม 179 รายการ .JSON</a></div>
+          <div className="flag-tools"><p className="flag-note">รายการหนึ่งอาจเข้าได้หลายเงื่อนไข จำนวนจึงนำมาบวกกันตรงๆ ไม่ได้</p><a href="/data/big-data-findings.json" download>ดาวน์โหลดผลเต็ม {analysisItems.length} รายการ .JSON</a></div>
+
+          <div className="anomaly-controls">
+            <label className="anomaly-search"><span>⌕</span><input ref={anomalySearchRef} value={anomalyQuery} onChange={(event) => setAnomalyQuery(event.target.value)} placeholder="ค้นชื่อรายการ หน่วยงาน กระทรวง หรือโครงการ" /></label>
+            <label className="anomaly-sort"><span>เรียงตาม</span><select value={anomalySort} onChange={(event) => setAnomalySort(event.target.value as SignalSort)}><option value="score">คะแนนคัดกรอง</option><option value="amount">วงเงินหลังโอน</option><option value="movement">มูลค่าที่เปลี่ยน</option><option value="execution">อัตราใช้จ่ายต่ำก่อน</option></select></label>
+            <div className="anomaly-count" aria-live="polite"><strong>{anomalyItems.length.toLocaleString('th-TH')}</strong><span>รายการที่ตรงเงื่อนไข</span></div>
+          </div>
 
           <div className="signal-desk">
             <aside className="anomaly-list" aria-label="รายการผิดสังเกตจากข้อมูลขนาดใหญ่">
-              <div className="list-head"><span>เรียงตามคะแนนคัดกรอง</span><strong>{anomalyItems.length} รายการ</strong></div>
+              <div className="list-head"><span>รายการสำหรับเปิดหลักฐาน</span><strong>{anomalyItems.length} รายการ</strong></div>
               {anomalyItems.map((item) => <button key={item.id} className={`anomaly-row ${activeAnomaly.id === item.id ? 'active' : ''}`} onClick={() => setActiveAnomalyId(item.id)}>
                 <span className="anomaly-score">{item.score}</span>
                 <span className="anomaly-copy"><strong>{item.item}</strong><small>{item.agency}</small></span>
                 <span className="anomaly-money">{formatMoney(item.adjusted)}<small>ล้าน</small></span>
               </button>)}
+              {anomalyItems.length === 0 && <div className="anomaly-empty"><strong>ไม่พบรายการที่ตรงกัน</strong><button onClick={() => { setAnomalyQuery(''); setActiveSignal('all') }}>ล้างคำค้นและเงื่อนไข</button></div>}
             </aside>
 
-            <article className="anomaly-file" key={activeAnomaly.id}>
+            {anomalyItems.length > 0 ? <article className="anomaly-file" key={activeAnomaly.id}>
               <div className="anomaly-topline">
                 <span>ANOMALY #{activeAnomaly.id.slice(0, 6).toUpperCase()}</span>
-                <strong>{activeAnomaly.score}<small>/100</small></strong>
+                <div className="anomaly-actions"><button onClick={copyAnomalyBrief} aria-live="polite">{anomalyCopied ? 'คัดลอกแล้ว' : 'คัดลอกใบตรวจ'}</button><button onClick={() => document.getElementById('law-workbench')?.scrollIntoView()}>ดูกฎหมาย</button><strong>{activeAnomaly.score}<small>/100</small></strong></div>
               </div>
               <div className="signal-tags">{activeAnomaly.signals.map((signal) => <span key={signal}>{bigData.flags.find((flag) => flag.id === signal)?.label}</span>)}</div>
               <h3>{activeAnomaly.item}</h3>
@@ -244,13 +276,19 @@ function App() {
                 <strong>สิ่งที่ควรเปิดดูต่อ</strong>
                 <ol>{activeAnomalyQuestions.map((question) => <li key={question}>{question}</li>)}</ol>
               </div>
+              <div className="anomaly-law-row"><strong>กฎหมายที่ใช้เดินต่อ</strong><div>{activeAnomalyLaws.map((law) => <button key={law} onClick={() => document.getElementById('law-workbench')?.scrollIntoView()}>{law}</button>)}</div></div>
               <div className="anomaly-source"><span>แหล่งข้อมูล PBO ปี 2568</span><a href={bigData.meta.sourceUrl} target="_blank" rel="noreferrer">เปิดไฟล์ต้นทาง ↗</a></div>
-            </article>
+            </article> : <article className="anomaly-file anomaly-file-empty"><span>NO MATCH</span><h3>ยังไม่มีรายการที่ตรงทั้งคำค้นและเงื่อนไข</h3><p>ลองล้างคำค้นหรือเลือกทุกเงื่อนไข แล้วเริ่มจากรายการที่คะแนนสูงสุด</p><button onClick={() => { setAnomalyQuery(''); setActiveSignal('all') }}>แสดง 179 รายการทั้งหมด</button></article>}
           </div>
+
+          <section className="evidence-path" aria-labelledby="evidence-path-title">
+            <div className="path-head"><span className="panel-kicker">NUMBER TO ACCOUNTABILITY</span><h3 id="evidence-path-title">จากตัวเลขหนึ่งแถว ไปถึงคำตอบที่ตรวจได้</h3><p>ตัวเลขผิดสังเกตมีค่าเมื่อพาไปถึงการอนุมัติ การจัดซื้อ การส่งมอบ และผลที่ประชาชนได้รับ</p></div>
+            <div className="path-grid">{investigationPath.map((stage) => <article key={stage.step}><span>{stage.step}</span><h4>{stage.title}</h4><strong>{stage.question}</strong><p>{stage.evidence}</p><small>{stage.law}</small></article>)}</div>
+          </section>
 
           <div className="deep-grid">
             <article className="deep-card theme-card">
-              <span className="panel-kicker">4 WORKSTREAMS</span><h3>งบตามหัวข้อที่ใช้ในวันงาน</h3>
+              <span className="panel-kicker">6 WORKSTREAMS</span><h3>งบตามหัวข้อที่ใช้ในวันงาน</h3>
               {bigData.themes.map((theme) => <div className="theme-line" key={theme.id}>
                 <div><strong>{theme.label}</strong><small>{theme.rows.toLocaleString('th-TH')} แถว</small></div>
                 <div><b>{formatMoney(theme.adjusted)} ลบ.</b><span>{theme.rate}%</span></div>
@@ -269,6 +307,11 @@ function App() {
               {bigData.repeatedPatterns.map((pattern) => <div className="pattern-row" key={pattern.pattern}><strong>{pattern.pattern}</strong><span>{pattern.count.toLocaleString('th-TH')} แถว</span><b>{formatMoney(pattern.adjusted)} ล้านบาท</b></div>)}
             </article>
           </div>
+
+          <section className="legal-workbench" id="law-workbench" aria-labelledby="law-workbench-title">
+            <div className="legal-head"><div><span className="panel-kicker">LAW TO ACTION</span><h3 id="law-workbench-title">กฎหมายที่เปลี่ยนข้อสงสัยเป็นรายการเอกสาร</h3></div><p>เลือกตัวบทตามลักษณะสัญญาณ แล้วขอหลักฐานที่ทำให้หน่วยงานตอบได้เป็นข้อ ไม่หยุดแค่คำอธิบายกว้างๆ</p></div>
+            <div className="legal-grid">{legalActionMap.map((law, index) => <article key={law.code}><span>{String(index + 1).padStart(2, '0')}</span><h4>{law.code}</h4><strong>{law.title}</strong><div><b>ใช้เมื่อ</b><p>{law.trigger}</p></div><div><b>เอกสารที่ควรขอ</b><p>{law.request}</p></div><a href={law.url} target="_blank" rel="noreferrer">เปิดตัวบทจากหน่วยงานทางการ ↗</a></article>)}</div>
+          </section>
         </section>
 
         <section className="workspace" id="workspace">
