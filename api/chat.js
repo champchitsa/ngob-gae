@@ -43,7 +43,7 @@ const signalLabels = {
   new_after_act: 'มีวงเงินหลังโอน ทั้งที่วงเงินตั้งต้นเป็นศูนย์หรือว่าง',
   transfer_up: 'วงเงินเพิ่มจากกรอบตั้งต้นอย่างมีนัย',
   transfer_down: 'วงเงินลดจากกรอบตั้งต้นอย่างมีนัย',
-  missing_execution: 'ไม่พบตัวเลข PO และยอดเบิกจ่ายในระดับแถว',
+  missing_execution: 'ไม่พบตัวเลขยอดผูกพัน (PO) และยอดเบิกจ่ายในระดับแถว',
   low_execution: 'ยอดเบิกจ่ายรวมยอดผูกพัน (PO) ต่ำกว่า 35% ของวงเงินหลังโอน',
   over_execution: 'ยอดที่รายงานสูงกว่าวงเงินหลังโอนเกิน 5%',
   vague_title: 'ชื่อรายการกว้างหรือเป็นรหัส จึงยังไม่เห็นรายละเอียดสิ่งที่จัดหา',
@@ -205,11 +205,11 @@ function buildEvidenceAnswer(question, selectedCases, selectedItems) {
       const reasons = item.signals.map((signal) => signalLabels[signal]).filter(Boolean)
       const documents = [...new Set(item.signals.flatMap((signal) => signalGuides[signal]?.docs ?? []))].slice(0, 4)
       const execution = item.rate === null
-        ? 'ไม่พบตัวเลขยอดเบิกจ่ายและยอดผูกพันในระดับแถว'
-        : `${item.committed.toLocaleString('th-TH')} ล้านบาท คิดเป็น ${item.rate}% ของวงเงินหลังโอน`
+        ? 'ไม่พบตัวเลขยอดผูกพัน (PO) และยอดเบิกจ่ายในระดับแถว'
+        : `ยอดเบิกจ่ายรวมยอดผูกพัน (PO) ${item.committed.toLocaleString('th-TH')} ล้านบาท คิดเป็น ${item.rate}% ของวงเงินหลังโอน`
       const reasonLines = reasons.map((reason, reasonIndex) => `${reasonIndex + 1}) ${reason}`).join('\n')
       const documentLines = documents.map((document, documentIndex) => `${documentIndex + 1}) ${document}`).join('\n')
-      return `${index + 1}. ${item.item} [รายการ ${index + 1}]\nหน่วยงาน: ${item.agency}\n\nข้อเท็จจริงจากข้อมูล\nวงเงินตาม พ.ร.บ. ${item.act.toLocaleString('th-TH')} ล้านบาท\nวงเงินหลังโอน ${item.adjusted.toLocaleString('th-TH')} ล้านบาท\nยอดเบิกจ่ายรวมยอดผูกพัน (PO) ${execution}\n\nเหตุที่ควรตรวจต่อ\n${reasonLines}\n\nเอกสารที่ควรเริ่มขอ\n${documentLines}`
+      return `${index + 1}. ${item.item} [รายการ ${index + 1}]\nหน่วยงาน: ${item.agency}\n\nข้อเท็จจริงจากข้อมูล\nวงเงินตาม พ.ร.บ. ${item.act.toLocaleString('th-TH')} ล้านบาท\nวงเงินหลังโอน ${item.adjusted.toLocaleString('th-TH')} ล้านบาท\n${execution}\n\nเหตุที่ควรตรวจต่อ\n${reasonLines}\n\nเอกสารที่ควรเริ่มขอ\n${documentLines}`
     })
     return `รายการที่ควรตรวจต่อจากข้อมูลผลการเบิกจ่ายปี 2568\n\n${sections.join('\n\n')}\n\nลำดับถัดไป\nเชื่อมคำอนุมัติ รายละเอียดรายการ TOR ราคากลาง สัญญา และผลตรวจรับเข้าด้วยกัน แล้วจึงประเมินความคุ้มค่าหรือสรุปสาเหตุ`
   }
