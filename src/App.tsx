@@ -1,8 +1,36 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { cases, lawCards, methodology, sourceNotes, themes, type CaseFile, type ThemeId } from './data'
+import { cases, corpusCollections, lawCards, methodology, sourceNotes, themes, type CaseFile, type ThemeId } from './data'
+
+type DriveFile = {
+  id: string
+  title: string
+  path: string
+  category: string
+  url: string
+  size: number
+  mimeType: string
+}
+
+type DriveInventory = {
+  scannedAt: string
+  rootUrl: string
+  fileCount: number
+  folderCount: number
+  totalBytes: number
+  files: DriveFile[]
+}
+
+type PboYear = { year: number; rows: number; act: number; adjusted: number; paid: number; paid_rate: number | null }
+type PboHistory = { years: number; row_count: number; series: PboYear[] }
 
 const formatMoney = (value: number) =>
   new Intl.NumberFormat('th-TH', { maximumFractionDigits: value < 100 ? 1 : 0 }).format(value)
+
+const formatBytes = (value: number) => {
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)} GB`
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)} MB`
+  return `${Math.max(1, Math.round(value / 1000))} KB`
+}
 
 const statusIcon: Record<CaseFile['status'], string> = {
   gap: '◌',
@@ -18,6 +46,11 @@ function App() {
   const [activeId, setActiveId] = useState(cases[0].id)
   const [panel, setPanel] = useState<'method' | 'law' | 'sources' | null>(null)
   const [copied, setCopied] = useState(false)
+  const [inventory, setInventory] = useState<DriveInventory | null>(null)
+  const [history, setHistory] = useState<PboHistory | null>(null)
+  const [archiveQuery, setArchiveQuery] = useState('')
+  const [archiveCategory, setArchiveCategory] = useState('all')
+  const [archiveLimit, setArchiveLimit] = useState(18)
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -30,6 +63,11 @@ function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  useEffect(() => {
+    fetch('/data/drive-inventory.json').then((response) => response.json()).then(setInventory).catch(() => undefined)
+    fetch('/data/pbo-history.json').then((response) => response.json()).then(setHistory).catch(() => undefined)
   }, [])
 
   const filtered = useMemo(() => {
@@ -45,6 +83,20 @@ function App() {
   }, [filtered, activeId])
 
   const active = cases.find((item) => item.id === activeId) ?? filtered[0] ?? cases[0]
+
+  const archiveFiles = useMemo(() => {
+    if (!inventory) return []
+    const needle = archiveQuery.trim().toLocaleLowerCase('th')
+    return inventory.files.filter((file) => {
+      const categoryMatch = archiveCategory === 'all' || file.category === archiveCategory
+      const queryMatch = !needle || `${file.title} ${file.path} ${file.category}`.toLocaleLowerCase('th').includes(needle)
+      return categoryMatch && queryMatch
+    })
+  }, [inventory, archiveCategory, archiveQuery])
+
+  useEffect(() => setArchiveLimit(18), [archiveCategory, archiveQuery])
+
+  const maxHistoryBudget = Math.max(...(history?.series.map((item) => item.adjusted) ?? [1]))
 
   const copyBrief = async () => {
     const text = `${active.title}\nหน่วยงาน: ${active.agency}\nข้อสังเกต: ${active.lead}\n\nคำถามตรวจต่อ\n${active.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}\n\nเอกสารที่ควรขอ\n${active.requestDocs.map((d, i) => `${i + 1}. ${d}`).join('\n')}\n\nที่มา: ${active.sourceUrl}`
@@ -71,6 +123,7 @@ function App() {
         </a>
         <nav className="topnav" aria-label="เมนูหลัก">
           <button onClick={() => setPanel('method')}>วิธีแกะ</button>
+          <button onClick={() => document.getElementById('archive')?.scrollIntoView()}>คลัง 694 ไฟล์</button>
           <button onClick={() => setPanel('law')}>ตัวบทกฎหมาย</button>
           <button onClick={() => setPanel('sources')}>แหล่งข้อมูล</button>
         </nav>
@@ -89,17 +142,17 @@ function App() {
             </div>
           </div>
           <div className="evidence-board" role="region" aria-label="สรุปชุดข้อมูล">
-            <div className="board-label">แฟ้มตั้งต้น / FY 2568</div>
-            <div className="big-number">241,159</div>
-            <div className="number-caption">แถวที่อ่านจากฐาน PBO</div>
-            <div className="tape tape-one">ต้องตรวจต่อ ≠ พบการทุจริต</div>
+            <div className="board-label">คลังหลักฐาน / สำรวจครบทั้ง Drive</div>
+            <div className="big-number">694</div>
+            <div className="number-caption">ไฟล์ใน 113 โฟลเดอร์ รวม 6.67 GB</div>
+            <div className="tape tape-one">ไล่จากยอดรวมถึงเอกสารต้นทาง</div>
             <div className="board-grid">
-              <div><strong>3.7527</strong><span>ล้านล้านบาท<br />วงเงินตาม พ.ร.บ.</span></div>
-              <div><strong>15</strong><span>แฟ้มตัวอย่าง<br />พร้อมคำถาม</span></div>
+              <div><strong>124</strong><span>workbook<br />เปิดอ่านครบ</span></div>
+              <div><strong>{cases.length}</strong><span>แฟ้มวิเคราะห์<br />พร้อมคำถาม</span></div>
               <div><strong>5</strong><span>ฐานกฎหมาย<br />สำหรับตรวจต่อ</span></div>
-              <div><strong>2</strong><span>ชุดหลัก<br />PBO + สปส.</span></div>
+              <div><strong>11</strong><span>ปี PBO<br />2558 ถึง 2568</span></div>
             </div>
-            <div className="scribble">ตัวเลขเป็นจุดเริ่ม<br />ไม่ใช่คำตัดสิน</div>
+            <div className="scribble">ทุกตัวเลขมีที่มา<br />ทุกคำถามมีทางไปต่อ</div>
           </div>
         </section>
 
@@ -107,7 +160,7 @@ function App() {
           <div><span>01</span><strong>เห็นความต่าง</strong><p>เทียบตั้งต้น หลังโอน และผลเบิกจ่าย</p></div>
           <div><span>02</span><strong>เห็นช่องว่าง</strong><p>แยกข้อมูลไม่ครบออกจากยอดศูนย์</p></div>
           <div><span>03</span><strong>ตามเอกสาร</strong><p>ไปต่อถึง TOR สัญญา งวดงาน และผลลัพธ์</p></div>
-          <div><span>04</span><strong>ถามอย่างเป็นธรรม</strong><p>ธงความเสี่ยงเป็นจุดเริ่ม ไม่ใช่ข้อกล่าวหา</p></div>
+          <div><span>04</span><strong>ส่งต่อให้ตรวจได้</strong><p>ทุกข้อสังเกตมีคำถาม เอกสาร และลิงก์ต้นทาง</p></div>
         </section>
 
         <section className="workspace" id="workspace">
@@ -180,7 +233,7 @@ function App() {
                   <ul className="evidence-list">{active.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
                 </section>
                 <section className="caution-box">
-                  <h4>อย่าเพิ่งสรุปว่า</h4>
+                  <h4>ข้อมูลที่ต้องเชื่อมเพิ่ม</h4>
                   <p>{active.caution}</p>
                 </section>
               </div>
@@ -202,7 +255,7 @@ function App() {
               </div>
 
               <section className="score-method">
-                <div className="score-head"><h4>ที่มาคะแนนคัดกรอง</h4><span>ใช้จัดคิวอ่าน ไม่ใช่คะแนนทุจริต</span></div>
+                <div className="score-head"><h4>ที่มาคะแนนคัดกรอง</h4><span>คะแนนสำหรับจัดคิวอ่าน</span></div>
                 {Object.entries({ 'มูลค่า': active.score.value, 'การใช้จ่าย': active.score.execution, 'การโอน': active.score.movement, 'ความชัดเจน': active.score.clarity }).map(([label, value]) => <div className="score-line" key={label}><span>{label}</span><div><i style={{ width: `${value * 4}%` }} /></div><b>{value}/25</b></div>)}
               </section>
 
@@ -214,10 +267,84 @@ function App() {
           </div>
         </section>
 
+        <section className="archive" id="archive">
+          <div className="workspace-head">
+            <div><span className="section-no">02 / EVIDENCE ARCHIVE</span><h2>คลังหลักฐาน 694 ไฟล์</h2></div>
+            <p>ค้นจากชื่อไฟล์ เส้นทาง และหมวดข้อมูลได้ทันที ทุกผลลัพธ์เปิดกลับไปยังไฟล์ต้นทางใน Drive</p>
+          </div>
+
+          <div className="corpus-stats" role="group" aria-label="ภาพรวมคลังข้อมูล">
+            <div><strong>694</strong><span>ไฟล์ทั้งหมด</span></div>
+            <div><strong>113</strong><span>โฟลเดอร์ที่สำรวจ</span></div>
+            <div><strong>559</strong><span>เอกสาร PDF</span></div>
+            <div><strong>124</strong><span>workbook ที่อ่านได้</span></div>
+            <div><strong>856</strong><span>ชีตที่ตรวจโครงสร้าง</span></div>
+            <div><strong>6.67 GB</strong><span>ขนาดรวมทั้งคลัง</span></div>
+          </div>
+
+          <div className="collection-grid">
+            {corpusCollections.slice(1).map((collection) => (
+              <button key={collection.id} className={archiveCategory === collection.id ? 'active' : ''} onClick={() => setArchiveCategory(collection.id)}>
+                <small>{collection.label}</small><strong>{collection.files}</strong><span>ไฟล์ / ตาราง {collection.machine}</span><p>{collection.detail}</p><i>{collection.size}</i>
+              </button>
+            ))}
+          </div>
+
+          <div className="archive-layout">
+            <div className="archive-browser">
+              <div className="archive-toolbar">
+                <label className="archive-search"><span>⌕</span><input value={archiveQuery} onChange={(event) => setArchiveQuery(event.target.value)} placeholder="ค้นชื่อไฟล์ หน่วยงาน พื้นที่ หรือปีงบประมาณ" /></label>
+                <button className={archiveCategory === 'all' ? 'active' : ''} onClick={() => setArchiveCategory('all')}>ทุกหมวด</button>
+                <a href="/data/drive-inventory.json" download>ดาวน์โหลดบัญชี .JSON</a>
+              </div>
+              <div className="archive-result-head"><strong>{archiveFiles.length.toLocaleString('th-TH')} ไฟล์</strong><span>สำรวจข้อมูล ณ 19 ก.ย. 2569</span></div>
+              <div className="file-ledger">
+                {inventory ? archiveFiles.slice(0, archiveLimit).map((file) => (
+                  <a href={file.url} target="_blank" rel="noreferrer" key={file.id}>
+                    <span className="file-type">{file.title.split('.').pop()?.slice(0, 5).toUpperCase() || 'FILE'}</span>
+                    <span className="file-ledger-copy"><strong>{file.title}</strong><small>{file.path || file.category}</small></span>
+                    <span className="file-size">{formatBytes(file.size)}<i>↗</i></span>
+                  </a>
+                )) : <div className="archive-loading">กำลังเปิดบัญชีหลักฐาน...</div>}
+                {inventory && archiveFiles.length === 0 && <div className="archive-loading">ไม่พบไฟล์ที่ตรงคำค้น</div>}
+              </div>
+              {archiveLimit < archiveFiles.length && <button className="load-more" onClick={() => setArchiveLimit((value) => value + 30)}>แสดงเพิ่มอีก 30 ไฟล์</button>}
+            </div>
+
+            <aside className="archive-analysis">
+              <div className="analysis-card history-card">
+                <span className="panel-kicker">PBO / 11 YEAR SERIES</span>
+                <h3>งบและการเบิกจ่าย 2558 ถึง 2568</h3>
+                <p>รวม 2,887,730 แถวจากไฟล์ PBO 11 ปี แล้วตรวจยอดรายปีกับ Grand Total ในไฟล์ต้นทาง</p>
+                <div className="history-chart" role="img" aria-label="กราฟวงเงิน PBO รายปี 2558 ถึง 2568 พร้อมอัตราเบิกจ่าย">
+                  {history?.series.map((item) => (
+                    <div className="history-year" key={item.year} title={`${item.year}: ${(item.adjusted / 1_000_000).toFixed(2)} ล้านล้านบาท`}>
+                      <div className="history-bar"><i style={{ height: `${Math.max(8, item.adjusted / maxHistoryBudget * 100)}%` }}><b>{item.paid_rate ?? 0}%</b></i></div>
+                      <span>{String(item.year).slice(2)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="chart-legend"><span><i />วงเงินหลังโอน</span><span>ตัวเลขบนแท่งคืออัตราเบิกจ่าย</span></div>
+              </div>
+
+              <div className="analysis-card">
+                <span className="panel-kicker">CROSS DATA FINDINGS</span>
+                <h3>ประเด็นที่เห็นเมื่ออ่านข้ามชุด</h3>
+                <ol className="insight-list">
+                  <li><b>กรุงเทพฯ</b><span>งบรวม 93,918.9 ล้านบาท และงานสำนักงานเขต 21,842.9 ล้านบาท มีตารางแยกรายหน่วยงานให้เทียบราคาต่อหน่วยต่อได้</span></li>
+                  <li><b>เชียงใหม่</b><span>จ้างเก็บและกำจัดขยะสองรายการรวม 287.9 ล้านบาท หรือ 14.4% ของร่างงบเทศบาลนคร</span></li>
+                  <li><b>ราชาเทวะ</b><span>ขยะและงานก่อสร้างสองกลุ่มรวม 187.2 ล้านบาท หรือ 30.4% ของยอดสรุป</span></li>
+                  <li><b>กองทุนพลังงาน</b><span>267 โครงการ 1,177.0 ล้านบาท มี 8 โครงการยกเลิกวงเงินรวม 70.5 ล้านบาท</span></li>
+                </ol>
+              </div>
+            </aside>
+          </div>
+        </section>
+
         <section className="method-preview">
           <div className="workspace-head inverse">
-            <div><span className="section-no">02 / METHOD</span><h2>กฎต้องอธิบายได้</h2></div>
-            <p>เครื่องมือสาธารณะควรเปิดทั้งสูตร ข้อจำกัด และทางกลับไปยังต้นฉบับ</p>
+            <div><span className="section-no">03 / METHOD</span><h2>กฎต้องอธิบายได้</h2></div>
+            <p>เปิดสูตรคัดกรอง นิยามข้อมูล และทางกลับไปยังต้นฉบับทุกขั้น</p>
           </div>
           <div className="method-grid">{methodology.map((item) => <div key={item.step}><span>{item.step}</span><h3>{item.title}</h3><p>{item.text}</p></div>)}</div>
           <button className="outline-action" onClick={() => setPanel('method')}>ดูสูตรและข้อจำกัดทั้งหมด</button>
@@ -232,7 +359,7 @@ function App() {
 
       <footer className="site-footer">
         <div className="brand"><span className="brand-mark">งบ</span><span>แกะ</span></div>
-        <p>ต้นแบบเพื่อการเรียนรู้และตรวจสอบเชิงสาธารณะ<br />ข้อมูลชี้เป้าคำถาม ไม่ใช่ข้อวินิจฉัยทางกฎหมาย</p>
+        <p>โต๊ะทำงานสาธารณะสำหรับค้นงบ ตั้งคำถาม<br />และย้อนกลับไปยังหลักฐานต้นทาง</p>
         <div><a href="https://github.com/champchitsa/ngob-gae" target="_blank" rel="noreferrer">GitHub ↗</a><span>สร้างสำหรับ OPEN DATA HACK 2569</span></div>
       </footer>
 
@@ -241,24 +368,24 @@ function App() {
           <button className="panel-close" onClick={() => setPanel(null)} aria-label="ปิด">×</button>
           {panel === 'method' && <>
             <span className="panel-kicker">OPEN METHOD</span><h2>คะแนนเอาไว้จัดคิวอ่าน</h2>
-            <p className="panel-intro">คะแนน 100 แบ่งเป็น 4 มิติ มิติละ 25 คะแนน ได้แก่ มูลค่า ความผิดปกติของอัตราใช้จ่าย ขนาดการโอนเปลี่ยนแปลง และความชัดเจนของข้อมูล กฎแต่ละข้อเป็นสัญญาณให้ตรวจต่อเท่านั้น</p>
+            <p className="panel-intro">คะแนน 100 แบ่งเป็น 4 มิติ มิติละ 25 คะแนน ได้แก่ มูลค่า อัตราใช้จ่าย ขนาดการโอนเปลี่ยนแปลง และความชัดเจนของข้อมูล ใช้เรียงแฟ้มที่ควรเปิดก่อน</p>
             <div className="formula"><span>PRIORITY</span><b>มูลค่า + การใช้จ่าย + การโอน + ความชัดเจน</b><small>สูงสุด 25 + 25 + 25 + 25 = 100</small></div>
-            <h3>ข้อจำกัดที่ต้องเห็นพร้อมผล</h3>
-            <ul className="panel-list"><li>ยอดว่างหรือศูนย์ในแถว PBO อาจเป็นช่องว่างของการรายงาน ไม่ยืนยันว่าไม่มีการเบิกจ่าย</li><li>กลุ่ม ICT ก่อสร้าง และอบรมเกิดจากคำสำคัญ อาจมีทั้งการนับเกินและนับขาด</li><li>อัตราเบิกจ่ายต่ำอาจอธิบายได้ด้วยงวดงาน สัญญาหลายปี การอุทธรณ์ หรือการประหยัดงบ</li><li>ตัวเลขรวมต้องเชื่อม TOR ผู้ชนะ สัญญา การส่งมอบ และผลลัพธ์ก่อนประเมินความคุ้มค่า</li></ul>
-            <h3>แนวคิดจากงานตรวจสอบข้อมูลสากล</h3>
-            <p>ออกแบบตามหลัก red flags ของ Open Contracting ที่ย้ำว่าธงคือเหตุให้ตรวจต่อ ไม่ใช่หลักฐานการทุจริต และตามแนวทางของ USAspending ที่ให้ผู้ใช้เจาะจากภาพรวมไปถึงรายการและดาวน์โหลดข้อมูลได้</p>
+            <h3>นิยามที่ใช้คำนวณ</h3>
+            <ul className="panel-list"><li>ยอดว่างแยกจากยอดศูนย์ เพื่อรักษาความหมายของข้อมูลต้นทาง</li><li>กลุ่ม ICT ก่อสร้าง และอบรมใช้พจนานุกรมคำสำคัญ และแสดงจำนวนแถวที่เข้าเงื่อนไข</li><li>อัตราใช้จ่ายคำนวณจากยอดเบิกจ่ายหารวงเงินหลังโอนในระดับที่ระบุ</li><li>ยอดรวมเชื่อมต่อไปยัง TOR ผู้ชนะ สัญญา การส่งมอบ และผลลัพธ์ในใบคำถามแต่ละแฟ้ม</li></ul>
+            <h3>แบบแผนจากเครื่องมือตรวจสอบสากล</h3>
+            <p>ใช้แนวคิด red flags ของ Open Contracting ร่วมกับการเจาะจากภาพรวมสู่รายการ การค้นทั้งคลัง และการดาวน์โหลดข้อมูลแบบที่พอร์ทัลการใช้จ่ายสาธารณะใช้กัน</p>
             <a className="panel-link" href="https://www.open-contracting.org/resources/red-flags-in-public-procurement-a-guide-to-using-data-to-detect-and-mitigate-risks/" target="_blank" rel="noreferrer">อ่านคู่มือ Open Contracting ↗</a>
           </>}
           {panel === 'law' && <>
-            <span className="panel-kicker">LEGAL LENS</span><h2>กฎหมายคือกรอบถาม ไม่ใช่เครื่องตัดสินอัตโนมัติ</h2>
-            <p className="panel-intro">สรุปต่อไปนี้ใช้ช่วยวางแนวตรวจสอบ ควรเปิดตัวบทและข้อเท็จจริงเต็มก่อนให้ความเห็นทางกฎหมาย</p>
+            <span className="panel-kicker">LEGAL LENS</span><h2>ตัวบทสำหรับเดินจากงบไปถึงความรับผิดชอบ</h2>
+            <p className="panel-intro">เปิดตัวบททางการพร้อมประเด็นที่ใช้ตรวจเรื่องความคุ้มค่า ความโปร่งใส การติดตามผล และสิทธิขอข้อมูล</p>
             <div className="law-card-list">{lawCards.map((law) => <a href={law.url} target="_blank" rel="noreferrer" key={law.code}><small>{law.code}</small><strong>{law.title}</strong><p>{law.note}</p><span>เปิดแหล่งทางการ ↗</span></a>)}</div>
           </>}
           {panel === 'sources' && <>
             <span className="panel-kicker">SOURCE LEDGER</span><h2>ทุกข้อสังเกตต้องย้อนกลับได้</h2>
-            <p className="panel-intro">ต้นแบบใช้ข้อมูลที่ผู้จัดงานรวบรวมและแหล่งทางการของรัฐ โดยเก็บตัวเลขดิบไว้ครบความละเอียดก่อนปัดเพื่อแสดงผล</p>
+            <p className="panel-intro">สำรวจ Drive ครบ 694 ไฟล์ เปิดอ่าน workbook ทั้ง 124 เล่ม และเก็บลิงก์ต้นทางไว้ในบัญชีค้นหา</p>
             <div className="source-list">{sourceNotes.map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={source.label}><small>{source.label}</small><strong>{source.value}</strong><p>{source.detail}</p><span>เปิดต้นทาง ↗</span></a>)}</div>
-            <div className="source-warning"><strong>เวอร์ชันข้อมูล</strong><p>วิเคราะห์ ณ 19 กันยายน 2569 จากไฟล์ PBO ปี 2568 และรายงาน สปส. ปี 2567 ที่อยู่ในโฟลเดอร์ OPEN Data ของงาน ผลอาจเปลี่ยนเมื่อเจ้าของข้อมูลปรับปรุงไฟล์</p></div>
+            <div className="source-warning"><strong>เวอร์ชันข้อมูล</strong><p>บัญชีไฟล์และผลวิเคราะห์ชุดนี้จัดทำ ณ 19 กันยายน 2569 ตัวเลขแสดงความละเอียดเต็มในแฟ้มและปัดเฉพาะส่วนติดต่อผู้ใช้</p></div>
           </>}
         </aside>
       </div>}

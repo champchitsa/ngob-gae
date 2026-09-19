@@ -1,0 +1,17 @@
+{
+  "years": 11,
+  "row_count": 2887730,
+  "series": [
+    {"year":2558,"rows":173986,"act":2575000,"adjusted":2575000,"paid":2378260.0288,"paid_rate":92.4},
+    {"year":2559,"rows":250474,"act":2776000,"adjusted":2776000,"paid":2578774.4423,"paid_rate":92.9},
+    {"year":2560,"rows":229116,"act":2923000,"adjusted":2923000,"paid":2686563.3699,"paid_rate":91.9},
+    {"year":2561,"rows":219246,"act":3050000.007,"adjusted":3050000.1152,"paid":2792068.7085,"paid_rate":91.5},
+    {"year":2562,"rows":217118,"act":3000000,"adjusted":3000000,"paid":2783154.8012,"paid_rate":92.8},
+    {"year":2563,"rows":336698,"act":3200000,"adjusted":3200000,"paid":2943851.0018,"paid_rate":92.0},
+    {"year":2564,"rows":452806,"act":3285962.4797,"adjusted":3285962.4797,"paid":3012143.3909,"paid_rate":91.7},
+    {"year":2565,"rows":356756,"act":3100000,"adjusted":3100000,"paid":2932562.7582,"paid_rate":94.6},
+    {"year":2566,"rows":188800,"act":3185000,"adjusted":3185000,"paid":3088424.9677,"paid_rate":97.0},
+    {"year":2567,"rows":221571,"act":3602000.0003,"adjusted":3602000.091,"paid":3395958.1667,"paid_rate":94.3},
+    {"year":2568,"rows":241159,"act":3752700.0006,"adjusted":3752700.1317,"paid":3464300.654,"paid_rate":92.3}
+  ]
+}
