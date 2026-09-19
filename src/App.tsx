@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { cases, corpusCollections, lawCards, methodology, sourceNotes, themes, type CaseFile, type ThemeId } from './data'
+import { bigData, signalQuestions, type SignalId } from './bigData'
 
 type DriveFile = {
   id: string
@@ -42,6 +43,8 @@ const statusIcon: Record<CaseFile['status'], string> = {
 
 function App() {
   const [activeTheme, setActiveTheme] = useState<ThemeId>('all')
+  const [activeSignal, setActiveSignal] = useState<SignalId>('all')
+  const [activeAnomalyId, setActiveAnomalyId] = useState(bigData.items[0].id)
   const [query, setQuery] = useState('')
   const [activeId, setActiveId] = useState(cases[0].id)
   const [panel, setPanel] = useState<'method' | 'law' | 'sources' | null>(null)
@@ -84,6 +87,20 @@ function App() {
 
   const active = cases.find((item) => item.id === activeId) ?? filtered[0] ?? cases[0]
 
+  const anomalyItems = useMemo(
+    () => bigData.items.filter((item) => activeSignal === 'all' || item.signals.includes(activeSignal)),
+    [activeSignal],
+  )
+
+  useEffect(() => {
+    if (anomalyItems.length && !anomalyItems.some((item) => item.id === activeAnomalyId)) {
+      setActiveAnomalyId(anomalyItems[0].id)
+    }
+  }, [anomalyItems, activeAnomalyId])
+
+  const activeAnomaly = bigData.items.find((item) => item.id === activeAnomalyId) ?? anomalyItems[0] ?? bigData.items[0]
+  const activeAnomalyQuestions = [...new Set(activeAnomaly.signals.flatMap((signal) => signalQuestions[signal]))].slice(0, 6)
+
   const archiveFiles = useMemo(() => {
     if (!inventory) return []
     const needle = archiveQuery.trim().toLocaleLowerCase('th')
@@ -122,10 +139,10 @@ function App() {
           <span className="brand-mark">งบ</span><span>แกะ</span>
         </a>
         <nav className="topnav" aria-label="เมนูหลัก">
-          <button onClick={() => setPanel('method')}>วิธีแกะ</button>
+          <button onClick={() => document.getElementById('signals')?.scrollIntoView()}>Big Data</button>
+          <button onClick={() => document.getElementById('workspace')?.scrollIntoView()}>โต๊ะแกะ</button>
           <button onClick={() => document.getElementById('archive')?.scrollIntoView()}>คลัง 694 ไฟล์</button>
           <button onClick={() => setPanel('law')}>ตัวบทกฎหมาย</button>
-          <button onClick={() => setPanel('sources')}>แหล่งข้อมูล</button>
         </nav>
         <div className="data-stamp"><i /> DATA CUT 19.09.69</div>
       </header>
@@ -134,11 +151,11 @@ function App() {
         <section className="masthead">
           <div className="mast-copy">
             <div className="kicker"><span>PUBLIC BUDGET WORKBENCH</span><span>ทดลองใช้</span></div>
-            <h1>อย่าเริ่มจาก<br /><mark>“ผิดไหม”</mark><br />เริ่มจาก “หลักฐานอยู่ไหน”</h1>
-            <p>เครื่องมือคัดกรองงบประมาณเพื่อเปลี่ยนตัวเลขก้อนใหญ่ให้เป็นคำถามที่ตรวจต่อได้ พร้อมร่องรอยข้อมูล เอกสารที่ควรขอ และขอบเขตทางกฎหมาย</p>
+            <h1><span>งบก้อนนี้</span><mark>ใช้ทำอะไร</mark><span>ได้ผลแค่ไหน</span></h1>
+            <p>ค้นและวิเคราะห์งบจากหลักฐาน 694 ไฟล์ ตั้งแต่ภาพรวมประเทศถึงรายการโครงการ พร้อมตัวเลขผิดสังเกต เอกสารต้นทาง และคำถามสำหรับตรวจต่อ</p>
             <div className="hero-actions">
-              <a className="primary-action" href="#workspace">เปิดโต๊ะแกะงบ <span>↓</span></a>
-              <button className="text-action" onClick={() => setPanel('method')}>อ่านหลักคิด 4 ขั้น</button>
+              <a className="primary-action" href="#signals">ดูรายการผิดสังเกต <span>↓</span></a>
+              <a className="text-action" href="#archive">ค้นหลักฐานทั้งหมด</a>
             </div>
           </div>
           <div className="evidence-board" role="region" aria-label="สรุปชุดข้อมูล">
@@ -163,10 +180,101 @@ function App() {
           <div><span>04</span><strong>ส่งต่อให้ตรวจได้</strong><p>ทุกข้อสังเกตมีคำถาม เอกสาร และลิงก์ต้นทาง</p></div>
         </section>
 
+        <section className="signal-lab" id="signals">
+          <div className="workspace-head inverse">
+            <div>
+              <span className="section-no">01 / BIG DATA SIGNALS</span>
+              <h2>สแกน 241,159 แถว</h2>
+            </div>
+            <p>มองทั้งการกระจุกตัว การเปลี่ยนวงเงิน และการใช้จ่าย แล้วเปิดลงไปถึงรายการที่ต้องถามต่อ</p>
+          </div>
+
+          <div className="overview-grid" role="group" aria-label="ภาพรวมข้อมูล PBO ปี 2568">
+            <div className="overview-lead"><span>วงเงินหลังโอนรวม</span><strong>3.753</strong><b>ล้านล้านบาท</b><p>ตรงกับยอดรวมในชุด PBO ปี 2568</p></div>
+            <div><span>แถวที่มีวงเงิน</span><strong>{bigData.overview.positiveRows.toLocaleString('th-TH')}</strong><b>จาก {bigData.meta.rows.toLocaleString('th-TH')} แถว</b></div>
+            <div><span>ตั้งแต่ 20 ล้านบาท</span><strong>{bigData.overview.rowsOver20m.toLocaleString('th-TH')}</strong><b>รายการ</b></div>
+            <div><span>มัธยฐานต่อรายการ</span><strong>{formatMoney(bigData.overview.median)}</strong><b>ล้านบาท</b></div>
+            <div className="hot-stat"><span>วงเงินของ 1% แรก</span><strong>{bigData.overview.topOnePercentShare}%</strong><b>ของวงเงินทั้งหมด</b></div>
+            <div><span>Gini ระดับรายการ</span><strong>{bigData.overview.gini}</strong><b>ยิ่งใกล้ 1 ยิ่งกระจุก</b></div>
+          </div>
+
+          <div className="reading-note">
+            <strong>ข้อค้นพบหลัก</strong>
+            <p>รายการที่มีวงเงิน 1% แรกถือวงเงินรวม 80.3% ขณะที่ครึ่งหนึ่งของรายการมีวงเงินไม่เกิน 0.499 ล้านบาท การตรวจแบบสุ่มเท่ากันทุกแถวจึงพลาดงบก้อนใหญ่ได้ง่าย โต๊ะนี้จัดคิวด้วยมูลค่า การโยกวงเงิน ความคืบหน้า และความชัดเจนของชื่อรายการ</p>
+          </div>
+
+          <div className="flag-rack" role="tablist" aria-label="เงื่อนไขคัดกรอง">
+            <button className={activeSignal === 'all' ? 'active' : ''} onClick={() => setActiveSignal('all')} role="tab" aria-selected={activeSignal === 'all'}>
+              <span>ทุกเงื่อนไข</span><strong>{bigData.items.length}</strong><small>รายการตัวอย่างจัดอันดับ</small>
+            </button>
+            {bigData.flags.map((flag) => <button key={flag.id} className={activeSignal === flag.id ? 'active' : ''} onClick={() => setActiveSignal(flag.id)} role="tab" aria-selected={activeSignal === flag.id} title={flag.definition}>
+              <span>{flag.label}</span><strong>{flag.count.toLocaleString('th-TH')}</strong><small>{formatMoney(flag.amount)} ล้านบาท</small>
+            </button>)}
+          </div>
+          <div className="flag-tools"><p className="flag-note">รายการหนึ่งอาจเข้าได้หลายเงื่อนไข จำนวนจึงนำมาบวกกันตรงๆ ไม่ได้</p><a href="/data/big-data-findings.json" download>ดาวน์โหลดผลเต็ม 179 รายการ .JSON</a></div>
+
+          <div className="signal-desk">
+            <aside className="anomaly-list" aria-label="รายการผิดสังเกตจากข้อมูลขนาดใหญ่">
+              <div className="list-head"><span>เรียงตามคะแนนคัดกรอง</span><strong>{anomalyItems.length} รายการ</strong></div>
+              {anomalyItems.map((item) => <button key={item.id} className={`anomaly-row ${activeAnomaly.id === item.id ? 'active' : ''}`} onClick={() => setActiveAnomalyId(item.id)}>
+                <span className="anomaly-score">{item.score}</span>
+                <span className="anomaly-copy"><strong>{item.item}</strong><small>{item.agency}</small></span>
+                <span className="anomaly-money">{formatMoney(item.adjusted)}<small>ล้าน</small></span>
+              </button>)}
+            </aside>
+
+            <article className="anomaly-file" key={activeAnomaly.id}>
+              <div className="anomaly-topline">
+                <span>ANOMALY #{activeAnomaly.id.slice(0, 6).toUpperCase()}</span>
+                <strong>{activeAnomaly.score}<small>/100</small></strong>
+              </div>
+              <div className="signal-tags">{activeAnomaly.signals.map((signal) => <span key={signal}>{bigData.flags.find((flag) => flag.id === signal)?.label}</span>)}</div>
+              <h3>{activeAnomaly.item}</h3>
+              <p className="anomaly-agency">{activeAnomaly.agency}<span>/</span>{activeAnomaly.ministry}</p>
+              <p className="anomaly-project">{activeAnomaly.project}</p>
+
+              <div className="anomaly-numbers">
+                <div><span>ตาม พ.ร.บ.</span><strong>{formatMoney(activeAnomaly.act)}</strong><small>ล้านบาท</small></div>
+                <div><span>หลังโอน</span><strong>{formatMoney(activeAnomaly.adjusted)}</strong><small>ล้านบาท</small></div>
+                <div className={activeAnomaly.delta >= 0 ? 'delta-up' : 'delta-down'}><span>เปลี่ยนแปลง</span><strong>{activeAnomaly.delta > 0 ? '+' : ''}{formatMoney(activeAnomaly.delta)}</strong><small>ล้านบาท</small></div>
+                <div><span>เบิกจ่ายรวม PO</span><strong>{activeAnomaly.rate === null ? 'ไม่มีค่า' : `${formatMoney(activeAnomaly.committed)}`}</strong><small>{activeAnomaly.rate === null ? 'ในระดับรายการ' : `${activeAnomaly.rate}% ของหลังโอน`}</small></div>
+              </div>
+
+              <div className="anomaly-reading">
+                <strong>สิ่งที่ควรเปิดดูต่อ</strong>
+                <ol>{activeAnomalyQuestions.map((question) => <li key={question}>{question}</li>)}</ol>
+              </div>
+              <div className="anomaly-source"><span>แหล่งข้อมูล PBO ปี 2568</span><a href={bigData.meta.sourceUrl} target="_blank" rel="noreferrer">เปิดไฟล์ต้นทาง ↗</a></div>
+            </article>
+          </div>
+
+          <div className="deep-grid">
+            <article className="deep-card theme-card">
+              <span className="panel-kicker">4 WORKSTREAMS</span><h3>งบตามหัวข้อที่ใช้ในวันงาน</h3>
+              {bigData.themes.map((theme) => <div className="theme-line" key={theme.id}>
+                <div><strong>{theme.label}</strong><small>{theme.rows.toLocaleString('th-TH')} แถว</small></div>
+                <div><b>{formatMoney(theme.adjusted)} ลบ.</b><span>{theme.rate}%</span></div>
+                <i><em style={{ width: `${Math.min(theme.rate, 100)}%` }} /></i>
+              </div>)}
+            </article>
+            <article className="deep-card agency-card">
+              <span className="panel-kicker">CONCENTRATION</span><h3>12 หน่วยงานวงเงินสูงสุด</h3>
+              {bigData.agencies.map((agency, index) => <div className="agency-bar" key={agency.agency}>
+                <span>{String(index + 1).padStart(2, '0')}</span><strong>{agency.agency}</strong><i><em style={{ width: `${agency.share / bigData.agencies[0].share * 100}%` }} /></i><b>{agency.share}%</b>
+              </div>)}
+            </article>
+            <article className="deep-card repeated-card">
+              <span className="panel-kicker">REPEATED LABELS</span><h3>ชื่อรวมที่ซ่อนรายการย่อยจำนวนมาก</h3>
+              <p>ชื่อซ้ำไม่ได้แปลว่าผิด แต่บอกว่าควรขอรายละเอียดระดับหน่วยงานและรายการย่อยเพิ่ม</p>
+              {bigData.repeatedPatterns.map((pattern) => <div className="pattern-row" key={pattern.pattern}><strong>{pattern.pattern}</strong><span>{pattern.count.toLocaleString('th-TH')} แถว</span><b>{formatMoney(pattern.adjusted)} ล้านบาท</b></div>)}
+            </article>
+          </div>
+        </section>
+
         <section className="workspace" id="workspace">
           <div className="workspace-head">
             <div>
-              <span className="section-no">01 / CASE DESK</span>
+              <span className="section-no">02 / CASE DESK</span>
               <h2>โต๊ะแกะงบ</h2>
             </div>
             <p>เลือกประเด็นจากงาน แล้วไล่จากรายการที่ควรอ่านก่อน</p>
@@ -269,7 +377,7 @@ function App() {
 
         <section className="archive" id="archive">
           <div className="workspace-head">
-            <div><span className="section-no">02 / EVIDENCE ARCHIVE</span><h2>คลังหลักฐาน 694 ไฟล์</h2></div>
+            <div><span className="section-no">03 / EVIDENCE ARCHIVE</span><h2>คลังหลักฐาน 694 ไฟล์</h2></div>
             <p>ค้นจากชื่อไฟล์ เส้นทาง และหมวดข้อมูลได้ทันที ทุกผลลัพธ์เปิดกลับไปยังไฟล์ต้นทางใน Drive</p>
           </div>
 
@@ -343,7 +451,7 @@ function App() {
 
         <section className="method-preview">
           <div className="workspace-head inverse">
-            <div><span className="section-no">03 / METHOD</span><h2>กฎต้องอธิบายได้</h2></div>
+            <div><span className="section-no">04 / METHOD</span><h2>กฎต้องอธิบายได้</h2></div>
             <p>เปิดสูตรคัดกรอง นิยามข้อมูล และทางกลับไปยังต้นฉบับทุกขั้น</p>
           </div>
           <div className="method-grid">{methodology.map((item) => <div key={item.step}><span>{item.step}</span><h3>{item.title}</h3><p>{item.text}</p></div>)}</div>
