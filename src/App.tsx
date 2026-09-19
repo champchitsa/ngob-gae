@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { cases, corpusCollections, lawCards, methodology, sourceNotes, themes, type CaseFile, type ThemeId } from './data'
 import { bigData, investigationPath, legalActionMap, signalLawMap, signalQuestions, type AnomalyItem, type SignalId } from './bigData'
+import BudgetChat from './BudgetChat'
+import DataExplorer from './DataExplorer'
 
 type DriveFile = {
   id: string
@@ -59,6 +61,7 @@ function App() {
   const [anomalyQuery, setAnomalyQuery] = useState('')
   const [anomalySort, setAnomalySort] = useState<SignalSort>('score')
   const [anomalyCopied, setAnomalyCopied] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
   const anomalySearchRef = useRef<HTMLInputElement>(null)
 
@@ -128,7 +131,9 @@ function App() {
     })
   }, [inventory, archiveCategory, archiveQuery])
 
-  useEffect(() => setArchiveLimit(18), [archiveCategory, archiveQuery])
+  useEffect(() => {
+    setArchiveLimit(18)
+  }, [archiveCategory, archiveQuery])
 
   const maxHistoryBudget = Math.max(...(history?.series.map((item) => item.adjusted) ?? [1]))
 
@@ -165,10 +170,13 @@ function App() {
         <nav className="topnav" aria-label="เมนูหลัก">
           <button onClick={() => document.getElementById('signals')?.scrollIntoView()}>Big Data</button>
           <button onClick={() => document.getElementById('workspace')?.scrollIntoView()}>โต๊ะแกะ</button>
+          <button onClick={() => document.getElementById('data-api')?.scrollIntoView()}>ตารางและ API</button>
           <button onClick={() => document.getElementById('archive')?.scrollIntoView()}>คลัง 694 ไฟล์</button>
           <button onClick={() => document.getElementById('law-workbench')?.scrollIntoView()}>กฎหมายลงมือใช้</button>
+          <button onClick={() => setChatOpen(true)}>ถาม AI</button>
         </nav>
         <div className="data-stamp"><i /> DATA CUT 19.09.69</div>
+        <button className="mobile-chat-button" onClick={() => setChatOpen(true)}>ถาม AI</button>
       </header>
 
       <main id="top">
@@ -180,6 +188,8 @@ function App() {
             <div className="hero-actions">
               <a className="primary-action" href="#signals" onClick={() => window.setTimeout(() => anomalySearchRef.current?.focus(), 500)}>ค้น 179 รายการผิดสังเกต <span>↓</span></a>
               <a className="text-action" href="#archive">ค้นหลักฐานทั้งหมด</a>
+              <a className="text-action" href="#data-api">เปิดตารางและ API</a>
+              <button className="text-action" onClick={() => setChatOpen(true)}>ถามข้อมูลกับปทุมมา</button>
             </div>
             <div className="hero-proof" role="list" aria-label="จุดเด่นเครื่องมือ"><span role="listitem"><b>179</b> รายการจัดอันดับ</span><span role="listitem"><b>7</b> เงื่อนไขคัดกรอง</span><span role="listitem"><b>5</b> ขั้นตามหลักฐาน</span></div>
           </div>
@@ -418,9 +428,11 @@ function App() {
           </div>
         </section>
 
+        <DataExplorer />
+
         <section className="archive" id="archive">
           <div className="workspace-head">
-            <div><span className="section-no">03 / EVIDENCE ARCHIVE</span><h2>คลังหลักฐาน 694 ไฟล์</h2></div>
+            <div><span className="section-no">04 / EVIDENCE ARCHIVE</span><h2>คลังหลักฐาน 694 ไฟล์</h2></div>
             <p>ค้นจากชื่อไฟล์ เส้นทาง และหมวดข้อมูลได้ทันที ทุกผลลัพธ์เปิดกลับไปยังไฟล์ต้นทางใน Drive</p>
           </div>
 
@@ -494,7 +506,7 @@ function App() {
 
         <section className="method-preview">
           <div className="workspace-head inverse">
-            <div><span className="section-no">04 / METHOD</span><h2>กฎต้องอธิบายได้</h2></div>
+            <div><span className="section-no">05 / METHOD</span><h2>กฎต้องอธิบายได้</h2></div>
             <p>เปิดสูตรคัดกรอง นิยามข้อมูล และทางกลับไปยังต้นฉบับทุกขั้น</p>
           </div>
           <div className="method-grid">{methodology.map((item) => <div key={item.step}><span>{item.step}</span><h3>{item.title}</h3><p>{item.text}</p></div>)}</div>
@@ -513,6 +525,8 @@ function App() {
         <p>โต๊ะทำงานสาธารณะสำหรับค้นงบ ตั้งคำถาม<br />และย้อนกลับไปยังหลักฐานต้นทาง</p>
         <div><a href="https://github.com/champchitsa/ngob-gae" target="_blank" rel="noreferrer">GitHub ↗</a><span>สร้างสำหรับ OPEN DATA HACK 2569</span></div>
       </footer>
+
+      <BudgetChat activeItem={activeAnomaly} open={chatOpen} onOpen={() => setChatOpen(true)} onClose={() => setChatOpen(false)} />
 
       {panel && <div className="panel-backdrop" role="presentation" onMouseDown={() => setPanel(null)}>
         <aside className="info-panel" role="dialog" aria-modal="true" aria-label={panel === 'method' ? 'วิธีแกะ' : panel === 'law' ? 'ตัวบทกฎหมาย' : 'แหล่งข้อมูล'} onMouseDown={(event) => event.stopPropagation()}>
