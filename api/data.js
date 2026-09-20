@@ -15,6 +15,7 @@ function loadData() {
     corpusAnalysis: read('corpus-analysis.json'),
     legal: read('legal-provisions.json'),
     committee: read('committee-meetings.json'),
+    structure: read('government-structure.json'),
   }
   return cache
 }
@@ -30,6 +31,7 @@ const datasetLabels = {
   evidence: 'สัญญาณจากข้อความและ OCR พร้อมตำแหน่งต้นทาง',
   laws: 'ตัวบทกฎหมายฉบับประกาศใช้จริง',
   committee: 'ดัชนีวาระและสรุปหลังประชุมของคณะกรรมาธิการ',
+  structure: 'โครงสร้างรัฐเชื่อมงบประมาณ PBO ปี 2568',
 }
 
 function scalarValues(value) {
@@ -140,6 +142,30 @@ function selectDataset(name, source) {
     source: source.committee.meta.sourceUrl,
     columns: ['dateLabel', 'roundLabel', 'session', 'title', 'description', 'themes', 'hasSummary', 'summaryOverview', 'summaryIssues', 'summaryObservations', 'summaryHomework', 'transcriptTurns', 'summaryUrl'],
   }
+  if (name === 'structure') return {
+    rows: source.structure.ministries.flatMap((ministry) => ministry.departments.map((department) => ({
+      ministryId: ministry.id,
+      ministry: ministry.name,
+      ministryDepartmentCount: ministry.departmentCount,
+      ministryDivisionCount: ministry.divisionCount,
+      departmentId: department.id,
+      department: department.name,
+      description: department.description,
+      type: department.type,
+      divisionCount: department.divisionCount,
+      divisionPreview: department.divisionPreview,
+      rows: department.pbo2568?.rows ?? null,
+      adjusted: department.pbo2568?.adjusted ?? null,
+      committed: department.pbo2568?.committed ?? null,
+      rate: department.pbo2568?.rate ?? null,
+      candidateCount: department.pbo2568?.candidateCount ?? 0,
+      candidateAmount: department.pbo2568?.candidateAmount ?? 0,
+      sourceUrl: department.sourceUrl,
+    }))),
+    filterField: 'type',
+    source: source.structure.meta.structureSourceUrl,
+    columns: ['ministry', 'department', 'description', 'type', 'divisionCount', 'adjusted', 'committed', 'rate', 'candidateCount', 'sourceUrl'],
+  }
   return null
 }
 
@@ -175,6 +201,7 @@ export default function handler(request, response) {
   if (dataset === 'evidence') rows = [...rows].sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0) || a.title.localeCompare(b.title, 'th'))
   if (dataset === 'laws') rows = [...rows].sort((a, b) => a.code.localeCompare(b.code, 'th'))
   if (dataset === 'committee') rows = [...rows].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || (b.round ?? 0) - (a.round ?? 0))
+  if (dataset === 'structure') rows = [...rows].sort((a, b) => (b.adjusted ?? -1) - (a.adjusted ?? -1) || b.candidateCount - a.candidateCount || a.department.localeCompare(b.department, 'th'))
 
   const payload = {
     meta: {

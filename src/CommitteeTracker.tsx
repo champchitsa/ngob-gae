@@ -138,7 +138,7 @@ export default function CommitteeTracker() {
 
   return <section className="committee-tracker" id="committee">
     <div className="committee-heading">
-      <div><span className="section-no">COMMITTEE FOLLOW THROUGH</span><h2>ตามวาระให้ไปถึง<br />คำตอบหลังประชุม</h2></div>
+      <div><span className="section-no">05 / COMMITTEE FOLLOW THROUGH</span><h2>ตามวาระให้ไปถึง<br />คำตอบหลังประชุม</h2></div>
       <p>เชื่อมรายการงบกับประเด็นที่คณะกรรมาธิการเปิดตรวจแล้ว ค้นวันประชุม วาระ และสรุปหลังประชุมได้จากหน้าเดียว</p>
     </div>
 

@@ -6,6 +6,7 @@ import BudgetDashboard from './BudgetDashboard'
 import DataExplorer from './DataExplorer'
 import CorpusReader from './CorpusReader'
 import CommitteeTracker from './CommitteeTracker'
+import GovernmentMap from './GovernmentMap'
 
 type PboYear = { year: number; rows: number; act: number; adjusted: number; paid: number; paid_rate: number | null }
 type PboHistory = { years: number; row_count: number; series: PboYear[] }
@@ -135,7 +136,7 @@ function App() {
         </a>
         <nav className="topnav" aria-label="เมนูหลัก">
           <button onClick={() => document.getElementById('signals')?.scrollIntoView()}>Big Data</button>
-          <button onClick={() => document.getElementById('workspace')?.scrollIntoView()}>โต๊ะแกะ</button>
+          <button onClick={() => document.getElementById('state-map')?.scrollIntoView()}>แผนที่รัฐ</button>
           <button onClick={() => document.getElementById('data-api')?.scrollIntoView()}>ตารางและ API</button>
           <button onClick={() => document.getElementById('committee')?.scrollIntoView()}>ติดตาม กมธ.</button>
           <button onClick={() => document.getElementById('archive')?.scrollIntoView()}>คลัง 694 ไฟล์</button>
@@ -151,15 +152,16 @@ function App() {
           <div className="mast-copy">
             <div className="kicker"><span>PUBLIC BUDGET WORKBENCH</span><span>ทดลองใช้</span></div>
             <h1><span>งบก้อนนี้</span><mark>ใช้ทำอะไร</mark><span>ได้ผลแค่ไหน</span></h1>
-            <p>ค้นและวิเคราะห์งบจากหลักฐาน 694 ไฟล์ ตั้งแต่ภาพรวมประเทศถึงรายการโครงการ พร้อมตัวเลขผิดสังเกต เอกสารต้นทาง และคำถามสำหรับตรวจต่อ</p>
+            <p>ค้นและวิเคราะห์งบจากหลักฐาน 694 ไฟล์ ตั้งแต่ภาพรวมประเทศ โครงสร้างผู้รับผิดชอบ จนถึงรายการโครงการ พร้อมตัวเลขผิดสังเกต เอกสารต้นทาง และคำถามสำหรับตรวจต่อ</p>
             <div className="hero-actions">
               <a className="primary-action" href="#signals" onClick={() => window.setTimeout(() => anomalySearchRef.current?.focus(), 500)}>ค้น {bigData.meta.candidateCount.toLocaleString('th-TH')} รายการที่ควรตรวจต่อ <span>↓</span></a>
               <a className="text-action" href="#archive">ค้นหลักฐานทั้งหมด</a>
               <a className="text-action" href="#data-api">เปิดตารางและ API</a>
+              <a className="text-action" href="#state-map">ดูว่าใครถือเงิน</a>
               <a className="text-action" href="#committee">ติดตามงานกรรมาธิการ</a>
               <button className="text-action" onClick={() => setChatOpen(true)}>ถามข้อมูลกับน้องเพนกวิน</button>
             </div>
-            <div className="hero-proof" role="list" aria-label="จุดเด่นเครื่องมือ"><span role="listitem"><b>{bigData.meta.candidateCount.toLocaleString('th-TH')}</b> รายการจัดอันดับ</span><span role="listitem"><b>7</b> เงื่อนไขคัดกรอง</span><span role="listitem"><b>5</b> ขั้นตามหลักฐาน</span></div>
+            <div className="hero-proof" role="list" aria-label="จุดเด่นเครื่องมือ"><span role="listitem"><b>{bigData.meta.candidateCount.toLocaleString('th-TH')}</b> รายการจัดอันดับ</span><span role="listitem"><b>417</b> หน่วยงานเชื่อมโครงสร้าง</span><span role="listitem"><b>7</b> เงื่อนไขคัดกรอง</span><span role="listitem"><b>5</b> ขั้นตามหลักฐาน</span></div>
           </div>
           <div className="evidence-board" role="region" aria-label="สรุปชุดข้อมูล">
             <div className="board-label">คลังหลักฐาน / สำรวจครบทั้ง Drive</div>
@@ -185,10 +187,19 @@ function App() {
 
         <BudgetDashboard history={history} />
 
+        <GovernmentMap onInspectMinistry={(ministry) => {
+          setActiveSignal('all')
+          setAnomalyQuery(ministry)
+          window.setTimeout(() => {
+            document.getElementById('signals')?.scrollIntoView()
+            anomalySearchRef.current?.focus()
+          }, 50)
+        }} />
+
         <section className="signal-lab" id="signals">
           <div className="workspace-head inverse">
             <div>
-              <span className="section-no">01 / BIG DATA SIGNALS</span>
+              <span className="section-no">02 / BIG DATA SIGNALS</span>
               <h2>สแกน 241,159 แถว</h2>
             </div>
             <p>มองทั้งการกระจุกตัว การเปลี่ยนวงเงิน และการใช้จ่าย แล้วเปิดลงไปถึงรายการที่ต้องถามต่อ</p>
@@ -298,7 +309,7 @@ function App() {
         <section className="workspace" id="workspace">
           <div className="workspace-head">
             <div>
-              <span className="section-no">02 / CASE DESK</span>
+              <span className="section-no">03 / CASE DESK</span>
               <h2>โต๊ะแกะงบ</h2>
             </div>
             <p>เลือกประเด็นจากงาน แล้วไล่จากรายการที่ควรอ่านก่อน</p>
@@ -405,7 +416,7 @@ function App() {
 
         <section className="archive" id="archive">
           <div className="workspace-head">
-            <div><span className="section-no">04 / EVIDENCE ARCHIVE</span><h2>คลังหลักฐาน 694 ไฟล์</h2></div>
+            <div><span className="section-no">06 / EVIDENCE ARCHIVE</span><h2>คลังหลักฐาน 694 ไฟล์</h2></div>
             <p>ค้นจากชื่อไฟล์ เส้นทาง และหมวดข้อมูลได้ทันที ทุกผลลัพธ์เปิดกลับไปยังไฟล์ต้นทางใน Drive</p>
           </div>
 
@@ -453,7 +464,7 @@ function App() {
 
         <section className="method-preview">
           <div className="workspace-head inverse">
-            <div><span className="section-no">05 / METHOD</span><h2>กฎต้องอธิบายได้</h2></div>
+            <div><span className="section-no">07 / METHOD</span><h2>กฎต้องอธิบายได้</h2></div>
             <p>เปิดสูตรคัดกรอง นิยามข้อมูล และทางกลับไปยังต้นฉบับทุกขั้น</p>
           </div>
           <div className="method-grid">{methodology.map((item) => <div key={item.step}><span>{item.step}</span><h3>{item.title}</h3><p>{item.text}</p></div>)}</div>
