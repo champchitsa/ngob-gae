@@ -354,7 +354,7 @@ export default function CorpusReader() {
 
       {analysis && <section className="corpus-analysis-panel" aria-labelledby="corpus-analysis-title">
         <header className="corpus-analysis-head">
-          <div><span className="panel-kicker">EVIDENCE MAP / REVIEW QUEUE</span><h4 id="corpus-analysis-title">วิเคราะห์ข้อความทุกหน้า แล้วจัดคิวหลักฐานที่ควรเปิดต่อ</h4></div>
+          <div><span className="panel-kicker">EVIDENCE MAP / REVIEW QUEUE</span><h4 id="corpus-analysis-title">วิเคราะห์ข้อความทุกหน้า แล้วจัดลำดับหลักฐานที่ควรตรวจสอบต่อ</h4></div>
           <div className="corpus-analysis-totals"><span><b>{formatCount(analysis.meta.analyzed_files)}</b> แฟ้ม</span><span><b>{formatCount(analysis.meta.analyzed_units)}</b> หน้าและแถว</span><span><b>{formatCount(analysis.meta.money_mentions)}</b> จุดที่กล่าวถึงเงิน</span></div>
         </header>
 

@@ -112,7 +112,7 @@ function App() {
   }
 
   const copyAnomalyBrief = async () => {
-    const text = `${activeAnomaly.item}\nหน่วยงาน: ${activeAnomaly.agency}\nโครงการ: ${activeAnomaly.project}\nตาม พ.ร.บ.: ${formatMoney(activeAnomaly.act)} ล้านบาท\nหลังโอน: ${formatMoney(activeAnomaly.adjusted)} ล้านบาท\nเปลี่ยนแปลง: ${formatMoney(activeAnomaly.delta)} ล้านบาท\nเบิกจ่ายรวม PO: ${activeAnomaly.rate === null ? 'ไม่มีค่าระดับรายการ' : `${formatMoney(activeAnomaly.committed)} ล้านบาท (${activeAnomaly.rate}%)`}\n\nเงื่อนไขคัดกรอง\n${activeAnomaly.signals.map((signal) => `- ${bigData.flags.find((flag) => flag.id === signal)?.label}`).join('\n')}\n\nคำถามตรวจต่อ\n${activeAnomalyQuestions.map((question, index) => `${index + 1}. ${question}`).join('\n')}\n\nกฎหมายที่เกี่ยวข้อง\n${activeAnomalyLaws.map((law) => `- ${law}`).join('\n')}\n\nที่มา: ${bigData.meta.sourceUrl}`
+    const text = `${activeAnomaly.item}\nหน่วยงาน: ${activeAnomaly.agency}\nโครงการ: ${activeAnomaly.project}\nตาม พ.ร.บ.: ${formatMoney(activeAnomaly.act)} ล้านบาท\nหลังโอน: ${formatMoney(activeAnomaly.adjusted)} ล้านบาท\nเปลี่ยนแปลง: ${formatMoney(activeAnomaly.delta)} ล้านบาท\nเบิกจ่ายรวมยอดผูกพัน (PO): ${activeAnomaly.rate === null ? 'ไม่พบข้อมูลระดับรายการ' : `${formatMoney(activeAnomaly.committed)} ล้านบาท (${activeAnomaly.rate}%)`}\n\nเงื่อนไขคัดกรอง\n${activeAnomaly.signals.map((signal) => `- ${bigData.flags.find((flag) => flag.id === signal)?.label}`).join('\n')}\n\nคำถามตรวจต่อ\n${activeAnomalyQuestions.map((question, index) => `${index + 1}. ${question}`).join('\n')}\n\nกฎหมายที่เกี่ยวข้อง\n${activeAnomalyLaws.map((law) => `- ${law}`).join('\n')}\n\nที่มา: ${bigData.meta.sourceUrl}`
     await navigator.clipboard.writeText(text)
     setAnomalyCopied(true)
     window.setTimeout(() => setAnomalyCopied(false), 1600)
@@ -216,7 +216,7 @@ function App() {
 
           <div className="reading-note">
             <strong>ข้อค้นพบหลัก</strong>
-            <p>รายการที่มีวงเงิน 1% แรกถือวงเงินรวม 80.3% ขณะที่ครึ่งหนึ่งของรายการมีวงเงินไม่เกิน 0.499 ล้านบาท การตรวจแบบสุ่มเท่ากันทุกแถวจึงพลาดงบก้อนใหญ่ได้ง่าย โต๊ะนี้จัดคิวด้วยมูลค่า การโยกวงเงิน ความคืบหน้า และความชัดเจนของชื่อรายการ</p>
+            <p>รายการที่มีวงเงินสูงสุด 1% แรกคิดเป็น 80.3% ของวงเงินทั้งหมด ขณะที่ครึ่งหนึ่งของรายการมีวงเงินไม่เกิน 0.499 ล้านบาท ระบบจึงจัดลำดับการตรวจด้วยมูลค่า การเปลี่ยนแปลงวงเงิน ความคืบหน้าการใช้จ่าย และความชัดเจนของชื่อรายการ</p>
           </div>
 
           <div className="flag-rack" role="tablist" aria-label="เงื่อนไขคัดกรอง">
@@ -261,7 +261,7 @@ function App() {
                 <div><span>ตาม พ.ร.บ.</span><strong>{formatMoney(activeAnomaly.act)}</strong><small>ล้านบาท</small></div>
                 <div><span>หลังโอน</span><strong>{formatMoney(activeAnomaly.adjusted)}</strong><small>ล้านบาท</small></div>
                 <div className={activeAnomaly.delta >= 0 ? 'delta-up' : 'delta-down'}><span>เปลี่ยนแปลง</span><strong>{activeAnomaly.delta > 0 ? '+' : ''}{formatMoney(activeAnomaly.delta)}</strong><small>ล้านบาท</small></div>
-                <div><span>เบิกจ่ายรวม PO</span><strong>{activeAnomaly.rate === null ? 'ไม่มีค่า' : `${formatMoney(activeAnomaly.committed)}`}</strong><small>{activeAnomaly.rate === null ? 'ในระดับรายการ' : `${activeAnomaly.rate}% ของหลังโอน`}</small></div>
+                <div><span>เบิกจ่ายรวมยอดผูกพัน (PO)</span><strong>{activeAnomaly.rate === null ? 'ไม่พบข้อมูล' : `${formatMoney(activeAnomaly.committed)}`}</strong><small>{activeAnomaly.rate === null ? 'ในระดับรายการ' : `${activeAnomaly.rate}% ของวงเงินหลังโอน`}</small></div>
               </div>
 
               <div className="anomaly-reading">
@@ -398,7 +398,7 @@ function App() {
               </div>
 
               <section className="score-method">
-                <div className="score-head"><h4>ที่มาคะแนนคัดกรอง</h4><span>คะแนนสำหรับจัดคิวอ่าน</span></div>
+                <div className="score-head"><h4>ที่มาคะแนนคัดกรอง</h4><span>คะแนนสำหรับจัดลำดับการตรวจ</span></div>
                 {Object.entries({ 'มูลค่า': active.score.value, 'การใช้จ่าย': active.score.execution, 'การโอน': active.score.movement, 'ความชัดเจน': active.score.clarity }).map(([label, value]) => <div className="score-line" key={label}><span>{label}</span><div><i style={{ width: `${value * 4}%` }} /></div><b>{value}/25</b></div>)}
               </section>
 
@@ -501,7 +501,7 @@ function App() {
         <aside className="info-panel" role="dialog" aria-modal="true" aria-label={panel === 'method' ? 'วิธีแกะ' : panel === 'law' ? 'ตัวบทกฎหมาย' : 'แหล่งข้อมูล'} onMouseDown={(event) => event.stopPropagation()}>
           <button className="panel-close" onClick={() => setPanel(null)} aria-label="ปิด">×</button>
           {panel === 'method' && <>
-            <span className="panel-kicker">OPEN METHOD</span><h2>คะแนนเอาไว้จัดคิวอ่าน</h2>
+            <span className="panel-kicker">OPEN METHOD</span><h2>คะแนนใช้จัดลำดับการตรวจ</h2>
             <p className="panel-intro">คะแนน 100 แบ่งเป็น 4 มิติ มิติละ 25 คะแนน ได้แก่ มูลค่า อัตราใช้จ่าย ขนาดการโอนเปลี่ยนแปลง และความชัดเจนของข้อมูล ใช้เรียงแฟ้มที่ควรเปิดก่อน</p>
             <div className="formula"><span>PRIORITY</span><b>มูลค่า + การใช้จ่าย + การโอน + ความชัดเจน</b><small>สูงสุด 25 + 25 + 25 + 25 = 100</small></div>
             <h3>นิยามที่ใช้คำนวณ</h3>

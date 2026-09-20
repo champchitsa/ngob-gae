@@ -68,7 +68,7 @@ const typeLabels: Record<string, string> = {
 const number = (value: number, digits = 0) => new Intl.NumberFormat('th-TH', { maximumFractionDigits: digits }).format(value)
 
 const money = (value?: number | null) => {
-  if (value === undefined || value === null) return 'ยังไม่เชื่อมยอด'
+  if (value === undefined || value === null) return 'ยังไม่พบยอดที่เชื่อมโยง'
   if (value >= 1_000_000) return `${number(value / 1_000_000, 3)} ล้านล้านบาท`
   if (value >= 1_000) return `${number(value / 1_000, 1)} พันล้านบาท`
   return `${number(value, 1)} ล้านบาท`
@@ -130,8 +130,8 @@ function GovernmentMap({ onInspectMinistry }: { onInspectMinistry: (ministry: st
 
   return <section className="state-map" id="state-map">
     <div className="state-map-heading">
-      <div><span className="section-no">01 / STATE RESPONSIBILITY MAP</span><h2>เงินอยู่ที่ไหน<br />ใครต้องตอบ</h2></div>
-      <p>เลือกกระทรวงเพื่อดูโครงสร้างหน่วยงานจาก Bureaucrazy Lab ควบคู่กับวงเงิน ผลใช้จ่าย และรายการที่ระบบจัดคิวตรวจจาก PBO ปี 2568</p>
+      <div><span className="section-no">01 / STATE RESPONSIBILITY MAP</span><h2>จากงบประมาณ<br />ถึงผู้รับผิดชอบ</h2></div>
+      <p>เลือกกระทรวงเพื่อดูหน่วยงานรับผิดชอบ วงเงิน ผลการใช้จ่าย และรายการที่ควรตรวจสอบต่อจากข้อมูล PBO ปี 2568</p>
     </div>
 
     <div className="state-map-proof" role="group" aria-label="ขอบเขตแผนที่โครงสร้างรัฐ">
@@ -150,19 +150,19 @@ function GovernmentMap({ onInspectMinistry }: { onInspectMinistry: (ministry: st
           </button>)}
           {!ministries.length && <p>ไม่พบชื่อกระทรวงที่ค้น</p>}
         </div>
-        <div className="ministry-list-key"><span>ตัวเลขขวา</span><strong>รายการที่ถูกจัดคิวตรวจ</strong></div>
+        <div className="ministry-list-key"><span>จำนวนด้านขวา</span><strong>รายการที่ผ่านเกณฑ์คัดกรอง</strong></div>
       </aside>
 
       <article className="ministry-dossier">
         <header>
           <div><span>กระทรวงที่กำลังเปิด</span><h3>{selected.name}</h3></div>
-          <button type="button" onClick={() => onInspectMinistry(selected.name)}>เปิดรายการที่ควรตรวจ <span>↓</span></button>
+          <button type="button" onClick={() => onInspectMinistry(selected.name)}>ดูรายการที่ผ่านเกณฑ์คัดกรอง <span>↓</span></button>
         </header>
 
         <div className="ministry-budget-cards">
           <div className="money-card"><span>วงเงินหลังโอน</span><strong>{money(selectedBudget?.adjusted)}</strong><small>PBO ปี 2568</small></div>
-          <div><span>เบิกจ่ายรวม PO</span><strong>{selectedBudget?.rate === null || selectedBudget?.rate === undefined ? 'ไม่มีค่า' : `${number(selectedBudget.rate, 1)}%`}</strong><small>{selectedBudget ? money(selectedBudget.committed) : 'ยังไม่เชื่อมยอด'}</small></div>
-          <div><span>รายการจัดคิวตรวจ</span><strong>{number(selectedBudget?.candidateCount ?? 0)}</strong><small>วงเงินรวม {money(selectedBudget?.candidateAmount ?? 0)}</small></div>
+          <div><span>เบิกจ่ายรวมยอดผูกพัน (PO)</span><strong>{selectedBudget?.rate === null || selectedBudget?.rate === undefined ? 'ไม่พบข้อมูล' : `${number(selectedBudget.rate, 1)}%`}</strong><small>{selectedBudget ? money(selectedBudget.committed) : 'ยังไม่พบยอดที่เชื่อมโยง'}</small></div>
+          <div><span>รายการที่ผ่านเกณฑ์คัดกรอง</span><strong>{number(selectedBudget?.candidateCount ?? 0)}</strong><small>วงเงินรวม {money(selectedBudget?.candidateAmount ?? 0)}</small></div>
           <div><span>เชื่อมหน่วยงานได้</span><strong>{linkedInMinistry}/{selected.departments.length}</strong><small>จับคู่จากชื่อที่ตรงกันหลังปรับ Unicode</small></div>
         </div>
 
@@ -173,7 +173,7 @@ function GovernmentMap({ onInspectMinistry }: { onInspectMinistry: (ministry: st
 
         <div className="department-tools">
           <label><span>ค้นในกระทรวงนี้</span><input value={departmentQuery} onChange={(event) => { setDepartmentQuery(event.target.value); setDepartmentLimit(12) }} placeholder="ชื่อหน่วยงาน ภารกิจ หรือกอง" /></label>
-          <label><span>เรียงตาม</span><select value={departmentSort} onChange={(event) => setDepartmentSort(event.target.value as DepartmentSort)}><option value="budget">วงเงินสูงก่อน</option><option value="candidates">รายการจัดคิวมากก่อน</option><option value="structure">หน่วยย่อยมากก่อน</option><option value="name">ชื่อหน่วยงาน</option></select></label>
+          <label><span>เรียงตาม</span><select value={departmentSort} onChange={(event) => setDepartmentSort(event.target.value as DepartmentSort)}><option value="budget">วงเงินสูงสุด</option><option value="candidates">รายการคัดกรองมากที่สุด</option><option value="structure">จำนวนหน่วยย่อยมากที่สุด</option><option value="name">ชื่อหน่วยงาน</option></select></label>
           <div><strong>{number(departments.length)}</strong><span>หน่วยงานที่พบ</span></div>
         </div>
 
@@ -182,7 +182,7 @@ function GovernmentMap({ onInspectMinistry }: { onInspectMinistry: (ministry: st
             <span className="department-index">{String(index + 1).padStart(2, '0')}</span>
             <div className="department-copy"><div><small>{typeLabels[department.type]}</small><h4>{department.name}</h4></div><p>{department.description || 'เปิดหน้าต้นทางเพื่อดูภารกิจและโครงสร้างย่อย'}</p>{department.divisionPreview.length > 0 && <div className="division-preview">{department.divisionPreview.slice(0, 3).map((item) => <span key={item}>{item}</span>)}{department.divisionCount > 3 && <b>และอีก {number(department.divisionCount - 3)} หน่วยย่อย</b>}</div>}</div>
             <div className="department-budget">
-              {department.pbo2568 ? <><strong>{money(department.pbo2568.adjusted)}</strong><span>เบิกจ่ายรวม PO {department.pbo2568.rate === null ? 'ไม่มีค่า' : `${number(department.pbo2568.rate, 1)}%`}</span><b>{number(department.pbo2568.candidateCount)} รายการจัดคิวตรวจ</b></> : <><strong>ยังไม่พบชื่อคู่ตรง</strong><span>ไม่รวมยอดด้วยการเดาจากชื่อคล้าย</span></>}
+              {department.pbo2568 ? <><strong>{money(department.pbo2568.adjusted)}</strong><span>เบิกจ่ายรวมยอดผูกพัน (PO) {department.pbo2568.rate === null ? 'ไม่พบข้อมูล' : `${number(department.pbo2568.rate, 1)}%`}</span><b>{number(department.pbo2568.candidateCount)} รายการที่ผ่านเกณฑ์คัดกรอง</b></> : <><strong>ยังไม่พบชื่อหน่วยงานที่ตรงกัน</strong><span>ระบบไม่รวมยอดจากชื่อที่ใกล้เคียงโดยอัตโนมัติ</span></>}
               <a href={department.sourceUrl} target="_blank" rel="noreferrer">ดูโครงสร้างต้นทาง ↗</a>
             </div>
           </article>)}
@@ -194,20 +194,20 @@ function GovernmentMap({ onInspectMinistry }: { onInspectMinistry: (ministry: st
 
     <div className="responsibility-route">
       <div><span>01</span><strong>เริ่มจากปัญหา</strong><p>ระบุเหตุการณ์ พื้นที่ หรือบริการที่ประชาชนได้รับผล</p></div>
-      <div><span>02</span><strong>หาเจ้าภาพ</strong><p>แยกหน่วยงานหลัก ผู้สนับสนุน ผู้กำกับ และผู้ประสาน</p></div>
-      <div><span>03</span><strong>เปิดเส้นเงิน</strong><p>ดูตั้งต้น หลังโอน PO เบิกจ่าย และยอดคงเหลือ</p></div>
-      <div><span>04</span><strong>ตามสัญญา</strong><p>เชื่อม TOR ราคากลาง ผู้เสนอราคา งวดงาน และผลตรวจรับ</p></div>
-      <div><span>05</span><strong>ถามผลลัพธ์</strong><p>เทียบสิ่งที่จ่ายกับบริการและประโยชน์ที่เกิดขึ้นจริง</p></div>
+      <div><span>02</span><strong>ระบุผู้รับผิดชอบ</strong><p>แยกหน่วยงานหลัก หน่วยงานสนับสนุน ผู้กำกับ และผู้ประสานงาน</p></div>
+      <div><span>03</span><strong>ตรวจเส้นทางงบประมาณ</strong><p>ดูวงเงินตั้งต้น หลังโอน ยอดผูกพัน การเบิกจ่าย และยอดคงเหลือ</p></div>
+      <div><span>04</span><strong>ติดตามการจัดซื้อจัดจ้าง</strong><p>เชื่อม TOR ราคากลาง ผู้เสนอราคา สัญญา งวดงาน และผลตรวจรับ</p></div>
+      <div><span>05</span><strong>ตรวจสอบผลลัพธ์</strong><p>เปรียบเทียบเงินที่ใช้กับบริการและประโยชน์ที่เกิดขึ้นจริง</p></div>
     </div>
 
     <div className="problem-lenses">
-      <div><span>PROBLEM TO POWER</span><h3>ปัญหาหนึ่งเรื่อง<br />อาจมีหลายเจ้าภาพ</h3><p>ตัวอย่างจาก Bureaucrazy Lab ช่วยชี้ว่าการตรวจงบต้องมองความเชื่อมโยงระหว่างหน่วยงาน ไม่หยุดที่ชื่อกระทรวงเดียว</p></div>
-      <div className="problem-cards">{data.issues.map((issue) => <a href={issue.sourceUrl} target="_blank" rel="noreferrer" key={issue.slug}><small>กรณีศึกษาโครงสร้างรัฐ</small><strong>{issue.title}</strong><p>{issue.stats.ministryCount ? `${number(issue.stats.ministryCount)} กระทรวง` : 'เปิดดูหน่วยงานที่เกี่ยวข้อง'}{issue.stats.departmentCount ? ` • ${number(issue.stats.departmentCount)} กรมหรือสำนักงาน` : ''}</p><span>เปิดแผนผังต้นทาง ↗</span></a>)}</div>
+      <div><span>PROBLEM TO RESPONSIBILITY</span><h3>หนึ่งปัญหา<br />อาจเกี่ยวข้องหลายหน่วยงาน</h3><p>เริ่มจากปัญหาที่ประชาชนพบ ระบุหน่วยงานที่เกี่ยวข้อง แล้วตรวจเส้นทางงบประมาณ สัญญา และผลลัพธ์ที่เกิดขึ้นจริง</p></div>
+      <div className="problem-cards">{data.issues.map((issue) => <a href={issue.sourceUrl} target="_blank" rel="noreferrer" key={issue.slug}><small>ตัวอย่างเส้นทางความรับผิดชอบ</small><strong>{issue.title}</strong><p>{issue.stats.ministryCount ? `${number(issue.stats.ministryCount)} กระทรวง` : 'เปิดดูหน่วยงานที่เกี่ยวข้อง'}{issue.stats.departmentCount ? ` • ${number(issue.stats.departmentCount)} กรมหรือสำนักงาน` : ''}</p><span>ดูหน่วยงานที่เกี่ยวข้อง ↗</span></a>)}</div>
     </div>
 
     <footer className="state-map-source">
-      <p><strong>วิธีเชื่อมข้อมูล:</strong> {data.meta.method} ยอดงบประมาณและรายการคัดกรองคำนวณจาก PBO ปี 2568 ส่วนจำนวนหน่วยงานและหน่วยย่อยมาจาก Bureaucrazy Lab ตามวันที่ดึงข้อมูล</p>
-      <div><a href={data.meta.structureSourceUrl} target="_blank" rel="noreferrer">Bureaucrazy Lab ↗</a><a href={data.meta.budgetSourceUrl} target="_blank" rel="noreferrer">PBO 2568 ↗</a><a href="/data/government-structure.json" download>ดาวน์โหลดข้อมูลเชื่อมโยง .JSON</a></div>
+      <p><strong>ที่มาและวิธีเชื่อม:</strong> {data.meta.method} ยอดงบประมาณและรายการคัดกรองคำนวณจาก PBO ปี 2568 ส่วนโครงสร้างหน่วยงานใช้ข้อมูลสาธารณะจาก Bureaucrazy Lab ตามวันที่ดึงข้อมูล</p>
+      <div><a href={data.meta.structureSourceUrl} target="_blank" rel="noreferrer">ที่มาโครงสร้าง ↗</a><a href={data.meta.budgetSourceUrl} target="_blank" rel="noreferrer">ที่มางบประมาณ ↗</a><a href="/data/government-structure.json" download>ดาวน์โหลดข้อมูลเชื่อมโยง .JSON</a></div>
     </footer>
   </section>
 }

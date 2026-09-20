@@ -8,7 +8,7 @@ const stopWords = new Set(['งบ', 'รายการ', 'ราย', 'กา�
 
 const siteFacts = [
   'คลังหลักฐานมี 694 ไฟล์ 113 โฟลเดอร์ รวม 6.67 GB เปิดอ่าน workbook 124 ไฟล์ครบ 856 ชีต และมีข้อมูล PBO 11 ปีตั้งแต่ 2558 ถึง 2568',
-  'PBO ปี 2568 มี 241,159 แถว วงเงินหลังโอนรวม 3.7527 ล้านล้านบาท มี 193,783 แถวที่วงเงินเป็นบวก มัธยฐาน 0.499 ล้านบาท และรายการ 1% แรกถือวงเงิน 80.3%',
+  'PBO ปี 2568 มี 241,159 แถว วงเงินหลังโอนรวม 3.7527 ล้านล้านบาท มี 193,783 แถวที่วงเงินเป็นบวก มัธยฐาน 0.499 ล้านบาท และรายการที่มีวงเงินสูงสุด 1% แรกคิดเป็น 80.3% ของวงเงินทั้งหมด',
   'ระบบคัดกรองข้อมูล PBO ปี 2568 ได้ 3,194 รายการตาม 7 เงื่อนไขเพื่อจัดลำดับการตรวจเอกสาร โดยทุกเงื่อนไขเป็นสัญญาณให้ตรวจต่อ ไม่ใช่ข้อสรุปว่ามีความผิด',
   'ร่างงบกรุงเทพมหานครและการพาณิชย์รวม 93,918.922 ล้านบาท งานบริการสำนักงานเขต 21,842.92229 ล้านบาท และงบกลาง 17,721.61045 ล้านบาท',
   'ร่างงบเทศบาลนครเชียงใหม่มี 700 รายการ รวม 1,995 ล้านบาท ค่าจ้างเอกชนกำจัดขยะ 166.075 ล้านบาทและจัดเก็บขยะ 121.80142 ล้านบาท รวม 287.87642 ล้านบาท',
@@ -20,7 +20,7 @@ const siteFacts = [
   'กลุ่มที่ดินและสิ่งก่อสร้างมี 77,283 แถว วงเงิน 488,197.6646 ล้านบาท อัตรารวม 67.7%',
   'กลุ่ม AI มี 131 แถว วงเงิน 1,396.0722 ล้านบาท อัตรารวม 66.9%',
   'กลุ่มสำนักงานประกันสังคมมี 87 แถว วงเงิน 129,196.2214 ล้านบาท อัตรารวม 100.1% ตัวเลขนี้ใช้เป็นจุดกระทบยอดนิยามและช่วงเวลา',
-  'แผนที่โครงสร้างรัฐเชื่อมข้อมูลสาธารณะของ Bureaucrazy Lab จำนวน 21 กลุ่มระดับกระทรวง 417 หน่วยงาน 2,405 กองหรือหน่วยย่อย กับ PBO ปี 2568 โดยเชื่อมชื่อหน่วยงานได้ตรงกัน 271 แห่ง',
+  'แผนที่โครงสร้างรัฐเชื่อม 21 กลุ่มระดับกระทรวง 417 หน่วยงาน และ 2,405 กองหรือหน่วยย่อย กับ PBO ปี 2568 โดยเชื่อมชื่อหน่วยงานได้ตรงกัน 280 แห่ง',
 ]
 
 const signalGuides = {
@@ -28,7 +28,7 @@ const signalGuides = {
   transfer_up: { meaning: 'บอกว่ารายการได้รับวงเงินเพิ่มทั้งในเชิงมูลค่าและสัดส่วน ต้องตรวจเหตุผล แหล่งโอน และผลต่อเป้าหมายเดิม', docs: ['คำสั่งโอนเปลี่ยนแปลง', 'แหล่งงบที่โอนออก', 'แผนงานฉบับก่อนและหลังปรับ', 'สถานะสัญญาและผลผลิต'] },
   transfer_down: { meaning: 'บอกว่าวงเงินลดจากกรอบตั้งต้นอย่างมีนัยตามกฎคัดกรอง ยังไม่บอกว่าเกิดจากการประหยัด การลดเป้าหมาย หรือโครงการล่าช้า', docs: ['คำสั่งโอนเปลี่ยนแปลง', 'เป้าหมายก่อนและหลังลดวงเงิน', 'แผนจัดซื้อและสถานะสัญญา', 'ผลกระทบต่อผู้รับประโยชน์'] },
   missing_execution: { meaning: 'บอกว่าช่อง PO และยอดเบิกจ่ายระดับแถวไม่มีค่าตัวเลข แยกจากยอดศูนย์ และต้องตรวจระดับการรายงานก่อนตีความ', docs: ['ทะเบียนเบิกจ่ายระดับรายการ', 'ยอดผูกพัน PO', 'เลขสัญญาและงวดงาน', 'คำอธิบายนิยามช่องข้อมูล'] },
-  low_execution: { meaning: 'บอกว่าอัตรารวม PO ตามข้อมูลต่ำกว่าเกณฑ์ 35% ใช้จัดคิวถามสาเหตุ แต่ยังไม่ยืนยันว่าโครงการล่าช้าหรือมีปัญหา', docs: ['แผนและผลใช้จ่ายรายเดือน', 'สถานะจัดซื้อและสัญญา', 'งวดงานและผลตรวจรับ', 'รายการกันเงินเหลื่อมปี'] },
+  low_execution: { meaning: 'บอกว่าอัตรารวม PO ตามข้อมูลต่ำกว่าเกณฑ์ 35% ใช้จัดลำดับการตรวจสอบสาเหตุ แต่ยังไม่ยืนยันว่าโครงการล่าช้าหรือมีปัญหา', docs: ['แผนและผลใช้จ่ายรายเดือน', 'สถานะจัดซื้อและสัญญา', 'งวดงานและผลตรวจรับ', 'รายการกันเงินเหลื่อมปี'] },
   over_execution: { meaning: 'บอกว่ายอดรวมที่รายงานสูงกว่าวงเงินหลังโอนเกินเกณฑ์ ควรกระทบยอดนิยาม ช่วงเวลา และการนับ PO กับยอดเบิกก่อน', docs: ['นิยามคอลัมน์และช่วงตัดข้อมูล', 'ทะเบียน PO', 'ทะเบียนเบิกจ่าย', 'บัญชีกระทบยอดรายรายการ'] },
   vague_title: { meaning: 'บอกว่าชื่อรายการเป็นหมวดกว้าง รหัสสั้น หรือข้อความสั้นจนยังตรวจวัตถุประสงค์ ราคา และผลผลิตจากชื่อแถวไม่ได้', docs: ['รายการย่อยและจำนวนหน่วย', 'TOR และราคากลาง', 'ทะเบียนสัญญาและผู้รับจ้าง', 'ตัวชี้วัดผลผลิตและผลลัพธ์'] },
 }
@@ -249,21 +249,27 @@ function retrieve(question, focusId) {
     }
     return !requestedYears.length || requestedYears.includes(row.year)
   }) : []
-  const asksStructure = /โครงสร้าง|ใคร.{0,12}(รับผิดชอบ|ต้องตอบ|เป็นเจ้าภาพ)|เจ้าภาพ|สังกัด|กี่หน่วยงาน|กี่กอง/.test(question)
-  const structureTerms = terms.filter((term) => !['โครงสร้าง', 'รับผิดชอบ', 'เจ้าภาพ', 'หน่วยงาน', 'กระทรวง'].includes(term))
-  const relevantStructure = structure.ministries.flatMap((ministry) => ministry.departments.map((department) => {
+  const structureStopTerms = new Set(['โครงสร้าง', 'รับผิดชอบ', 'เจ้าภาพ', 'หน่วยงาน', 'กระทรวง', 'กรม', 'สังกัด', 'ใคร', 'ต้องตอบ', 'กี่กอง', 'วงเงิน', 'เท่าไร', 'ตรวจต่อ'])
+  const structureTerms = terms.filter((term) => !structureStopTerms.has(term))
+  const normalizedStructureQuestion = question.toLocaleLowerCase('th')
+  const rankedStructure = structure.ministries.flatMap((ministry) => ministry.departments.map((department) => {
     const searchable = `${ministry.name} ${department.name} ${department.description} ${(department.divisionPreview ?? []).join(' ')}`.toLocaleLowerCase('th')
-    const score = structureTerms.reduce((sum, term) => sum + (department.name.toLocaleLowerCase('th').includes(term) ? 6 : 0) + (ministry.name.toLocaleLowerCase('th').includes(term) ? 4 : 0) + (searchable.includes(term) ? 1 : 0), 0)
+    const exactDepartment = normalizedStructureQuestion.includes(department.name.toLocaleLowerCase('th')) ? 40 : 0
+    const exactMinistry = normalizedStructureQuestion.includes(ministry.name.toLocaleLowerCase('th')) ? 20 : 0
+    const score = exactDepartment + exactMinistry + structureTerms.reduce((sum, term) => sum + (department.name.toLocaleLowerCase('th').includes(term) ? 6 : 0) + (ministry.name.toLocaleLowerCase('th').includes(term) ? 4 : 0) + (searchable.includes(term) ? 1 : 0), 0)
     return { ministry, department, score }
   }))
     .filter((entry) => entry.score > 0)
     .sort((a, b) => b.score - a.score || (b.department.pbo2568?.adjusted ?? -1) - (a.department.pbo2568?.adjusted ?? -1))
-    .slice(0, asksStructure ? 6 : 3)
+  const bestStructureScore = rankedStructure[0]?.score ?? 0
+  const relevantStructure = rankedStructure
+    .filter((entry) => entry.score >= Math.max(2, bestStructureScore * 0.55))
+    .slice(0, 3)
 
-  const itemText = selected.map(({ item }, index) => `[รายการ ${index + 1}] ${item.item}\nหน่วยงาน: ${item.agency}\nกระทรวง: ${item.ministry}\nโครงการ: ${item.project}\nตาม พ.ร.บ.: ${item.act} ล้านบาท | หลังโอน: ${item.adjusted} ล้านบาท | เปลี่ยนแปลง: ${item.delta} ล้านบาท | เบิกจ่ายรวม PO: ${item.committed} ล้านบาท | อัตรา: ${item.rate ?? 'ไม่มีค่า'}%\nสัญญาณ: ${item.signals.join(', ')}\nที่มา: ${SOURCE_URL}`).join('\n\n')
+  const itemText = selected.map(({ item }, index) => `[รายการ ${index + 1}] ${item.item}\nหน่วยงาน: ${item.agency}\nกระทรวง: ${item.ministry}\nโครงการ: ${item.project}\nตาม พ.ร.บ.: ${item.act} ล้านบาท | หลังโอน: ${item.adjusted} ล้านบาท | เปลี่ยนแปลง: ${item.delta} ล้านบาท | เบิกจ่ายรวมยอดผูกพัน (PO): ${item.committed} ล้านบาท | อัตรา: ${item.rate ?? 'ไม่พบข้อมูล'}%\nสัญญาณ: ${item.signals.join(', ')}\nที่มา: ${SOURCE_URL}`).join('\n\n')
   const caseText = selectedCases.map(({ item }, index) => `[แฟ้ม ${index + 1}] ${item.title}\nหน่วยงาน: ${item.agency}\nประเด็น: ${item.lead}\nสิ่งที่ข้อมูลบอก: ${item.finding}\nข้อควรระวัง: ${item.caution}\nระดับข้อมูล: ${item.dataLevel}\nความครบถ้วน: ${item.completeness}\nคำถามตรวจต่อ: ${item.questions.join(' | ')}\nเอกสารที่ควรขอ: ${item.requestDocs.join(' | ')}\nกฎหมาย: ${item.laws.join(' | ')}\nที่มา: ${item.sourceUrl}`).join('\n\n')
   const fileText = relevantFiles.map((file, index) => `[ไฟล์ ${index + 1}] ${file.title}\nหมวด: ${file.category}\nตำแหน่งในคลัง: ${file.path || 'โฟลเดอร์หลัก'}\nชนิด: ${file.type}\nขนาด: ${formatBytes(file.size)}\nสถานะการอ่าน: ${file.status === 'complete' ? 'อ่านและจัดทำดัชนีแล้ว' : file.status === 'error' ? 'ต้องตรวจซ้ำ' : 'อยู่ระหว่างประมวลผล'}\nโครงสร้าง: ${file.units ?? 0} หน้า แถว หรือส่วนเนื้อหา | ${file.lines ?? 0} บรรทัด | ${file.cells ?? 0} เซลล์ | OCR ${file.ocr_units ?? 0} หน่วย\nตัวอย่างข้อความ: ${(file.preview ?? []).map((record) => record.text).filter(Boolean).slice(0, 1).map((text) => text.slice(0, 500)).join(' | ') || 'ยังไม่มีข้อความตัวอย่าง'}\nที่มา: ${file.url}`).join('\n\n')
-  const evidenceText = relevantEvidence.map((item, index) => `[หลักฐาน ${index + 1}] ${item.label}\nแฟ้ม: ${item.title}\nตำแหน่ง: ${item.locator_label}\nวิธีอ่านข้อความ: ${item.extraction === 'ocr' ? 'OCR ภาษาไทยและอังกฤษ' : 'ข้อความฝังหรือข้อมูลมีโครงสร้าง'}\nจำนวนเงิน: ${item.amount ? `${item.amount.toLocaleString('th-TH')} บาท` : 'ไม่ระบุ'}\nเหตุผลที่จัดคิว: ${item.explanation}\nบริบทจากต้นทาง: ${item.context}\nที่มา: ${item.source_url}`).join('\n\n')
+  const evidenceText = relevantEvidence.map((item, index) => `[หลักฐาน ${index + 1}] ${item.label}\nแฟ้ม: ${item.title}\nตำแหน่ง: ${item.locator_label}\nวิธีอ่านข้อความ: ${item.extraction === 'ocr' ? 'OCR ภาษาไทยและอังกฤษ' : 'ข้อความฝังหรือข้อมูลมีโครงสร้าง'}\nจำนวนเงิน: ${item.amount ? `${item.amount.toLocaleString('th-TH')} บาท` : 'ไม่ระบุ'}\nเหตุที่ควรตรวจต่อ: ${item.explanation}\nบริบทต้นทาง: ${item.context}\nที่มา: ${item.source_url}`).join('\n\n')
   const committeeText = relevantMeetings.map((meeting, index) => {
     const summary = meeting.summary
     const issues = summary?.issues.slice(0, 4).map((item, itemIndex) => `${itemIndex + 1}) ${item.title}: ${item.desc || item.public || item.why || item.q || item.ask || 'ไม่มีคำอธิบายเพิ่มเติม'}`).join('\n') || 'ไม่มีข้อมูลสาระรายประเด็นในดัชนี'
@@ -271,7 +277,7 @@ function retrieve(question, focusId) {
     return `[กมธ. ${index + 1}] ${meeting.title}\nวันประชุม: ${meeting.dateLabel} | ${meeting.roundLabel} ${meeting.session}\nขอบเขตวาระ: ${meeting.description}\nสถานะ: ${meeting.hasSummary ? 'มีสรุปหลังประชุม' : 'ยังไม่มีสรุปหลังประชุม'}\nภาพรวมจากหน้าสรุปต้นทาง: ${summary?.overview || 'ไม่มีข้อมูล'}\nสาระรายประเด็นจากหน้าสรุปต้นทาง:\n${issues}\nงานติดตามต่อจากหน้าสรุปต้นทาง:\n${homework}\nที่มา: ${meeting.summaryUrl ?? committee.meta.sourceUrl}`
   }).join('\n\n')
   const historyText = relevantHistory.map((row) => `[ปี ${row.year}] จำนวน ${row.rows.toLocaleString('th-TH')} แถว | ตาม พ.ร.บ. ${row.act.toLocaleString('th-TH')} ล้านบาท | หลังโอน ${row.adjusted.toLocaleString('th-TH')} ล้านบาท | เบิกจ่าย ${row.paid.toLocaleString('th-TH')} ล้านบาท | อัตรา ${row.paid_rate ?? 'ไม่มีค่า'}%`).join('\n')
-  const structureText = relevantStructure.map(({ ministry, department }, index) => `[โครงสร้าง ${index + 1}] ${department.name}\nสังกัด: ${ministry.name}\nภารกิจที่แหล่งต้นทางระบุ: ${department.description || 'ไม่ระบุ'}\nรูปแบบหน่วยงาน: ${department.type}\nหน่วยย่อยที่นับได้: ${department.divisionCount}\nPBO 2568: ${department.pbo2568 ? `วงเงินหลังโอน ${department.pbo2568.adjusted.toLocaleString('th-TH')} ล้านบาท | เบิกจ่ายรวม PO ${department.pbo2568.committed.toLocaleString('th-TH')} ล้านบาท | อัตรา ${department.pbo2568.rate ?? 'ไม่มีค่า'}% | รายการจัดคิวตรวจ ${department.pbo2568.candidateCount}` : 'ยังไม่พบชื่อคู่ตรง จึงไม่รวมยอดด้วยการเดาจากชื่อคล้าย'}\nที่มาโครงสร้าง: ${department.sourceUrl}\nที่มางบประมาณ: ${structure.meta.budgetSourceUrl}`).join('\n\n')
+  const structureText = relevantStructure.map(({ ministry, department }, index) => `[โครงสร้าง ${index + 1}] ${department.name}\nสังกัด: ${ministry.name}\nภารกิจที่แหล่งต้นทางระบุ: ${department.description || 'ไม่ระบุ'}\nรูปแบบหน่วยงาน: ${department.type}\nหน่วยย่อยที่นับได้: ${department.divisionCount}\nPBO 2568: ${department.pbo2568 ? `วงเงินหลังโอน ${department.pbo2568.adjusted.toLocaleString('th-TH')} ล้านบาท | เบิกจ่ายรวมยอดผูกพัน (PO) ${department.pbo2568.committed.toLocaleString('th-TH')} ล้านบาท | อัตรา ${department.pbo2568.rate ?? 'ไม่พบข้อมูล'}% | รายการที่ผ่านเกณฑ์คัดกรอง ${department.pbo2568.candidateCount}` : 'ยังไม่พบชื่อหน่วยงานที่ตรงกัน ระบบจึงไม่รวมยอดจากชื่อที่ใกล้เคียงโดยอัตโนมัติ'}\nที่มาโครงสร้าง: ${department.sourceUrl}\nที่มางบประมาณ: ${structure.meta.budgetSourceUrl}`).join('\n\n')
   const focusText = focus ? `\nรายการที่ผู้ใช้กำลังเปิดดูและถามถึงโดยตรง:\n${JSON.stringify(focus)}` : ''
   const context = `ข้อมูลภาพรวม:\n${relevantFacts.length ? relevantFacts.map((fact, index) => `[ข้อมูล ${index + 1}] ${fact.text}`).join('\n') : 'ไม่พบตัวเลขภาพรวมที่ตรงคำค้นโดยตรง'}\n\nโครงสร้างรัฐเชื่อมงบประมาณ:\n${structureText || 'ไม่พบหน่วยงานที่ตรงคำค้นโดยตรง'}\n\nอนุกรมเวลา PBO:\n${historyText}\n\nวาระและสรุปหลังประชุมของคณะกรรมาธิการ:\n${committeeText || 'ไม่พบวาระที่ตรงคำค้นโดยตรง'}\n\nแฟ้มวิเคราะห์ที่ค้นคืนจากเว็บ:\n${caseText || 'ไม่พบแฟ้มเฉพาะที่ตรงคำค้น'}\n\nรายการที่ค้นคืนจาก PBO 2568:\n${itemText || 'ไม่พบรายการ PBO ที่ตรงคำค้นโดยตรง'}\n\nหลักฐานในคลังที่ค้นคืน:\n${fileText || 'ไม่พบชื่อไฟล์ที่ตรงคำค้นโดยตรง'}\n\nสัญญาณจากข้อความและ OCR:\n${evidenceText || 'ไม่พบสัญญาณที่ตรงคำค้นโดยตรง'}\n\nกฎหมายที่เกี่ยวข้อง:\n${relevantLaws.map((law) => `${law.code}\nตัวบทตามประกาศ:\n${law.exactText}\n\nแนวทางใช้ตรวจงบของระบบ:\n${law.analysis}\nเอกสารที่เชื่อมต่อ: ${law.documents.join(' | ')}\nประกาศ: ${law.publication}\nที่มา: ${law.sourceUrl}`).join('\n\n')}${focusText}`
 
@@ -281,7 +287,7 @@ function retrieve(question, focusId) {
     ...relevantFiles.map((file, index) => ({ ref: `[ไฟล์ ${index + 1}]`, label: file.title, detail: `${file.category} | ${file.path || 'โฟลเดอร์หลัก'} | ${formatBytes(file.size)}`, url: file.url })),
     ...relevantEvidence.map((item, index) => ({ ref: `[หลักฐาน ${index + 1}]`, label: `${item.label}: ${item.title}`, detail: `${item.locator_label} | ${item.category}`, url: item.source_url })),
     ...relevantMeetings.map((meeting, index) => ({ ref: `[กมธ. ${index + 1}]`, label: meeting.title, detail: `${meeting.dateLabel} | ${meeting.roundLabel} ${meeting.session} | ${meeting.hasSummary ? 'มีสรุปหลังประชุม' : 'รอสรุป'}`, url: meeting.summaryUrl ?? committee.meta.sourceUrl })),
-    ...relevantStructure.map(({ ministry, department }, index) => ({ ref: `[โครงสร้าง ${index + 1}]`, label: department.name, detail: `${ministry.name} | ${department.pbo2568 ? `${department.pbo2568.adjusted.toLocaleString('th-TH')} ล้านบาท` : 'ยังไม่เชื่อมยอด PBO'}`, url: department.sourceUrl })),
+    ...relevantStructure.map(({ ministry, department }, index) => ({ ref: `[โครงสร้าง ${index + 1}]`, label: department.name, detail: `${ministry.name} | ${department.pbo2568 ? `${department.pbo2568.adjusted.toLocaleString('th-TH')} ล้านบาท` : 'ยังไม่พบยอด PBO ที่เชื่อมโยง'}`, url: department.sourceUrl })),
     ...relevantHistory.map((row) => {
       const sourceFile = inventory.files.find((file) => file.category === 'PBO' && file.title === `${row.year}.xlsx`)
       return { ref: `[ปี ${row.year}]`, label: `PBO ปี ${row.year}`, detail: `${row.rows.toLocaleString('th-TH')} แถว | เบิกจ่าย ${row.paid_rate ?? 'ไม่มีค่า'}%`, url: sourceFile?.url ?? SOURCE_URL }
@@ -394,8 +400,8 @@ function buildStructureAnswer(entries) {
   const typeLabels = { regular: 'กรมหรือสำนักงาน', stateEnterprise: 'รัฐวิสาหกิจ', publicOrganization: 'องค์การมหาชน', other: 'หน่วยงานรูปแบบอื่น' }
   const rows = entries.slice(0, 6).map(({ ministry, department }, index) => {
     const budget = department.pbo2568
-      ? `วงเงินหลังโอน ${department.pbo2568.adjusted.toLocaleString('th-TH')} ล้านบาท เบิกจ่ายรวมยอดผูกพัน (PO) ${department.pbo2568.committed.toLocaleString('th-TH')} ล้านบาท คิดเป็น ${department.pbo2568.rate ?? 'ไม่มีค่า'}% และมี ${department.pbo2568.candidateCount.toLocaleString('th-TH')} รายการที่ระบบจัดคิวตรวจ`
-      : 'ยังไม่พบชื่อคู่ตรงใน PBO ปี 2568 ระบบจึงไม่รวมยอดด้วยการเดาจากชื่อคล้าย'
+      ? `วงเงินหลังโอน ${department.pbo2568.adjusted.toLocaleString('th-TH')} ล้านบาท เบิกจ่ายรวมยอดผูกพัน (PO) ${department.pbo2568.committed.toLocaleString('th-TH')} ล้านบาท คิดเป็น ${department.pbo2568.rate ?? 'ไม่พบข้อมูล'}% และมี ${department.pbo2568.candidateCount.toLocaleString('th-TH')} รายการที่ผ่านเกณฑ์คัดกรอง`
+      : 'ยังไม่พบชื่อหน่วยงานที่ตรงกันใน PBO ปี 2568 ระบบจึงไม่รวมยอดจากชื่อที่ใกล้เคียงโดยอัตโนมัติ'
     return `${index + 1}. ${department.name} [โครงสร้าง ${index + 1}]\nสังกัด: ${ministry.name}\nบทบาทที่แหล่งต้นทางระบุ: ${department.description || 'ไม่ระบุ'}\nรูปแบบ: ${typeLabels[department.type] ?? department.type} | ${department.divisionCount.toLocaleString('th-TH')} กองหรือหน่วยย่อย\nข้อมูลงบประมาณ: ${budget}`
   })
   return `หน่วยงานที่สัมพันธ์กับคำถาม\n\n${rows.join('\n\n')}\n\nวิธีตรวจต่อ\nเริ่มจากระบุหน่วยงานหลักและหน่วยงานสนับสนุน เปิดรายการงบของแต่ละแห่ง แล้วเชื่อม TOR สัญญา งวดงาน ผลตรวจรับ และผลลัพธ์ของบริการเข้าด้วยกัน`
@@ -403,7 +409,7 @@ function buildStructureAnswer(entries) {
 
 function buildSignalAnswer(signal, selectedItems) {
   const guide = signalGuides[signal.id]
-  const examples = selectedItems.slice(0, 3).map((item, index) => `${index + 1}. [รายการ ${index + 1}] ${item.item}\nหน่วยงาน: ${item.agency}\nตาม พ.ร.บ. ${item.act.toLocaleString('th-TH')} ล้านบาท หลังโอน ${item.adjusted.toLocaleString('th-TH')} ล้านบาท เบิกจ่ายรวม PO ${item.committed.toLocaleString('th-TH')} ล้านบาท`)
+  const examples = selectedItems.slice(0, 3).map((item, index) => `${index + 1}. [รายการ ${index + 1}] ${item.item}\nหน่วยงาน: ${item.agency}\nตาม พ.ร.บ. ${item.act.toLocaleString('th-TH')} ล้านบาท หลังโอน ${item.adjusted.toLocaleString('th-TH')} ล้านบาท เบิกจ่ายรวมยอดผูกพัน (PO) ${item.committed.toLocaleString('th-TH')} ล้านบาท`)
   return `${signal.label}\nนิยามที่ใช้คัดกรอง: ${signal.definition}\nขนาดในข้อมูล PBO 2568: ${signal.count.toLocaleString('th-TH')} แถว วงเงินหลังโอนรวม ${signal.amount.toLocaleString('th-TH')} ล้านบาท\nวิธีอ่าน: ${guide.meaning}\nเอกสารที่ควรขอ: ${guide.docs.join(', ')}${examples.length ? `\n\nตัวอย่างสำหรับเริ่มตรวจ\n${examples.join('\n\n')}` : ''}`
 }
 

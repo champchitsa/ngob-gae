@@ -103,7 +103,7 @@ function BudgetDashboard({ history }: { history: PboHistory | null }) {
       <aside className="audit-sequence">
         <span>ลำดับเปิดหลักฐาน</span>
         <ol><li><b>01</b>ยืนยันนิยามและช่วงตัดข้อมูล</li><li><b>02</b>เปิดคำอนุมัติและรายการโอน</li><li><b>03</b>เชื่อม TOR ราคากลาง และผู้ยื่นข้อเสนอ</li><li><b>04</b>เชื่อมสัญญา งวดงาน และการแก้ไขสัญญา</li><li><b>05</b>ตรวจผลส่งมอบ ตรวจรับ และผลลัพธ์</li></ol>
-        <a href="#signals">เปิด {bigData.meta.candidateCount.toLocaleString('th-TH')} รายการที่จัดคิวแล้ว ↓</a>
+        <a href="#signals">ดู {bigData.meta.candidateCount.toLocaleString('th-TH')} รายการที่ผ่านเกณฑ์คัดกรอง ↓</a>
       </aside>
     </div>}
   </section>
