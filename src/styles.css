@@ -1023,8 +1023,9 @@ a { color: inherit; }
 }
 
 @media (max-width: 680px) {
-  .topbar { height: 62px; grid-template-columns: 1fr auto auto; padding: 0 12px; }
-  .brand { font-size: 23px; }
+  .topbar { height: 62px; grid-template-columns: minmax(0, 1fr) 92px 40px; padding: 0 10px; }
+  .brand { font-size: 21px; }
+  .mobile-section-nav { width: 92px; min-width: 92px; }
   .mobile-chat-button { width: 40px; height: 36px; padding: 0; font-size: 0; }
   .mobile-chat-button::after { content: 'AI'; font: 900 11px 'IBM Plex Mono', monospace; }
   .topnav { display: none; }
