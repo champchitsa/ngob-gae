@@ -56,6 +56,7 @@ function loadKnowledge() {
     committee: JSON.parse(readFileSync(join(process.cwd(), 'public', 'data', 'committee-meetings.json'), 'utf8')),
     structure: JSON.parse(readFileSync(join(process.cwd(), 'public', 'data', 'government-structure.json'), 'utf8')),
     sso: JSON.parse(readFileSync(join(process.cwd(), 'public', 'data', 'sso-budget-analysis.json'), 'utf8')),
+    ssoIt: JSON.parse(readFileSync(join(process.cwd(), 'public', 'data', 'sso-it-procurement.json'), 'utf8')),
   }
   return knowledgeCache
 }
@@ -162,7 +163,7 @@ function subsectionText(exactText, requestedSubsection) {
 }
 
 function retrieve(question, focusId) {
-  const { big: data, cases, inventory, history, corpus, corpusAnalysis, legal, committee, structure, sso } = loadKnowledge()
+  const { big: data, cases, inventory, history, corpus, corpusAnalysis, legal, committee, structure, sso, ssoIt } = loadKnowledge()
   const terms = termsFor(question)
   const topicPattern = topicPatternFor(question)
   const matchedSignal = signalFor(question, data.flags)
@@ -304,10 +305,12 @@ function retrieve(question, focusId) {
   }).join('\n\n')
   const historyText = relevantHistory.map((row) => `[ปี ${row.year}] จำนวน ${row.rows.toLocaleString('th-TH')} แถว | ตาม พ.ร.บ. ${row.act.toLocaleString('th-TH')} ล้านบาท | หลังโอน ${row.adjusted.toLocaleString('th-TH')} ล้านบาท | เบิกจ่าย ${row.paid.toLocaleString('th-TH')} ล้านบาท | อัตรา ${row.paid_rate ?? 'ไม่มีค่า'}%`).join('\n')
   const structureText = relevantStructure.map(({ ministry, department }, index) => `[โครงสร้าง ${index + 1}] ${department.name}\nสังกัด: ${ministry.name}\nภารกิจที่แหล่งต้นทางระบุ: ${department.description || 'ไม่ระบุ'}\nรูปแบบหน่วยงาน: ${department.type}\nหน่วยย่อยที่นับได้: ${department.divisionCount}\nPBO 2568: ${department.pbo2568 ? `วงเงินหลังโอน ${department.pbo2568.adjusted.toLocaleString('th-TH')} ล้านบาท | เบิกจ่ายรวมยอดผูกพัน (PO) ${department.pbo2568.committed.toLocaleString('th-TH')} ล้านบาท | อัตรา ${department.pbo2568.rate ?? 'ไม่พบข้อมูล'}% | รายการที่ผ่านเกณฑ์คัดกรอง ${department.pbo2568.candidateCount}` : 'ยังไม่พบชื่อหน่วยงานที่ตรงกัน ระบบจึงไม่รวมยอดจากชื่อที่ใกล้เคียงโดยอัตโนมัติ'}\nที่มาโครงสร้าง: ${department.sourceUrl}\nที่มางบประมาณ: ${structure.meta.budgetSourceUrl}`).join('\n\n')
+  const asksSsoIt = /\bAIT\b|แอ็ดวานซ์|ไชยกาญจน์|คอนซอ|กิจการร่วมค้า|SSO\s*(?:Core|Plus)|งบ\s*(?:IT|ไอที)|จัดซื้อ.{0,20}(?:IT|ไอที|เทคโนโลยีสารสนเทศ)|ผู้ชนะ.{0,20}ประกันสังคม|TKC|SKY\s*ICT|63\d{9}|64\d{9}|65\d{9}|66\d{9}|67\d{9}/i.test(question)
   const asksSso = /ประกันสังคม|ผู้ประกันตน|สปส|มาตรา\s*40|skyy9|ปฏิทิน|เฟิร์สคลาส|first\s*class|contact\s*center|1506|sso\s*plus/i.test(question)
+  const ssoItText = asksSsoIt ? `ภาพรวมจัดซื้อ IT สำนักงานประกันสังคม:\n[จัดซื้อ IT 1] ชุดตรวจสอบยืนยันรอบแรกพบ ${ssoIt.metrics.linkedProjects} โครงการที่ AIT รับงานตรงหรือเป็นสมาชิกกิจการร่วมค้า มูลค่าสัญญารวม ${ssoIt.metrics.totalContract.toLocaleString('th-TH')} บาท รับงานตรง ${ssoIt.metrics.directProjects} โครงการ ${ssoIt.metrics.directContract.toLocaleString('th-TH')} บาท และอยู่ในกิจการร่วมค้า ${ssoIt.metrics.consortiumProjects} โครงการ มูลค่าสัญญารวม ${ssoIt.metrics.consortiumContract.toLocaleString('th-TH')} บาท มูลค่ากิจการร่วมค้าไม่ใช่รายได้ของ AIT ทั้งหมด\n\n${ssoIt.projects.map((project, index) => `[จัดซื้อ IT ${index + 2}] ${project.id} ${project.title}\nปีงบประมาณ: ${project.budgetYear} | วิธี: ${project.method}\nราคากลาง: ${project.estimatePrice.toLocaleString('th-TH')} บาท | ราคาสัญญา: ${project.contractPrice.toLocaleString('th-TH')} บาท | ต่ำกว่าราคากลาง: ${project.discountPct}%\nผู้ชนะ: ${project.winner}\nสมาชิก: ${project.members.join(' | ')}\nผู้ซื้อเอกสาร: ${project.documentBuyerCount ?? 'ไม่พบข้อมูล'} ราย | ผู้ยื่นข้อเสนอ: ${project.submittedCount} ราย\nผู้เสนอราคา: ${project.bidders.map((bidder) => `${bidder.name} ${bidder.price?.toLocaleString('th-TH') ?? 'ไม่พบราคา'} บาท (${bidder.status})`).join(' | ')}\nประเด็นที่ควรตรวจสอบเพิ่มเติม: ${project.concerns.join(' | ')}\nที่มา: ${project.projectUrl}`).join('\n\n')}\n\nรูปแบบที่พบ:\n${ssoIt.patterns.map((pattern) => `- ${pattern.title}: ${pattern.value} ${pattern.detail}`).join('\n')}\n\nขอบเขต: ${ssoIt.meta.scopeLimit}` : ''
   const ssoText = asksSso ? `ภาพรวมงบประกันสังคมเฉพาะเรื่อง:\nงบแผ่นดินสำนักงานประกันสังคมโดยตรงปี 2568 จำนวน ${sso.pbo.agencyAdjusted} ล้านบาท จาก ${sso.pbo.agencyRows} แถว ยอดก่อนและหลังโอนรวมเท่ากัน\nงบกองทุนบริหารงานปี 2563 ถึง 2567 จัดสรรรวม ${sso.administration.history.reduce((sum, row) => sum + row.allocated, 0).toFixed(4)} ล้านบาท ใช้จ่ายรวมก่อหนี้ ${sso.administration.history.reduce((sum, row) => sum + row.committed, 0).toFixed(4)} ล้านบาท\nทะเบียนสินทรัพย์ปี 2567 อ่านได้ ${sso.assets.parsedRows.toLocaleString('th-TH')} รายการ จาก ${sso.assets.pages.toLocaleString('th-TH')} หน้า ราคาทุนที่คำนวณได้ ${sso.assets.acquisitionCost} ล้านบาท มูลค่าตามบัญชี ${sso.assets.bookValue} ล้านบาท รายการมูลค่าตามบัญชี 1 บาท ${sso.assets.oneBahtRows.toLocaleString('th-TH')} รายการ\n\n${sso.findings.map((finding, index) => `[ประกันสังคม ${index + 1}] ${finding.title}\nข้อเท็จจริง: ${finding.fact}\nข้อสังเกต: ${finding.observation}\nเอกสารที่ควรขอ: ${finding.documents.join(' | ')}\nที่มา: ${finding.sourceUrl || sso.meta.pboSource}`).join('\n\n')}\n\nรูปแบบที่เกิดซ้ำในรายงาน 5 ปี:\n${sso.administration.recurring.map((group) => `- ${group.label}: พบ ${group.yearCount} ปี จัดสรรรวม ${group.allocated} ล้านบาท ใช้จ่ายรวมก่อหนี้ ${group.committed} ล้านบาท`).join('\n')}\n\nบริบทข่าวและสถานะ:\n${sso.newsContext.map((item) => `- ${item.date} ${item.title}: ${item.fact} สถานะ: ${item.status} ที่มา: ${item.url}`).join('\n')}` : ''
   const focusText = focus ? `\nรายการที่ผู้ใช้กำลังเปิดดูและถามถึงโดยตรง:\n${JSON.stringify(focus)}` : ''
-  const context = `ข้อมูลภาพรวม:\n${relevantFacts.length ? relevantFacts.map((fact, index) => `[ข้อมูล ${index + 1}] ${fact.text}`).join('\n') : 'ไม่พบตัวเลขภาพรวมที่ตรงคำค้นโดยตรง'}\n\nแฟ้มเจาะงบประกันสังคม:\n${ssoText || 'คำถามนี้ไม่ตรงกับแฟ้มประกันสังคมเฉพาะเรื่อง'}\n\nโครงสร้างรัฐเชื่อมงบประมาณ:\n${structureText || 'ไม่พบหน่วยงานที่ตรงคำค้นโดยตรง'}\n\nอนุกรมเวลา PBO:\n${historyText}\n\nวาระและสรุปหลังประชุมของคณะกรรมาธิการ:\n${committeeText || 'ไม่พบวาระที่ตรงคำค้นโดยตรง'}\n\nแฟ้มวิเคราะห์ที่ค้นคืนจากเว็บ:\n${caseText || 'ไม่พบแฟ้มเฉพาะที่ตรงคำค้น'}\n\nรายการที่ค้นคืนจาก PBO 2568:\n${itemText || 'ไม่พบรายการ PBO ที่ตรงคำค้นโดยตรง'}\n\nหลักฐานในคลังที่ค้นคืน:\n${fileText || 'ไม่พบชื่อไฟล์ที่ตรงคำค้นโดยตรง'}\n\nสัญญาณจากข้อความและ OCR:\n${evidenceText || 'ไม่พบสัญญาณที่ตรงคำค้นโดยตรง'}\n\nกฎหมายที่เกี่ยวข้อง:\n${relevantLaws.map((law) => `${law.code}\nตัวบทตามประกาศ:\n${law.exactText}\n\nแนวทางใช้ตรวจงบของระบบ:\n${law.analysis}\nเอกสารที่เชื่อมต่อ: ${law.documents.join(' | ')}\nประกาศ: ${law.publication}\nที่มา: ${law.sourceUrl}`).join('\n\n')}${focusText}`
+  const context = `ข้อมูลภาพรวม:\n${relevantFacts.length ? relevantFacts.map((fact, index) => `[ข้อมูล ${index + 1}] ${fact.text}`).join('\n') : 'ไม่พบตัวเลขภาพรวมที่ตรงคำค้นโดยตรง'}\n\nแฟ้มจัดซื้อ IT ประกันสังคม:\n${ssoItText || 'คำถามนี้ไม่ตรงกับแฟ้มจัดซื้อ IT ประกันสังคม'}\n\nแฟ้มเจาะงบประกันสังคม:\n${ssoText || 'คำถามนี้ไม่ตรงกับแฟ้มประกันสังคมเฉพาะเรื่อง'}\n\nโครงสร้างรัฐเชื่อมงบประมาณ:\n${structureText || 'ไม่พบหน่วยงานที่ตรงคำค้นโดยตรง'}\n\nอนุกรมเวลา PBO:\n${historyText}\n\nวาระและสรุปหลังประชุมของคณะกรรมาธิการ:\n${committeeText || 'ไม่พบวาระที่ตรงคำค้นโดยตรง'}\n\nแฟ้มวิเคราะห์ที่ค้นคืนจากเว็บ:\n${caseText || 'ไม่พบแฟ้มเฉพาะที่ตรงคำค้น'}\n\nรายการที่ค้นคืนจาก PBO 2568:\n${itemText || 'ไม่พบรายการ PBO ที่ตรงคำค้นโดยตรง'}\n\nหลักฐานในคลังที่ค้นคืน:\n${fileText || 'ไม่พบชื่อไฟล์ที่ตรงคำค้นโดยตรง'}\n\nสัญญาณจากข้อความและ OCR:\n${evidenceText || 'ไม่พบสัญญาณที่ตรงคำค้นโดยตรง'}\n\nกฎหมายที่เกี่ยวข้อง:\n${relevantLaws.map((law) => `${law.code}\nตัวบทตามประกาศ:\n${law.exactText}\n\nแนวทางใช้ตรวจงบของระบบ:\n${law.analysis}\nเอกสารที่เชื่อมต่อ: ${law.documents.join(' | ')}\nประกาศ: ${law.publication}\nที่มา: ${law.sourceUrl}`).join('\n\n')}${focusText}`
 
   const sources = [
     ...selectedCases.map(({ item }, index) => ({ ref: `[แฟ้ม ${index + 1}]`, label: item.title, detail: `${item.agency} | ${item.sourceLabel}`, url: item.sourceUrl })),
@@ -322,9 +325,14 @@ function retrieve(question, focusId) {
     }),
     ...(asksSso ? sso.findings.map((finding, index) => ({ ref: `[ประกันสังคม ${index + 1}]`, label: finding.title, detail: 'ข้อสังเกตจากงบและเอกสารใน OPEN SSO', url: finding.sourceUrl || sso.meta.pboSource })) : []),
     ...(asksSso ? sso.newsContext.map((item, index) => ({ ref: `[ข่าวประกันสังคม ${index + 1}]`, label: item.title, detail: `${item.date} | ${item.source} | ${item.status}`, url: item.url })) : []),
+    ...(asksSsoIt ? [
+      { ref: '[จัดซื้อ IT 1]', label: 'ภาพรวม AIT และกิจการร่วมค้า', detail: `${ssoIt.metrics.linkedProjects} โครงการ | ${(ssoIt.metrics.totalContract / 1_000_000).toLocaleString('th-TH')} ล้านบาท`, url: '/data/sso-it-procurement.json' },
+      ...ssoIt.projects.map((project, index) => ({ ref: `[จัดซื้อ IT ${index + 2}]`, label: `${project.id} ${project.title}`, detail: `${project.budgetYear} | ${(project.contractPrice / 1_000_000).toLocaleString('th-TH')} ล้านบาท`, url: project.projectUrl })),
+      ...ssoIt.network.relationships.map((edge, index) => ({ ref: `[เครือข่าย ${index + 1}]`, label: `${edge.from} → ${edge.to}`, detail: `${edge.label} | ${edge.date}`, url: edge.sourceUrl })),
+    ] : []),
     ...relevantLaws.filter((law) => law.score > 0).map((law) => ({ ref: law.shortCode, label: law.code, detail: law.publication, url: law.sourceUrl })),
   ].filter((source, index, all) => all.findIndex((candidate) => candidate.label === source.label && candidate.url === source.url) === index)
-  return { context, sources, selectedCases: selectedCases.map(({ item }) => item), selectedItems: selected.map(({ item }) => item), relevantFacts, relevantLaws, relevantFiles, relevantHistory, relevantEvidence, relevantMeetings, relevantStructure, matchedSignal, asksSso, sso }
+  return { context, sources, selectedCases: selectedCases.map(({ item }) => item), selectedItems: selected.map(({ item }) => item), relevantFacts, relevantLaws, relevantFiles, relevantHistory, relevantEvidence, relevantMeetings, relevantStructure, matchedSignal, asksSsoIt, ssoIt, asksSso, sso }
 }
 
 function rateLimited(request) {
@@ -429,6 +437,35 @@ function buildCommitteeAnswer(question, meetings) {
   return `วาระกรรมาธิการที่ตรงคำค้น\n\n${rows.join('\n\n')}\n\nเปิดสาระฉบับเต็มบนเว็บหรือใช้ลิงก์ต้นทางใต้คำตอบ จากนั้นนำชื่อโครงการ หน่วยงาน และเอกสารที่ระบุไปค้นต่อในคลังหลักฐานของงบแกะ`
 }
 
+function buildSsoItAnswer(question, ssoIt) {
+  const normalized = question.toLocaleLowerCase('th')
+  const exactId = question.match(/(?:63|64|65|66|67)\d{9}/)?.[0]
+  const asksPortfolio = /กี่โครงการ|ทั้งหมด|รวม(?:กี่|เท่าไร)|มูลค่ารวม|ภาพรวม|กระจุก/.test(question)
+  const project = exactId
+    ? ssoIt.projects.find((item) => item.id === exactId)
+    : asksPortfolio ? undefined : ssoIt.projects
+      .map((item) => ({ item, score: termsFor(question).filter((term) => `${item.title} ${item.winner} ${item.members.join(' ')}`.toLocaleLowerCase('th').includes(term)).length }))
+      .filter((entry) => entry.score >= 2)
+      .sort((a, b) => b.score - a.score)[0]?.item
+
+  if (/ผู้ถือหุ้น|ถือหุ้น|กรรมการ|เครือข่าย|เชื่อมโยง|\bTKC\b|SKY\s*ICT|TKS/i.test(question)) {
+    const rows = ssoIt.network.relationships.map((edge, index) => `${index + 1}. ${edge.from} → ${edge.to} [เครือข่าย ${index + 1}]\nความสัมพันธ์: ${edge.label}\nวันที่อ้างอิง: ${edge.date}`).join('\n\n')
+    return `เครือข่ายบริษัทจากเอกสารสาธารณะ\n\n${rows}\n\nวิธีอ่าน\nเส้นเหล่านี้แสดงการถือหุ้น กรรมการร่วม หรือการเป็นสมาชิกกิจการร่วมค้าที่มีเอกสารรองรับ ลำดับเวลาที่ใกล้กันไม่ใช่หลักฐานว่ามีความเป็นเหตุเป็นผล [จัดซื้อ IT 1]`
+  }
+
+  if (project) {
+    const index = ssoIt.projects.indexOf(project) + 2
+    const bidderRows = project.bidders.map((bidder, bidderIndex) => `${bidderIndex + 1}. ${bidder.name}: ${bidder.price === null ? 'ไม่พบราคาในข้อมูลโครงสร้าง' : `${(bidder.price / 1_000_000).toLocaleString('th-TH')} ล้านบาท`} | ${bidder.status}`).join('\n')
+    return `${project.title} [จัดซื้อ IT ${index}]\n\nข้อเท็จจริงที่ยืนยันได้\nเลขที่โครงการ e-GP ${project.id}\nปีงบประมาณ ${project.budgetYear}\nวิธีจัดซื้อจัดจ้าง ${project.method}\nราคากลาง ${(project.estimatePrice / 1_000_000).toLocaleString('th-TH')} ล้านบาท\nราคาสัญญา ${(project.contractPrice / 1_000_000).toLocaleString('th-TH')} ล้านบาท ต่ำกว่าราคากลาง ${project.discountPct.toLocaleString('th-TH')}%\nผู้ชนะ ${project.winner}\nสมาชิก ${project.members.join(' และ ')}\nผู้ซื้อเอกสาร ${project.documentBuyerCount ?? 'ไม่พบข้อมูล'} ราย ยื่นข้อเสนอ ${project.submittedCount} ราย\n\nผู้เสนอราคา\n${bidderRows}\n\nประเด็นที่ควรตรวจสอบเพิ่มเติม\n${project.concerns.map((item, itemIndex) => `${itemIndex + 1}. ${item}`).join('\n')}\n\nเปิด TOR ราคากลาง รายชื่อผู้ยื่น ผลพิจารณา และสัญญาได้จากหลักฐานใต้คำตอบ`
+  }
+
+  if (/คู่แข่ง|ผู้เสนอ|ผู้ยื่น|ประมูล|ราคากลาง|ส่วนต่าง|กระจุก|รูปแบบ|pattern/i.test(normalized)) {
+    return `รูปแบบที่พบในชุดตรวจสอบจัดซื้อ IT ประกันสังคม\n\n${ssoIt.patterns.map((pattern, index) => `${index + 1}. ${pattern.title}: ${pattern.value}\n${pattern.detail}`).join('\n\n')}\n\nขอบเขตการอ่าน\nรูปแบบเหล่านี้ใช้กำหนดเอกสารที่ควรเปิดต่อ และยังไม่ใช่ข้อสรุปว่ามีการกระทำผิด [จัดซื้อ IT 1]`
+  }
+
+  return `AIT และกิจการร่วมค้าในชุดตรวจสอบจัดซื้อ IT ประกันสังคม\n\nข้อเท็จจริงที่ยืนยันได้\nพบ ${ssoIt.metrics.linkedProjects} โครงการ มูลค่าสัญญารวม ${(ssoIt.metrics.totalContract / 1_000_000).toLocaleString('th-TH')} ล้านบาท [จัดซื้อ IT 1]\nAIT รับงานตรง ${ssoIt.metrics.directProjects} โครงการ มูลค่า ${(ssoIt.metrics.directContract / 1_000_000).toLocaleString('th-TH')} ล้านบาท\nAIT อยู่ในกิจการร่วมค้า ${ssoIt.metrics.consortiumProjects} โครงการ มูลค่าสัญญารวม ${(ssoIt.metrics.consortiumContract / 1_000_000).toLocaleString('th-TH')} ล้านบาท\nมูลค่ากิจการร่วมค้าเป็นมูลค่าสัญญารวม ไม่ใช่รายได้ของ AIT ทั้งหมด เพราะยังไม่มีข้อมูลส่วนแบ่งของสมาชิก\n\nรูปแบบเด่น\nAIT และบริษัท ไชยกาญจน์ คอนซัลติ้ง ปรากฏร่วมกัน ${ssoIt.metrics.chaiyakarnProjects} โครงการ\nโครงการประกวดราคาอิเล็กทรอนิกส์ทั้ง 7 โครงการมีผู้ยื่นข้อเสนอ 2 หรือ 3 ราย\nพบ 1 โครงการใช้วิธีเฉพาะเจาะจง คือโครงการเครือข่ายปี 2567\n\nขอบเขต\n${ssoIt.meta.scopeLimit}`
+}
+
 function buildSsoAnswer(question, sso) {
   const normalized = question.toLocaleLowerCase('th')
   let selected = sso.findings
@@ -485,7 +522,7 @@ export default async function handler(request, response) {
   const apiKey = process.env.PATHUMMA_API_KEY
   if (!apiKey) return response.status(503).json({ error: 'ระบบถามตอบยังรอการเชื่อมต่อ Pathumma API' })
 
-  const { context, sources, selectedCases, selectedItems, relevantFacts, relevantLaws, relevantFiles, relevantHistory, relevantMeetings, relevantStructure, matchedSignal, asksSso, sso } = retrieve(question, String(request.body?.focusId ?? ''))
+  const { context, sources, selectedCases, selectedItems, relevantFacts, relevantLaws, relevantFiles, relevantHistory, relevantMeetings, relevantStructure, matchedSignal, asksSsoIt, ssoIt, asksSso, sso } = retrieve(question, String(request.body?.focusId ?? ''))
   const history = Array.isArray(request.body?.history) ? request.body.history.slice(-6).map((message) => ({ role: message.role === 'assistant' ? 'assistant' : 'user', content: String(message.content ?? '').slice(0, 2500) })) : []
   const asksAboutFocus = /(รายการนี้|โครงการนี้|หน้านี้|ที่กำลังเปิด|แฟ้มนี้)/.test(question)
   const asksLegalQuestion = /มาตรา\s*[\d๐-๙]+|กฎหมาย|รัฐธรรมนูญ|พ\.ร\.บ\.\s*(การจัดซื้อ|วินัย|วิธีการงบประมาณ|ข้อมูลข่าวสาร)/.test(question)
@@ -499,6 +536,10 @@ export default async function handler(request, response) {
   }
   if (/โครงสร้าง|ใคร.{0,12}(รับผิดชอบ|ต้องตอบ|เป็นเจ้าภาพ)|เจ้าภาพ|สังกัด|กี่หน่วยงาน|กี่กอง/.test(question)) {
     const answer = buildStructureAnswer(relevantStructure)
+    return response.status(200).json({ answer, sources: visibleSourcesFor(answer, sources), model: process.env.PATHUMMA_MODEL ?? 'pathumma' })
+  }
+  if (asksSsoIt) {
+    const answer = buildSsoItAnswer(question, ssoIt)
     return response.status(200).json({ answer, sources: visibleSourcesFor(answer, sources), model: process.env.PATHUMMA_MODEL ?? 'pathumma' })
   }
   if (asksSso) {

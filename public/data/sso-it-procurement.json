@@ -1,0 +1,990 @@
+{
+  "meta": {
+    "title": "เจาะงบ IT สำนักงานประกันสังคม",
+    "accessedAt": "2026-09-20",
+    "accessedAtThai": "20 กันยายน 2569",
+    "coverage": "ชุดตรวจสอบยืนยันรอบแรก ครอบคลุม 8 โครงการที่ AIT ปรากฏเป็นคู่สัญญาโดยตรงหรือสมาชิกกิจการร่วมค้าในปีงบประมาณ 2564 ถึง 2567 และเพิ่มโครงการ SSO Core เป็นกรณีเปรียบเทียบ",
+    "method": "ยืนยันเลขที่โครงการ ราคากลาง ผู้ยื่นข้อเสนอ ผู้ชนะ และสัญญาจากสำเนาเอกสาร e-GP ที่ ACT Ai รวบรวม แล้วตรวจทานองค์ประกอบกิจการร่วมค้ากับข่าวที่อ้างเอกสารจัดซื้อจัดจ้าง",
+    "scopeLimit": "ผลรวมนี้ตอบเฉพาะชุดโครงการที่ตรวจยืนยันแล้ว ยังไม่ใช่จักรวาลโครงการ IT ทุกโครงการตั้งแต่ปี 2560 ถึงปัจจุบัน"
+  },
+  "metrics": {
+    "linkedProjects": 8,
+    "totalContract": 1854672000,
+    "directProjects": 3,
+    "directContract": 753892000,
+    "consortiumProjects": 5,
+    "consortiumContract": 1100780000,
+    "eBiddingProjects": 7,
+    "chaiyakarnProjects": 4
+  },
+  "projects": [
+    {
+      "id": "63127444506",
+      "title": "เช่าใช้ระบบเครือข่ายสื่อสารข้อมูลเพื่อบริการงานประกันสังคม",
+      "budgetYear": 2564,
+      "announcementDate": "2021-03-16",
+      "contractDate": "2021-03-26",
+      "method": "ประกวดราคาอิเล็กทรอนิกส์",
+      "procurementType": "ซื้อ",
+      "budget": null,
+      "estimatePrice": 453600000.0,
+      "winningBid": 449208000,
+      "contractPrice": 449100000,
+      "winner": "บริษัท แอ็ดวานซ์ อินฟอร์เมชั่น เทคโนโลยี จำกัด (มหาชน)",
+      "mode": "direct",
+      "members": [
+        "บริษัท แอ็ดวานซ์ อินฟอร์เมชั่น เทคโนโลยี จำกัด (มหาชน)"
+      ],
+      "contractId": "ช 007/2564",
+      "contractControlNumber": "640411000025",
+      "documentBuyerCount": 12,
+      "submittedCount": 2,
+      "bidders": [
+        {
+          "name": "แอ็ดวานซ์อินฟอร์เมชั่นเทคโนโลยี จำกัด (มหาชน)",
+          "price": 449208000,
+          "status": "คู่สัญญา"
+        },
+        {
+          "name": "สามารถคอมเทค",
+          "price": 450450000,
+          "status": "ยื่นข้อเสนอและไม่ได้รับคัดเลือก"
+        }
+      ],
+      "discountAmount": 4500000.0,
+      "discountPct": 0.9921,
+      "concerns": [
+        "ผู้ขอรับเอกสาร 12 ราย แต่ยื่นข้อเสนอ 2 ราย",
+        "ราคาสัญญาต่ำกว่าราคากลางร้อยละ 0.99"
+      ],
+      "documents": [
+        {
+          "label": "ประกาศเชิญชวน",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/63127444506/ประกาศเชิญชวน_63127444506_08012564_chkProjectD2A00.html"
+        },
+        {
+          "label": "ประกาศราคากลาง",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/63127444506/ประกาศราคากลาง_63127444506_25122563_clkDownloadDocpricebuild_1700600000_63127444506.zip"
+        },
+        {
+          "label": "ประกาศรายชื่อผู้ชนะการเสนอราคา",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/63127444506/ประกาศรายชื่อผู้ชนะการเสนอราคา_63127444506_16032564_chkProjectW2A02.html"
+        },
+        {
+          "label": "ร่างเอกสารประกวดราคา (e-Bidding)",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/63127444506/ร่างเอกสารประกวดราคา(e-Bidding)_63127444506_25122563_showPopupFile063127444506_25631225220203_2.html"
+        },
+        {
+          "label": "สรุปข้อมูลการเสนอราคาเบื้องต้น",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/63127444506/สรุปข้อมูลการเสนอราคาเบื้องต้น_63127444506__setProjectBidPriceNew_a47818d4-1.pdf"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ขอรับ/ซื้อเอกสาร",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/63127444506/ข้อมูลรายชื่อผู้ขอรับซื้อเอกสาร_63127444506__chklink16R0.html"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ยื่นเอกสาร",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/63127444506/ข้อมูลรายชื่อผู้ยื่นเอกสาร_63127444506__chklink16S0.html"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ผ่านการพิจารณาคุณสมบัติและเทคนิค",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/63127444506/ข้อมูลรายชื่อผู้ผ่านการพิจารณาคุณสมบัติและเทคนิค_63127444506__chklink16E0.html"
+        },
+        {
+          "label": "ข้อมูลสาระสำคัญในสัญญา",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/63127444506/ข้อมูลสาระสำคัญในสัญญา_63127444506_26032564_chklink16I0.html"
+        }
+      ],
+      "projectUrl": "https://procurement.actai.co/project/63127444506",
+      "dataUrl": "https://admin-procurement.actai.co/project/63127444506"
+    },
+    {
+      "id": "64057333869",
+      "title": "จัดหาเครื่องคอมพิวเตอร์แม่ข่ายเพื่อปรับปรุงระบบเทคโนโลยีสารสนเทศ",
+      "budgetYear": 2564,
+      "announcementDate": "2021-07-29",
+      "contractDate": "2021-08-11",
+      "method": "ประกวดราคาอิเล็กทรอนิกส์",
+      "procurementType": "จ้างก่อสร้าง",
+      "budget": null,
+      "estimatePrice": 299472600.0,
+      "winningBid": 296600000,
+      "contractPrice": 296500000,
+      "winner": "เอซี คอนซอเตียม",
+      "mode": "consortium",
+      "members": [
+        "บริษัท แอ็ดวานซ์ อินฟอร์เมชั่น เทคโนโลยี จำกัด (มหาชน)",
+        "บริษัท ไชยกาญจน์ คอนซัลติ้ง จำกัด"
+      ],
+      "contractId": "ซ 016/2564",
+      "contractControlNumber": "640802000474",
+      "documentBuyerCount": 18,
+      "submittedCount": 3,
+      "bidders": [
+        {
+          "name": "เอซีคอนซอเตียม",
+          "price": 296600000,
+          "status": "คู่สัญญา"
+        },
+        {
+          "name": "เอสวีโอเอ จำกัด (มหาชน)",
+          "price": 297900000,
+          "status": "ยื่นข้อเสนอและไม่ได้รับคัดเลือก"
+        },
+        {
+          "name": "สามารถคอมเทค",
+          "price": 298200000,
+          "status": "ยื่นข้อเสนอและไม่ได้รับคัดเลือก"
+        }
+      ],
+      "discountAmount": 2972600.0,
+      "discountPct": 0.9926,
+      "concerns": [
+        "ผู้ขอรับเอกสาร 18 ราย แต่ยื่นข้อเสนอ 3 ราย",
+        "ราคาสัญญาต่ำกว่าราคากลางร้อยละ 0.99"
+      ],
+      "documents": [
+        {
+          "label": "ประกาศเชิญชวน",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64057333869/ประกาศเชิญชวน_64057333869_15062564_chkProjectD2A00.html"
+        },
+        {
+          "label": "ประกาศราคากลาง",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64057333869/ประกาศราคากลาง_64057333869_08062564_clkDownloadDocpricebuild_1700600000_64057333869.zip"
+        },
+        {
+          "label": "ประกาศรายชื่อผู้ชนะการเสนอราคา",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64057333869/ประกาศรายชื่อผู้ชนะการเสนอราคา_64057333869_29072564_chkProjectW2A02.html"
+        },
+        {
+          "label": "ร่างเอกสารประกวดราคา (e-Bidding)",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64057333869/ร่างเอกสารประกวดราคา(e-Bidding)_64057333869_08062564_showPopupFile064057333869_25640608144508_2.html"
+        },
+        {
+          "label": "สรุปข้อมูลการเสนอราคาเบื้องต้น",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64057333869/สรุปข้อมูลการเสนอราคาเบื้องต้น_64057333869__setProjectBidPriceNew_6274c002-e.pdf"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ขอรับ/ซื้อเอกสาร",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64057333869/ข้อมูลรายชื่อผู้ขอรับซื้อเอกสาร_64057333869__chklink16R0.html"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ยื่นเอกสาร",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64057333869/ข้อมูลรายชื่อผู้ยื่นเอกสาร_64057333869__chklink16S0.html"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ผ่านการพิจารณาคุณสมบัติและเทคนิค",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64057333869/ข้อมูลรายชื่อผู้ผ่านการพิจารณาคุณสมบัติและเทคนิค_64057333869__chklink16E0.html"
+        },
+        {
+          "label": "ข้อมูลสาระสำคัญในสัญญา",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64057333869/ข้อมูลสาระสำคัญในสัญญา_64057333869_11082564_chklink16I0.html"
+        }
+      ],
+      "projectUrl": "https://procurement.actai.co/project/64057333869",
+      "dataUrl": "https://admin-procurement.actai.co/project/64057333869"
+    },
+    {
+      "id": "64127481785",
+      "title": "พัฒนาแพลตฟอร์มดิจิทัลกลาง SSO Plus",
+      "budgetYear": 2565,
+      "announcementDate": "2022-03-10",
+      "contractDate": "2022-03-29",
+      "method": "ประกวดราคาอิเล็กทรอนิกส์",
+      "procurementType": "เช่า",
+      "budget": null,
+      "estimatePrice": 276303400.0,
+      "winningBid": 275500000,
+      "contractPrice": 275000000,
+      "winner": "เอแอนด์บี คอนซอเตียม",
+      "mode": "consortium",
+      "members": [
+        "บริษัท แอ็ดวานซ์ อินฟอร์เมชั่น เทคโนโลยี จำกัด (มหาชน)",
+        "บริษัท บอสอัพ โซลูชั่น จำกัด"
+      ],
+      "contractId": "จ 022/2565",
+      "contractControlNumber": "650424001428",
+      "documentBuyerCount": 17,
+      "submittedCount": 3,
+      "bidders": [
+        {
+          "name": "ริโก้ (ประเทศไทย)",
+          "price": 255555555,
+          "status": "ไม่ผ่านคุณสมบัติและข้อเสนอด้านเทคนิคตามข้อมูลผลพิจารณาที่เผยแพร่"
+        },
+        {
+          "name": "เอแอนด์บี คอนซอเตียม",
+          "price": 275500000,
+          "status": "คู่สัญญา"
+        },
+        {
+          "name": "แอพเวิร์คส์",
+          "price": 275865000,
+          "status": "ยื่นข้อเสนอและไม่ได้รับคัดเลือก"
+        }
+      ],
+      "discountAmount": 1303400.0,
+      "discountPct": 0.4717,
+      "concerns": [
+        "ผู้ขอรับเอกสาร 17 ราย แต่ยื่นข้อเสนอ 3 ราย",
+        "ผู้เสนอราคาต่ำสุดไม่ผ่านคุณสมบัติและข้อเสนอด้านเทคนิค จึงควรอ่านเหตุผลฉบับเต็ม"
+      ],
+      "documents": [
+        {
+          "label": "ประกาศเชิญชวน",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127481785/ประกาศเชิญชวน_64127481785_26012565_chkProjectD2A00.html"
+        },
+        {
+          "label": "ประกาศราคากลาง",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127481785/ประกาศราคากลาง_64127481785_17012565_clkDownloadDocpricebuild_1700600000_64127481785.zip"
+        },
+        {
+          "label": "ประกาศรายชื่อผู้ชนะการเสนอราคา",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127481785/ประกาศรายชื่อผู้ชนะการเสนอราคา_64127481785_10032565_chkProjectW2A02.html"
+        },
+        {
+          "label": "ร่างเอกสารประกวดราคา (e-Bidding)",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127481785/ร่างเอกสารประกวดราคา(e-Bidding)_64127481785_17012565_showPopupFile064127481785_25650117152149_2.html"
+        },
+        {
+          "label": "สรุปข้อมูลการเสนอราคาเบื้องต้น",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127481785/สรุปข้อมูลการเสนอราคาเบื้องต้น_64127481785__setProjectBidPriceNew_0f6dce4d-f.pdf"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ขอรับ/ซื้อเอกสาร",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127481785/ข้อมูลรายชื่อผู้ขอรับซื้อเอกสาร_64127481785__chklink16R0.html"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ยื่นเอกสาร",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127481785/ข้อมูลรายชื่อผู้ยื่นเอกสาร_64127481785__chklink16S0.html"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ผ่านการพิจารณาคุณสมบัติและเทคนิค",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127481785/ข้อมูลรายชื่อผู้ผ่านการพิจารณาคุณสมบัติและเทคนิค_64127481785__chklink16E0.html"
+        },
+        {
+          "label": "ข้อมูลสาระสำคัญในสัญญา",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127481785/ข้อมูลสาระสำคัญในสัญญา_64127481785_29032565_chklink16I0.html"
+        }
+      ],
+      "projectUrl": "https://procurement.actai.co/project/64127481785",
+      "dataUrl": "https://admin-procurement.actai.co/project/64127481785"
+    },
+    {
+      "id": "65057498628",
+      "title": "จัดหาและพัฒนาระบบสารสนเทศภูมิศาสตร์เพื่อการวิจัยและกำหนดนโยบาย",
+      "budgetYear": 2565,
+      "announcementDate": "2022-08-03",
+      "contractDate": "2022-09-02",
+      "method": "ประกวดราคาอิเล็กทรอนิกส์",
+      "procurementType": "เช่า",
+      "budget": null,
+      "estimatePrice": 197877700.0,
+      "winningBid": 197629000,
+      "contractPrice": 197000000,
+      "winner": "เอซี คอนซอเตียม",
+      "mode": "consortium",
+      "members": [
+        "บริษัท แอ็ดวานซ์ อินฟอร์เมชั่น เทคโนโลยี จำกัด (มหาชน)",
+        "บริษัท ไชยกาญจน์ คอนซัลติ้ง จำกัด"
+      ],
+      "contractId": "จ 048/2565",
+      "contractControlNumber": "651024000434",
+      "documentBuyerCount": 11,
+      "submittedCount": 2,
+      "bidders": [
+        {
+          "name": "AC Consortium",
+          "price": 197629000,
+          "status": "คู่สัญญา"
+        },
+        {
+          "name": "ซัมมิท คอมพิวเตอร์",
+          "price": 197843000,
+          "status": "ยื่นข้อเสนอและไม่ได้รับคัดเลือก"
+        }
+      ],
+      "discountAmount": 877700.0,
+      "discountPct": 0.4436,
+      "concerns": [
+        "ผู้ขอรับเอกสาร 11 ราย แต่ยื่นข้อเสนอ 2 ราย",
+        "ราคาสัญญาต่ำกว่าราคากลางร้อยละ 0.44"
+      ],
+      "documents": [
+        {
+          "label": "ประกาศเชิญชวน",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/65057498628/ประกาศเชิญชวน_65057498628_13062565_chkProjectD2A00.html"
+        },
+        {
+          "label": "ประกาศราคากลาง",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/65057498628/ประกาศราคากลาง_65057498628_06062565_clkDownloadDocpricebuild_1700600000_65057498628.zip"
+        },
+        {
+          "label": "ประกาศรายชื่อผู้ชนะการเสนอราคา",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/65057498628/ประกาศรายชื่อผู้ชนะการเสนอราคา_65057498628_03082565_chkProjectW2A02.html"
+        },
+        {
+          "label": "ร่างเอกสารประกวดราคา (e-Bidding)",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/65057498628/ร่างเอกสารประกวดราคา(e-Bidding)_65057498628_06062565_showPopupFile065057498628_25650606101923_2.html"
+        },
+        {
+          "label": "สรุปข้อมูลการเสนอราคาเบื้องต้น",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/65057498628/สรุปข้อมูลการเสนอราคาเบื้องต้น_65057498628__setProjectBidPriceNew_56d7733a-e.pdf"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ขอรับ/ซื้อเอกสาร",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/65057498628/ข้อมูลรายชื่อผู้ขอรับซื้อเอกสาร_65057498628__chklink16R0.html"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ยื่นเอกสาร",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/65057498628/ข้อมูลรายชื่อผู้ยื่นเอกสาร_65057498628__chklink16S0.html"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ผ่านการพิจารณาคุณสมบัติและเทคนิค",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/65057498628/ข้อมูลรายชื่อผู้ผ่านการพิจารณาคุณสมบัติและเทคนิค_65057498628__chklink16E0.html"
+        },
+        {
+          "label": "ข้อมูลสาระสำคัญในสัญญา",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/65057498628/ข้อมูลสาระสำคัญในสัญญา_65057498628_02092565_chklink16I0.html"
+        }
+      ],
+      "projectUrl": "https://procurement.actai.co/project/65057498628",
+      "dataUrl": "https://admin-procurement.actai.co/project/65057498628"
+    },
+    {
+      "id": "64127487707",
+      "title": "จัดหาเครื่องคอมพิวเตอร์แม่ข่ายสำหรับระบบสารสนเทศ",
+      "budgetYear": 2565,
+      "announcementDate": "2022-02-23",
+      "contractDate": "2022-03-10",
+      "method": "ประกวดราคาอิเล็กทรอนิกส์",
+      "procurementType": "จ้างก่อสร้าง",
+      "budget": null,
+      "estimatePrice": 174485300.0,
+      "winningBid": 174250000,
+      "contractPrice": 174000000,
+      "winner": "เอไอซี คอนซอเตียม",
+      "mode": "consortium",
+      "members": [
+        "บริษัท แอ็ดวานซ์ อินฟอร์เมชั่น เทคโนโลยี จำกัด (มหาชน)",
+        "บริษัท ไชยกาญจน์ คอนซัลติ้ง จำกัด"
+      ],
+      "contractId": "ซ 004/2565",
+      "contractControlNumber": "650302000358",
+      "documentBuyerCount": 11,
+      "submittedCount": 2,
+      "bidders": [
+        {
+          "name": "เอไอซีคอนซอเตียม",
+          "price": 174250000,
+          "status": "คู่สัญญา"
+        },
+        {
+          "name": "สามารถคอมเทค",
+          "price": 174365300,
+          "status": "ยื่นข้อเสนอและไม่ได้รับคัดเลือก"
+        }
+      ],
+      "discountAmount": 485300.0,
+      "discountPct": 0.2781,
+      "concerns": [
+        "ผู้ขอรับเอกสาร 11 ราย แต่ยื่นข้อเสนอ 2 ราย",
+        "ราคาสัญญาต่ำกว่าราคากลางร้อยละ 0.28"
+      ],
+      "documents": [
+        {
+          "label": "ประกาศเชิญชวน",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127487707/ประกาศเชิญชวน_64127487707_18012565_chkProjectD2A00.html"
+        },
+        {
+          "label": "ประกาศราคากลาง",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127487707/ประกาศราคากลาง_64127487707_10012565_clkDownloadDocpricebuild_1700600000_64127487707.zip"
+        },
+        {
+          "label": "ประกาศรายชื่อผู้ชนะการเสนอราคา",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127487707/ประกาศรายชื่อผู้ชนะการเสนอราคา_64127487707_23022565_chkProjectW2A02.html"
+        },
+        {
+          "label": "ร่างเอกสารประกวดราคา (e-Bidding)",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127487707/ร่างเอกสารประกวดราคา(e-Bidding)_64127487707_10012565_showPopupFile064127487707_25650110161903_2.html"
+        },
+        {
+          "label": "สรุปข้อมูลการเสนอราคาเบื้องต้น",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127487707/สรุปข้อมูลการเสนอราคาเบื้องต้น_64127487707__setProjectBidPriceNew_c0872c63-5.pdf"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ขอรับ/ซื้อเอกสาร",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127487707/ข้อมูลรายชื่อผู้ขอรับซื้อเอกสาร_64127487707__chklink16R0.html"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ยื่นเอกสาร",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127487707/ข้อมูลรายชื่อผู้ยื่นเอกสาร_64127487707__chklink16S0.html"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ผ่านการพิจารณาคุณสมบัติและเทคนิค",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127487707/ข้อมูลรายชื่อผู้ผ่านการพิจารณาคุณสมบัติและเทคนิค_64127487707__chklink16E0.html"
+        },
+        {
+          "label": "ข้อมูลสาระสำคัญในสัญญา",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64127487707/ข้อมูลสาระสำคัญในสัญญา_64127487707_10032565_chklink16I0.html"
+        }
+      ],
+      "projectUrl": "https://procurement.actai.co/project/64127487707",
+      "dataUrl": "https://admin-procurement.actai.co/project/64127487707"
+    },
+    {
+      "id": "66089162708",
+      "title": "จัดหาอุปกรณ์เพิ่มประสิทธิภาพการป้องกันการบุกรุกระบบผู้ใช้งานและอีเมล",
+      "budgetYear": 2566,
+      "announcementDate": "2023-10-11",
+      "contractDate": "2024-02-15",
+      "method": "ประกวดราคาอิเล็กทรอนิกส์",
+      "procurementType": "จ้างก่อสร้าง",
+      "budget": 93600000,
+      "estimatePrice": 93600000.0,
+      "winningBid": 90000000,
+      "contractPrice": 89800000,
+      "winner": "บริษัท แอ็ดวานซ์ อินฟอร์เมชั่น เทคโนโลยี จำกัด (มหาชน)",
+      "mode": "direct",
+      "members": [
+        "บริษัท แอ็ดวานซ์ อินฟอร์เมชั่น เทคโนโลยี จำกัด (มหาชน)"
+      ],
+      "contractId": "ซ 002/2567",
+      "contractControlNumber": "670201004980",
+      "documentBuyerCount": 3,
+      "submittedCount": 3,
+      "bidders": [
+        {
+          "name": "อินเตอร์เนชั่นแนล เน็ตเวิร์ค ซิสเต็ม จำกัด (มหาชน)",
+          "price": 87298090,
+          "status": "ไม่ผ่านคุณสมบัติและข้อเสนอด้านเทคนิคตามข้อมูลผลพิจารณาที่เผยแพร่"
+        },
+        {
+          "name": "แอ็ดวานซ์อินฟอร์เมชั่นเทคโนโลยี จำกัด (มหาชน)",
+          "price": 90000000,
+          "status": "คู่สัญญา"
+        },
+        {
+          "name": "ยิบอินซอย",
+          "price": 92500000,
+          "status": "ยื่นข้อเสนอและไม่ได้รับคัดเลือก"
+        }
+      ],
+      "discountAmount": 3800000.0,
+      "discountPct": 4.0598,
+      "concerns": [
+        "ผู้ยื่นข้อเสนอ 3 ราย แต่ผู้เสนอราคาต่ำสุดไม่ผ่านคุณสมบัติและข้อเสนอด้านเทคนิค",
+        "ควรเปิดเหตุผลการไม่ผ่านและเกณฑ์เทคนิคเทียบกันรายข้อ"
+      ],
+      "documents": [
+        {
+          "label": "ประกาศราคากลาง",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66089162708/ประกาศราคากลาง_66089162708_11082566_clkDownloadDoc1b803193323a4c878e0500e952a384fe.zip"
+        },
+        {
+          "label": "ประกาศรายชื่อผู้ชนะการเสนอราคา",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66089162708/ประกาศรายชื่อผู้ชนะการเสนอราคา_66089162708_11102566_chkProjectNewf322de73-8b56-43ce-b9c5-a9de42255e8b.pdf"
+        },
+        {
+          "label": "ร่างเอกสารประกวดราคา (e-Bidding)",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66089162708/ร่างเอกสารประกวดราคา(e-Bidding)_66089162708_11082566_showPopupFile8be7270e490645ffa337ce968bfa206f.zip"
+        },
+        {
+          "label": "สรุปข้อมูลการเสนอราคาเบื้องต้น",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66089162708/สรุปข้อมูลการเสนอราคาเบื้องต้น_66089162708__setProjectBidPriceNew_01af6b89-7.pdf"
+        },
+        {
+          "label": "ประกาศเชิญชวน",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66089162708/เอกสารประกวดราคา_66089162708__chkProjectNewcdb56cef47e24dd6a74b4610b5e2640a.zip"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ขอรับ/ซื้อเอกสาร",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66089162708/ข้อมูลรายชื่อผู้ขอรับซื้อเอกสาร_66089162708__chklink16R0.html"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ยื่นเอกสาร",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66089162708/ข้อมูลรายชื่อผู้ยื่นเอกสาร_66089162708__chklink16S0.html"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ผ่านการพิจารณาคุณสมบัติและเทคนิค",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66089162708/ข้อมูลรายชื่อผู้ผ่านการพิจารณาคุณสมบัติและเทคนิค_66089162708__chklink16E0.html"
+        },
+        {
+          "label": "ข้อมูลสาระสำคัญในสัญญา",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66089162708/ข้อมูลสาระสำคัญในสัญญา_66089162708_15022567_chklink16I0.html"
+        }
+      ],
+      "projectUrl": "https://procurement.actai.co/project/66089162708",
+      "dataUrl": "https://admin-procurement.actai.co/project/66089162708"
+    },
+    {
+      "id": "66037366002",
+      "title": "จัดหาเครื่องคอมพิวเตอร์แม่ข่ายเพื่อทดแทนและรองรับระบบสารสนเทศเพิ่มเติม",
+      "budgetYear": 2566,
+      "announcementDate": "2023-05-10",
+      "contractDate": "2023-05-29",
+      "method": "ประกวดราคาอิเล็กทรอนิกส์",
+      "procurementType": "จ้างก่อสร้าง",
+      "budget": 158500000,
+      "estimatePrice": 158500000.0,
+      "winningBid": 158340000,
+      "contractPrice": 158280000,
+      "winner": "เอไอซีจี คอนซอเตียม",
+      "mode": "consortium",
+      "members": [
+        "บริษัท แอ็ดวานซ์ อินฟอร์เมชั่น เทคโนโลยี จำกัด (มหาชน)",
+        "บริษัท ไชยกาญจน์ คอนซัลติ้ง จำกัด"
+      ],
+      "contractId": "ซ 003/2566",
+      "contractControlNumber": "660602000331",
+      "documentBuyerCount": 11,
+      "submittedCount": 2,
+      "bidders": [
+        {
+          "name": "AICG Consortium",
+          "price": 158340000,
+          "status": "คู่สัญญา"
+        },
+        {
+          "name": "แอพเวิร์คส์",
+          "price": 158400000,
+          "status": "ยื่นข้อเสนอและไม่ได้รับคัดเลือก"
+        }
+      ],
+      "discountAmount": 220000.0,
+      "discountPct": 0.1388,
+      "concerns": [
+        "ผู้ขอรับเอกสาร 11 ราย แต่ยื่นข้อเสนอ 2 ราย",
+        "ราคาสัญญาต่ำกว่าราคากลางร้อยละ 0.14"
+      ],
+      "documents": [
+        {
+          "label": "ประกาศเชิญชวน",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66037366002/ประกาศเชิญชวน_66037366002_27032566_chkProjectD2A00.html"
+        },
+        {
+          "label": "ประกาศราคากลาง",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66037366002/ประกาศราคากลาง_66037366002_21032566_clkDownloadDocpricebuild_1700600000_66037366002.zip"
+        },
+        {
+          "label": "ประกาศรายชื่อผู้ชนะการเสนอราคา",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66037366002/ประกาศรายชื่อผู้ชนะการเสนอราคา_66037366002_10052566_chkProjectW2A02.html"
+        },
+        {
+          "label": "ร่างเอกสารประกวดราคา (e-Bidding)",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66037366002/ร่างเอกสารประกวดราคา(e-Bidding)_66037366002_21032566_showPopupFile066037366002_25660321183940_2.html"
+        },
+        {
+          "label": "สรุปข้อมูลการเสนอราคาเบื้องต้น",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66037366002/สรุปข้อมูลการเสนอราคาเบื้องต้น_66037366002__setProjectBidPriceNew_f305e73d-1.pdf"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ขอรับ/ซื้อเอกสาร",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66037366002/ข้อมูลรายชื่อผู้ขอรับซื้อเอกสาร_66037366002__chklink16R0.html"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ยื่นเอกสาร",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66037366002/ข้อมูลรายชื่อผู้ยื่นเอกสาร_66037366002__chklink16S0.html"
+        },
+        {
+          "label": "ข้อมูลรายชื่อผู้ผ่านการพิจารณาคุณสมบัติและเทคนิค",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66037366002/ข้อมูลรายชื่อผู้ผ่านการพิจารณาคุณสมบัติและเทคนิค_66037366002__chklink16E0.html"
+        },
+        {
+          "label": "ข้อมูลสาระสำคัญในสัญญา",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/66037366002/ข้อมูลสาระสำคัญในสัญญา_66037366002_29052566_chklink16I0.html"
+        }
+      ],
+      "projectUrl": "https://procurement.actai.co/project/66037366002",
+      "dataUrl": "https://admin-procurement.actai.co/project/66037366002"
+    },
+    {
+      "id": "67049379222",
+      "title": "เช่าใช้ระบบเครือข่ายสื่อสารข้อมูลเพื่อบริการงานประกันสังคม โดยวิธีเฉพาะเจาะจง",
+      "budgetYear": 2567,
+      "announcementDate": "2024-05-16",
+      "contractDate": "2024-05-21",
+      "method": "เฉพาะเจาะจง",
+      "procurementType": "ซื้อ",
+      "budget": 215193000,
+      "estimatePrice": 215193000.0,
+      "winningBid": 215142081.36,
+      "contractPrice": 214992000,
+      "winner": "บริษัท แอ็ดวานซ์ อินฟอร์เมชั่น เทคโนโลยี จำกัด (มหาชน)",
+      "mode": "direct",
+      "members": [
+        "บริษัท แอ็ดวานซ์ อินฟอร์เมชั่น เทคโนโลยี จำกัด (มหาชน)"
+      ],
+      "contractId": "ช 007/2567",
+      "contractControlNumber": "670611000114",
+      "documentBuyerCount": null,
+      "submittedCount": 1,
+      "bidders": [
+        {
+          "name": "แอ็ดวานซ์อินฟอร์เมชั่นเทคโนโลยี จำกัด (มหาชน)",
+          "price": 215142081.36,
+          "status": "คู่สัญญา"
+        }
+      ],
+      "discountAmount": 201000.0,
+      "discountPct": 0.0934,
+      "concerns": [
+        "ใช้วิธีเฉพาะเจาะจงและมีผู้เสนอราคาในข้อมูลโครงสร้าง 1 ราย",
+        "ราคาสัญญาต่ำกว่าราคากลางร้อยละ 0.09 จึงควรเปิดเหตุผลเลือกวิธีและบันทึกเจรจาราคา"
+      ],
+      "documents": [
+        {
+          "label": "ประกาศราคากลาง",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/67049379222/ประกาศราคากลาง_67049379222__clkDownloadDoc545b542712bc4623ad845d57fdf14284.zip"
+        },
+        {
+          "label": "ประกาศรายชื่อผู้ชนะการเสนอราคา",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/67049379222/ประกาศรายชื่อผู้ชนะการเสนอราคา_67049379222_16052567_chkProjectW2A01.html"
+        },
+        {
+          "label": "ข้อมูลสาระสำคัญในสัญญา",
+          "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/67049379222/ข้อมูลสาระสำคัญในสัญญา_67049379222_21052567_chklink19I0.html"
+        }
+      ],
+      "projectUrl": "https://procurement.actai.co/project/67049379222",
+      "dataUrl": "https://admin-procurement.actai.co/project/67049379222"
+    }
+  ],
+  "comparison": {
+    "id": "64097542764",
+    "title": "ปรับเปลี่ยนระบบงานประกันสังคมจากเมนเฟรมเป็น Web Application หรือ SSO Core",
+    "budgetYear": 2561,
+    "announcementDate": "2021-11-26",
+    "contractDate": "2021-12-20",
+    "method": "ประกวดราคาอิเล็กทรอนิกส์",
+    "procurementType": "เช่า",
+    "budget": 850000000,
+    "estimatePrice": 848925000.0,
+    "winningBid": 848500000,
+    "contractPrice": 848000000,
+    "winner": "บริษัท อินเตอร์เนชั่นแนล รีเสริช คอร์ปอเรชั่น จำกัด (มหาชน)",
+    "mode": "comparison",
+    "members": [
+      "บริษัท อินเตอร์เนชั่นแนล รีเสริช คอร์ปอเรชั่น จำกัด (มหาชน)"
+    ],
+    "contractId": "จ 092/2564",
+    "contractControlNumber": "650124001278",
+    "documentBuyerCount": 16,
+    "submittedCount": 2,
+    "bidders": [
+      {
+        "name": "อินเตอร์เนชั่นแนล รีเสริช คอร์ปอเรชั่น จำกัด (มหาชน)",
+        "price": 848500000,
+        "status": "คู่สัญญา"
+      },
+      {
+        "name": "ยิบอินซอย",
+        "price": 848888000,
+        "status": "ยื่นข้อเสนอและไม่ได้รับคัดเลือก"
+      }
+    ],
+    "discountAmount": 925000.0,
+    "discountPct": 0.109,
+    "concerns": [
+      "ผู้ขอรับเอกสาร 16 ราย แต่ยื่นข้อเสนอ 2 ราย",
+      "ราคาสัญญาต่ำกว่าราคากลางร้อยละ 0.11",
+      "TOR ที่สื่อเผยแพร่ระบุประสบการณ์สัญญาเดียวไม่น้อยกว่า 170 ล้านบาท จึงควรเทียบผลต่อจำนวนผู้ผ่านคุณสมบัติ"
+    ],
+    "documents": [
+      {
+        "label": "ประกาศเชิญชวน",
+        "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64097542764/ประกาศเชิญชวน_64097542764_29092564_chkProjectD2A00.html"
+      },
+      {
+        "label": "ประกาศราคากลาง",
+        "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64097542764/ประกาศราคากลาง_64097542764_20092564_clkDownloadDocpricebuild_1700600000_64097542764.zip"
+      },
+      {
+        "label": "ประกาศรายชื่อผู้ชนะการเสนอราคา",
+        "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64097542764/ประกาศรายชื่อผู้ชนะการเสนอราคา_64097542764_26112564_chkProjectW2A02.html"
+      },
+      {
+        "label": "ร่างเอกสารประกวดราคา (e-Bidding)",
+        "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64097542764/ร่างเอกสารประกวดราคา(e-Bidding)_64097542764_20092564_showPopupFile064097542764_25640920195334_2.html"
+      },
+      {
+        "label": "สรุปข้อมูลการเสนอราคาเบื้องต้น",
+        "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64097542764/สรุปข้อมูลการเสนอราคาเบื้องต้น_64097542764__setProjectBidPriceNew_702b366a-0.pdf"
+      },
+      {
+        "label": "ข้อมูลรายชื่อผู้ขอรับ/ซื้อเอกสาร",
+        "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64097542764/ข้อมูลรายชื่อผู้ขอรับซื้อเอกสาร_64097542764__chklink16R0.html"
+      },
+      {
+        "label": "ข้อมูลรายชื่อผู้ยื่นเอกสาร",
+        "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64097542764/ข้อมูลรายชื่อผู้ยื่นเอกสาร_64097542764__chklink16S0.html"
+      },
+      {
+        "label": "ข้อมูลรายชื่อผู้ผ่านการพิจารณาคุณสมบัติและเทคนิค",
+        "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64097542764/ข้อมูลรายชื่อผู้ผ่านการพิจารณาคุณสมบัติและเทคนิค_64097542764__chklink16E0.html"
+      },
+      {
+        "label": "ข้อมูลสาระสำคัญในสัญญา",
+        "url": "https://storage.googleapis.com/act-egp-documents/DocumentEGP/64097542764/ข้อมูลสาระสำคัญในสัญญา_64097542764_20122564_chklink16I0.html"
+      }
+    ],
+    "projectUrl": "https://procurement.actai.co/project/64097542764",
+    "dataUrl": "https://admin-procurement.actai.co/project/64097542764"
+  },
+  "patterns": [
+    {
+      "title": "AIT ปรากฏทุกสัญญาในชุดหลัก",
+      "value": "8 จาก 8",
+      "detail": "รับงานตรง 3 โครงการ และเป็นสมาชิกกิจการร่วมค้า 5 โครงการ"
+    },
+    {
+      "title": "พันธมิตรที่เกิดซ้ำ",
+      "value": "4 โครงการ",
+      "detail": "AIT และบริษัท ไชยกาญจน์ คอนซัลติ้ง ปรากฏร่วมกันในกิจการร่วมค้า 4 โครงการ"
+    },
+    {
+      "title": "การแข่งขันที่ปลายกรวย",
+      "value": "7 โครงการ",
+      "detail": "โครงการประกวดราคาอิเล็กทรอนิกส์ทั้ง 7 โครงการมีผู้ยื่นข้อเสนอเพียง 2 หรือ 3 ราย แม้หลายโครงการมีผู้ขอรับเอกสาร 12 ถึง 19 ราย"
+    },
+    {
+      "title": "ส่วนต่างจากราคากลาง",
+      "value": "0.09 ถึง 4.06%",
+      "detail": "เจ็ดโครงการมีส่วนต่างต่ำกว่าร้อยละ 1 ส่วนโครงการอุปกรณ์ความปลอดภัยมีส่วนต่างร้อยละ 4.06"
+    },
+    {
+      "title": "ผู้เสนอราคาต่ำสุดไม่ชนะ",
+      "value": "2 โครงการ",
+      "detail": "พบใน SSO Plus และอุปกรณ์ความปลอดภัย เพราะผู้เสนอราคาต่ำสุดไม่ผ่านคุณสมบัติและข้อเสนอด้านเทคนิคตามข้อมูลผลพิจารณาที่เผยแพร่"
+    },
+    {
+      "title": "วิธีเฉพาะเจาะจง",
+      "value": "1 โครงการ",
+      "detail": "โครงการเช่าเครือข่ายปี 2567 มูลค่าสัญญา 214.992 ล้านบาท ควรเปิดเหตุผลเลือกวิธี หลักฐานสืบราคา และบันทึกเจรจา"
+    }
+  ],
+  "network": {
+    "relationships": [
+      {
+        "from": "TKC",
+        "to": "AIT",
+        "label": "ถือหุ้น 16.60% จากธุรกรรมปี 2566",
+        "date": "24 กรกฎาคม 2566",
+        "sourceUrl": "https://market.sec.or.th/public/idisc/Download?FILEID=dat/news/202307/1575NWS270720231239300540T.pdf"
+      },
+      {
+        "from": "TKC",
+        "to": "AIT",
+        "label": "ถือหุ้น 34.90%",
+        "date": "5 มีนาคม 2569",
+        "sourceUrl": "https://lssmedia.setlink.set.or.th/2026/3M/AIT-3M69-ListedCompanySnapshot-TH.html"
+      },
+      {
+        "from": "TKS Technology",
+        "to": "AIT",
+        "label": "ถือหุ้น 3.14%",
+        "date": "5 มีนาคม 2569",
+        "sourceUrl": "https://lssmedia.setlink.set.or.th/2026/3M/AIT-3M69-ListedCompanySnapshot-TH.html"
+      },
+      {
+        "from": "SKY ICT",
+        "to": "TKC",
+        "label": "ซื้อหุ้น 34.00% ก่อน TKC เข้าตลาด",
+        "date": "ธันวาคม 2560",
+        "sourceUrl": "https://market.sec.or.th/public/idisc/Download?FILEID=dat/news/201712/17101329.pdf"
+      },
+      {
+        "from": "SKY ICT",
+        "to": "TKC",
+        "label": "ถือหุ้น 25.16% หลัง IPO",
+        "date": "17 มกราคม 2565",
+        "sourceUrl": "https://www.set.or.th/th/market/news-and-alert/newsdetails?id=16421174121651"
+      },
+      {
+        "from": "รดากร มีธรรม",
+        "to": "TKC / AIT",
+        "label": "กรรมการ TKC และเป็นกรรมการ AIT ตั้งแต่ 8 พฤศจิกายน 2566",
+        "date": "ข้อมูลรายงานปี 2568",
+        "sourceUrl": "https://eonemedia.setlink.set.or.th/report/0712/2025/1773101858532.pdf"
+      },
+      {
+        "from": "AIT",
+        "to": "ไชยกาญจน์ คอนซัลติ้ง",
+        "label": "สมาชิกกิจการร่วมค้าใน 4 สัญญา สปส.",
+        "date": "สัญญาปี 2564 ถึง 2566",
+        "sourceUrl": "https://www.isranews.org/article/isranews-scoop/137762-invesnewssdsd.html"
+      }
+    ],
+    "note": "เส้นทุกเส้นแสดงเฉพาะความสัมพันธ์ที่มีเอกสารรองรับ เส้นเวลาที่เกิดใกล้กันเป็นเพียงลำดับเหตุการณ์และไม่ใช่หลักฐานความเป็นเหตุเป็นผล"
+  },
+  "timeline": [
+    {
+      "date": "ธันวาคม 2560",
+      "title": "SKY ICT ลงทุนใน TKC",
+      "detail": "เอกสารแจ้งตลาดหลักทรัพย์ระบุการซื้อหุ้น TKC ร้อยละ 34.00 ก่อน TKC เข้าจดทะเบียน"
+    },
+    {
+      "date": "17 มกราคม 2565",
+      "title": "TKC เข้าซื้อขายในตลาดหลักทรัพย์",
+      "detail": "ข่าว SET ระบุ SKY ICT ถือหุ้น TKC ร้อยละ 25.16 หลัง IPO"
+    },
+    {
+      "date": "24 กรกฎาคม 2566",
+      "title": "TKC ตกลงซื้อหุ้น AIT",
+      "detail": "เอกสาร SEC ระบุหุ้น 237.6 ล้านหุ้น คิดเป็นร้อยละ 16.60 ราคาหุ้นละ 6.80 บาท"
+    },
+    {
+      "date": "8 พฤศจิกายน 2566",
+      "title": "เริ่มมีกรรมการจาก TKC ใน AIT",
+      "detail": "รดากร มีธรรม และสิทธิเดช มัยลาภ ได้รับแต่งตั้งเป็นกรรมการ AIT ตามเอกสารบริษัท"
+    },
+    {
+      "date": "ก่อนพฤษภาคม 2568",
+      "title": "TKC ถือ AIT ร้อยละ 24.90",
+      "detail": "ใช้เป็นฐานก่อนคำเสนอซื้อหุ้นบางส่วน"
+    },
+    {
+      "date": "28 พฤษภาคม 2568",
+      "title": "ยื่นคำเสนอซื้อหุ้น AIT เพิ่ม",
+      "detail": "คำเสนอซื้อกำหนดซื้อเพิ่มไม่เกินร้อยละ 10 ทำให้ถือได้ไม่เกินร้อยละ 34.90"
+    },
+    {
+      "date": "5 มีนาคม 2569",
+      "title": "ภาพผู้ถือหุ้นล่าสุดที่ใช้ในหน้าเว็บ",
+      "detail": "SET Company Snapshot ระบุ TKC ถือ AIT ร้อยละ 34.90 และ TKS Technology ถือร้อยละ 3.14"
+    }
+  ],
+  "legalChecks": [
+    {
+      "section": "มาตรา 8",
+      "title": "หลักความคุ้มค่า โปร่งใส มีประสิทธิภาพและประสิทธิผล และตรวจสอบได้",
+      "action": "เทียบราคากลาง ราคาของผู้เสนอทุกราย เหตุผลตัดสิทธิ และผลส่งมอบ",
+      "sourceUrl": "https://www.cgd.go.th/cs/mkn/mkn/%E0%B8%82%E0%B9%89%E0%B8%AD1.1.html?adv_search=&date_end=&date_start=&keyword=&page=1&page_locale=th_TH&perpage=100"
+    },
+    {
+      "section": "มาตรา 56",
+      "title": "วิธีประกาศเชิญชวน วิธีคัดเลือก และวิธีเฉพาะเจาะจง",
+      "action": "โครงการเครือข่ายปี 2567 ต้องอ่านเหตุผลและเงื่อนไขที่ใช้อ้างเลือกวิธีเฉพาะเจาะจง",
+      "sourceUrl": "https://www.cgd.go.th/cs/mkn/mkn/%E0%B8%82%E0%B9%89%E0%B8%AD1.1.html?adv_search=&date_end=&date_start=&keyword=&page=1&page_locale=th_TH&perpage=100"
+    },
+    {
+      "section": "มาตรา 62",
+      "title": "การจัดทำราคากลาง",
+      "action": "ขอที่มาราคา รายการคำนวณ ผู้ให้ข้อมูลราคา และวันที่สืบราคาเพื่อเทียบกับราคาชนะ",
+      "sourceUrl": "https://www.cgd.go.th/cs/mkn/mkn/%E0%B8%82%E0%B9%89%E0%B8%AD1.1.html?adv_search=&date_end=&date_start=&keyword=&page=1&page_locale=th_TH&perpage=100"
+    },
+    {
+      "section": "ระเบียบข้อ 21",
+      "title": "คณะกรรมการหรือเจ้าหน้าที่จัดทำร่างขอบเขตของงานและหลักเกณฑ์พิจารณา",
+      "action": "ตรวจรายชื่อคณะกรรมการ TOR ข้อกำหนดประสบการณ์ หนังสือรับรอง และเกณฑ์เทคนิคที่ทำให้ผู้เสนอราคาไม่ผ่าน",
+      "sourceUrl": "https://www.cgd.go.th/cs/stn/stn/%E0%B8%81%E0%B8%8E%E0%B8%AB%E0%B8%A1%E0%B8%B2%E0%B8%A2%E0%B8%A3%E0%B8%B0%E0%B9%80%E0%B8%9A%E0%B8%B5%E0%B8%A2%E0%B8%9A%E0%B8%9E%E0%B8%B1%E0%B8%AA%E0%B8%94%E0%B8%B8.html"
+    }
+  ],
+  "conclusions": {
+    "facts": [
+      "ชุดยืนยันรอบแรกพบ 8 โครงการที่ AIT เป็นคู่สัญญาโดยตรงหรือสมาชิกกิจการร่วมค้า มูลค่าสัญญารวม 1,854.672 ล้านบาท",
+      "AIT รับงานตรง 3 โครงการ มูลค่า 753.892 ล้านบาท และอยู่ในกิจการร่วมค้า 5 โครงการ มูลค่าสัญญารวม 1,100.780 ล้านบาท",
+      "ยังไม่มีข้อมูลส่วนแบ่งรายได้ของสมาชิกกิจการร่วมค้า จึงไม่ถือมูลค่า 1,100.780 ล้านบาทเป็นรายได้ของ AIT",
+      "AIT และบริษัท ไชยกาญจน์ คอนซัลติ้ง ปรากฏร่วมในกิจการร่วมค้า 4 โครงการ"
+    ],
+    "patterns": [
+      "ผู้ยื่นข้อเสนอปลายทางมีเพียง 2 ถึง 3 รายในโครงการประกวดราคาอิเล็กทรอนิกส์ทั้ง 7 โครงการ",
+      "เจ็ดโครงการมีราคาสัญญาต่ำกว่าราคากลางไม่ถึงร้อยละ 1",
+      "พบ 2 โครงการที่ผู้เสนอราคาต่ำสุดไม่ชนะเพราะไม่ผ่านคุณสมบัติและข้อเสนอด้านเทคนิคตามข้อมูลที่เผยแพร่",
+      "ชื่อกิจการร่วมค้าเปลี่ยนไป แต่คู่สมาชิก AIT และไชยกาญจน์ปรากฏซ้ำ จึงต้องนับในระดับสมาชิก ไม่ใช่นับเฉพาะชื่อผู้ชนะ"
+    ],
+    "next": [
+      "ขอ TOR ฉบับลงนาม ตารางประเมินรายข้อ และเหตุผลที่ผู้เสนอแต่ละรายไม่ผ่าน โดยเฉพาะ SSO Plus และอุปกรณ์ความปลอดภัย",
+      "ขอรายชื่อคณะกรรมการจัดทำ TOR กำหนดราคากลาง พิจารณาผล ตรวจรับ และประวัติการปรากฏซ้ำข้ามโครงการ",
+      "ขอสัญญาจัดตั้งกิจการร่วมค้าและสัดส่วนงานของสมาชิก เพื่อแยกมูลค่าสัญญารวมออกจากรายได้ของแต่ละบริษัท",
+      "ขอหลักฐานสืบราคาและบันทึกเจรจาของโครงการวิธีเฉพาะเจาะจงปี 2567",
+      "ขยายจักรวาลโครงการ IT ตั้งแต่ปี 2560 ถึงปัจจุบัน แล้วคำนวณส่วนแบ่งผู้ชนะจากทุกโครงการวงเงินตั้งแต่ 10 ล้านบาทขึ้นไป"
+    ]
+  },
+  "answers": [
+    {
+      "question": "AIT และกิจการร่วมค้าที่มี AIT เกี่ยวข้องได้รับงานรวมกี่โครงการ และมูลค่าเท่าใด",
+      "answer": "ชุดยืนยันรอบแรกพบ 8 โครงการ มูลค่าสัญญารวม 1,854.672 ล้านบาท แยกเป็น AIT รับงานตรง 3 โครงการ 753.892 ล้านบาท และกิจการร่วมค้า 5 โครงการ มูลค่าสัญญารวม 1,100.780 ล้านบาท",
+      "status": "ยืนยันได้ในขอบเขต 8 โครงการ"
+    },
+    {
+      "question": "ผู้ชนะโครงการ IT กระจุกอยู่ในบริษัทหรือกลุ่มบริษัทใดบ้าง",
+      "answer": "ชุด 8 โครงการนี้คัดจากโครงการที่ AIT เกี่ยวข้อง จึงใช้ตอบส่วนแบ่งของตลาดทั้งหมดไม่ได้ ภายในชุดพบ AIT ร่วมกับไชยกาญจน์ 4 โครงการ และสามารถคอมเทคปรากฏเป็นคู่แข่ง 3 โครงการ การตอบเรื่องความกระจุกตัวทั้งระบบต้องเพิ่มโครงการ IT ทุกโครงการวงเงินตั้งแต่ 10 ล้านบาทขึ้นไป",
+      "status": "พบรูปแบบในชุดยืนยัน ต้องขยายจักรวาลข้อมูล"
+    },
+    {
+      "question": "บริษัทที่แข่งขันกันมีความสัมพันธ์ทางผู้ถือหุ้น กรรมการ หรือธุรกิจระหว่างกันหรือไม่",
+      "answer": "ยืนยันได้ว่า TKC ถือหุ้น AIT ร้อยละ 34.90 ณ 5 มีนาคม 2569 และมีกรรมการเชื่อมกันตั้งแต่ 8 พฤศจิกายน 2566 ส่วน SKY ICT มีประวัติถือหุ้น TKC ตั้งแต่ปี 2560 ความสัมพันธ์ระหว่างผู้เสนอราคารายอื่นยังต้องตรวจ DBD และเอกสารรายปีตามวันที่ประมูลก่อนสร้างเส้นเพิ่ม",
+      "status": "ยืนยันบางเส้นด้วย SET และ SEC"
+    },
+    {
+      "question": "มีรูปแบบใดใน TOR จำนวนผู้เสนอราคา ราคากลาง หรือกิจการร่วมค้าที่ควรตรวจต่อ",
+      "answer": "พบผู้ยื่นข้อเสนอเพียง 2 ถึง 3 รายในโครงการประกวดราคาอิเล็กทรอนิกส์ทั้ง 7 โครงการ เจ็ดโครงการมีราคาสัญญาต่ำกว่าราคากลางไม่ถึงร้อยละ 1 ผู้เสนอราคาต่ำสุดไม่ชนะ 2 โครงการเพราะไม่ผ่านคุณสมบัติและเทคนิค และมี 1 โครงการใช้วิธีเฉพาะเจาะจง",
+      "status": "รูปแบบเพื่อจัดลำดับการเปิดเอกสาร"
+    },
+    {
+      "question": "อะไรพิสูจน์ได้ และอะไรยังเป็นเพียงข้อสงสัยหรือข้อกล่าวหา",
+      "answer": "เลขโครงการ ราคากลาง ผู้เสนอราคา ผู้ชนะ สัญญา สมาชิกกิจการร่วมค้า และเส้นผู้ถือหุ้นที่แสดงบนเว็บมีเอกสารรองรับ ส่วนข้อกล่าวหาเรื่องเอื้อประโยชน์ การหมุนเวียนผู้ชนะ การส่งมอบล่าช้า หรือการไม่เรียกค่าปรับยังต้องรอเอกสารทางการและผลตรวจสอบถึงที่สุด",
+      "status": "แยกข้อเท็จจริงออกจากข้อกล่าวหา"
+    }
+  ],
+  "publicRecord": [
+    {
+      "date": "12 พฤษภาคม 2568",
+      "title": "สื่อรายงานว่ามีหนังสือร้องเรียนให้ตรวจการจัดซื้อ IT ของสำนักงานประกันสังคม",
+      "detail": "สำนักข่าวอิศรารายงานคำกล่าวอ้างเรื่องผู้ชนะและคู่เทียบซ้ำ การส่งมอบ และค่าปรับ โดยอ้างว่ามีหนังสือร้องเรียนถึงรัฐมนตรีว่าการกระทรวงแรงงาน",
+      "status": "ข้อกล่าวหาและการร้องเรียน ในแหล่งข้อมูลนี้ยังไม่มีผลสอบหรือคำวินิจฉัยถึงที่สุด",
+      "sourceUrl": "https://www.isranews.org/article/isranews-news/137906-invesnewsdsdsds.html"
+    }
+  ],
+  "sources": [
+    {
+      "label": "ACT Ai Procurement",
+      "detail": "หน้ารวมสำเนาเอกสาร e-GP รายโครงการและข้อมูลโครงสร้าง",
+      "url": "https://procurement.actai.co",
+      "accessedAt": "2026-09-20"
+    },
+    {
+      "label": "สำนักข่าวอิศรา",
+      "detail": "ตาราง 8 โครงการและองค์ประกอบกิจการร่วมค้า",
+      "url": "https://www.isranews.org/article/isranews-scoop/137762-invesnewssdsd.html",
+      "accessedAt": "2026-09-20"
+    },
+    {
+      "label": "สำนักข่าวอิศรา",
+      "detail": "รายละเอียดผู้ซื้อเอกสาร ผู้ยื่น และผลคุณสมบัติของโครงการที่ตรวจสอบ",
+      "url": "https://www.isranews.org/article/isranews/137626-invesnewspa.html",
+      "accessedAt": "2026-09-20"
+    },
+    {
+      "label": "สำนักข่าวอิศรา",
+      "detail": "ข่าวหนังสือร้องเรียน แยกสถานะเป็นข้อกล่าวหาและการร้องเรียน",
+      "url": "https://www.isranews.org/article/isranews-news/137906-invesnewsdsdsds.html",
+      "accessedAt": "2026-09-20"
+    },
+    {
+      "label": "กรุงเทพธุรกิจ",
+      "detail": "รายละเอียด TOR และบริบท SSO Core กับ SSO Plus",
+      "url": "https://www.bangkokbiznews.com/politics/1218477",
+      "accessedAt": "2026-09-20"
+    },
+    {
+      "label": "SET Company Snapshot AIT",
+      "detail": "ผู้ถือหุ้น AIT ณ 5 มีนาคม 2569",
+      "url": "https://lssmedia.setlink.set.or.th/2026/3M/AIT-3M69-ListedCompanySnapshot-TH.html",
+      "accessedAt": "2026-09-20"
+    },
+    {
+      "label": "SEC แบบคำเสนอซื้อ AIT",
+      "detail": "TKC เสนอซื้อหุ้น AIT เพิ่มในปี 2568",
+      "url": "https://market.sec.or.th/public/idisc/Download?FILEID=dat/news/202505/1674NWS280520251233320475T.pdf",
+      "accessedAt": "2026-09-20"
+    },
+    {
+      "label": "แบบจำลองความยั่งยืนกองทุน",
+      "detail": "งานที่ผู้ใช้ส่งมา ใช้ตั้งสมมติฐานเรื่องต้นทุนระบบเดิม แยกจากข้อเท็จจริงการจัดซื้อจัดจ้าง",
+      "url": "https://claude.ai/artifact/WC535wf4fibVbeSSxSFoGg",
+      "accessedAt": "2026-09-20"
+    }
+  ]
+}

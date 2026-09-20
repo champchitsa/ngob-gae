@@ -8,6 +8,7 @@ import CorpusReader from './CorpusReader'
 import CommitteeTracker from './CommitteeTracker'
 import GovernmentMap from './GovernmentMap'
 import SsoBudgetLab from './SsoBudgetLab'
+import SsoItProcurementLab from './SsoItProcurementLab'
 import { useModalAccessibility } from './useModalAccessibility'
 
 type PboYear = { year: number; rows: number; act: number; adjusted: number; paid: number; paid_rate: number | null }
@@ -144,7 +145,8 @@ function App() {
         <nav className="topnav" aria-label="เมนูหลัก">
           <button onClick={() => document.getElementById('signals')?.scrollIntoView()}>Big Data</button>
           <button onClick={() => document.getElementById('state-map')?.scrollIntoView()}>แผนที่รัฐ</button>
-          <button onClick={() => document.getElementById('sso-lab')?.scrollIntoView()}>ประกันสังคม</button>
+          <button onClick={() => document.getElementById('sso-it')?.scrollIntoView()}>เจาะงบ IT</button>
+          <button onClick={() => document.getElementById('sso-lab')?.scrollIntoView()}>งบประกันสังคม</button>
           <button onClick={() => document.getElementById('data-api')?.scrollIntoView()}>ตารางและ API</button>
           <button onClick={() => document.getElementById('committee')?.scrollIntoView()}>ติดตาม กมธ.</button>
           <button onClick={() => document.getElementById('archive')?.scrollIntoView()}>คลัง 694 ไฟล์</button>
@@ -204,6 +206,7 @@ function App() {
           }, 50)
         }} />
 
+        <SsoItProcurementLab onAsk={() => setChatOpen(true)} />
         <SsoBudgetLab onAsk={() => setChatOpen(true)} />
 
         <section className="signal-lab" id="signals">
