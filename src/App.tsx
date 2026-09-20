@@ -513,7 +513,11 @@ function App() {
       <footer className="site-footer">
         <div className="brand"><span className="brand-mark">งบ</span><span>แกะ</span></div>
         <p>โต๊ะทำงานสาธารณะสำหรับค้นงบ ตั้งคำถาม<br />และย้อนกลับไปยังหลักฐานต้นทาง</p>
-        <div><a href="https://github.com/champchitsa/ngob-gae" target="_blank" rel="noreferrer">GitHub ↗</a><span>สร้างสำหรับ OPEN DATA HACK 2569</span></div>
+        <div className="footer-meta">
+          <a href="https://github.com/champchitsa/ngob-gae" target="_blank" rel="noreferrer">GitHub ↗</a>
+          <a className="event-credit" href="https://open.thaith.ai/aievent/#posterSection" target="_blank" rel="noreferrer">จัดทำขึ้นในกิจกรรม “เพราะ AI ไม่ใช่แค่ CHATBOT”</a>
+          <span>จัดโดย คณะกรรมาธิการศึกษาการจัดทำและติดตามการบริหารงบประมาณ สภาผู้แทนราษฎร</span>
+        </div>
       </footer>
 
       <BudgetChat

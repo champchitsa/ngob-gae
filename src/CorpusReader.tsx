@@ -118,10 +118,50 @@ const previewRecords = (file: CorpusFile, query: string) => {
   return matches.length ? matches : file.preview.slice(0, PAGE_SIZE)
 }
 
-const corpusReaderUrl = (file: CorpusFile) => {
+const corpusAssetName = (file: CorpusFile) => {
   if (!file.corpus_url) return null
   const asset = file.corpus_url.split('/').pop()
-  return asset ? `/corpus/${encodeURIComponent(asset)}` : file.corpus_url
+  return asset || null
+}
+
+const corpusByteStream = (file: CorpusFile, signal: AbortSignal) => {
+  const asset = corpusAssetName(file)
+  if (!asset) throw new Error('ไฟล์นี้ยังไม่มีฉบับอ่านบนเว็บ')
+  let offset = 0
+  let total: number | null = null
+  let finished = false
+
+  return new ReadableStream<BufferSource>({
+    async pull(controller) {
+      if (finished || (total !== null && offset >= total)) {
+        finished = true
+        controller.close()
+        return
+      }
+      try {
+        const response = await fetch(`/api/corpus?asset=${encodeURIComponent(asset)}&offset=${offset}`, { signal })
+        if (!response.ok) throw new Error(`ดาวน์โหลดข้อมูลไม่สำเร็จ (${response.status})`)
+        const bytes = new Uint8Array(await response.arrayBuffer())
+        total = Number(response.headers.get('X-Corpus-Total')) || bytes.length
+        if (!bytes.length) {
+          finished = true
+          controller.close()
+          return
+        }
+        offset += bytes.length
+        controller.enqueue(bytes)
+        if (offset >= total) {
+          finished = true
+          controller.close()
+        }
+      } catch (reason) {
+        controller.error(reason)
+      }
+    },
+    cancel() {
+      finished = true
+    },
+  })
 }
 
 const formatBytes = (value: number) => {
@@ -184,15 +224,12 @@ async function scanCorpus(
   signal: AbortSignal,
   onProgress: (units: number) => void,
 ) {
-  const readerUrl = corpusReaderUrl(file)
-  if (!readerUrl) throw new Error('ไฟล์นี้ยังไม่มีฉบับอ่านบนเว็บ')
-  const response = await fetch(readerUrl, { signal })
-  if (!response.ok || !response.body) throw new Error(`ดาวน์โหลดข้อมูลไม่สำเร็จ (${response.status})`)
-  const [probeStream, contentStream] = response.body.tee()
+  const [probeStream, contentStream] = corpusByteStream(file, signal).tee()
   const probeReader = probeStream.getReader()
   const probe = await probeReader.read()
   void probeReader.cancel()
-  const isGzip = Boolean(probe.value && probe.value.length > 1 && probe.value[0] === 0x1f && probe.value[1] === 0x8b)
+  const probeBytes = probe.value as Uint8Array | undefined
+  const isGzip = Boolean(probeBytes && probeBytes.length > 1 && probeBytes[0] === 0x1f && probeBytes[1] === 0x8b)
   if (isGzip && typeof DecompressionStream === 'undefined') throw new Error('เบราว์เซอร์นี้ยังไม่รองรับการอ่านไฟล์บีบอัด')
   const decodedStream = isGzip ? contentStream.pipeThrough(new DecompressionStream('gzip')) : contentStream
   const stream = decodedStream.pipeThrough(new TextDecoderStream())
