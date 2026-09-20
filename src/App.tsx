@@ -143,17 +143,26 @@ function App() {
           <span className="brand-mark">งบ</span><span>แกะ</span>
         </a>
         <nav className="topnav" aria-label="เมนูหลัก">
-          <button onClick={() => document.getElementById('signals')?.scrollIntoView()}>Big Data</button>
-          <button onClick={() => document.getElementById('state-map')?.scrollIntoView()}>แผนที่รัฐ</button>
-          <button onClick={() => document.getElementById('sso-it')?.scrollIntoView()}>เจาะงบ IT</button>
-          <button onClick={() => document.getElementById('sso-lab')?.scrollIntoView()}>งบประกันสังคม</button>
-          <button onClick={() => document.getElementById('data-api')?.scrollIntoView()}>ตารางและ API</button>
+          <button onClick={() => document.getElementById('budget-dashboard')?.scrollIntoView()}>ภาพรวม</button>
+          <button onClick={() => document.getElementById('signals')?.scrollIntoView()}>ตรวจรายการ</button>
+          <button onClick={() => document.getElementById('sso-it')?.scrollIntoView()}>ประกันสังคม</button>
+          <button onClick={() => document.getElementById('archive')?.scrollIntoView()}>ค้นหลักฐาน</button>
           <button onClick={() => document.getElementById('committee')?.scrollIntoView()}>ติดตาม กมธ.</button>
-          <button onClick={() => document.getElementById('archive')?.scrollIntoView()}>คลัง 694 ไฟล์</button>
-          <button onClick={() => document.getElementById('law-workbench')?.scrollIntoView()}>กฎหมายลงมือใช้</button>
-          <button onClick={() => setChatOpen(true)}>ถามน้องเพนกวิน</button>
+          <button className="nav-chat" onClick={() => setChatOpen(true)}>ถามน้องเพนกวิน</button>
         </nav>
         <div className="data-stamp"><i /> ประมวลผล 20.09.69</div>
+        <select className="mobile-section-nav" defaultValue="" aria-label="ไปยังส่วนต่างๆ ของเว็บ" onChange={(event) => {
+          const targetId = event.currentTarget.value
+          document.getElementById(targetId)?.scrollIntoView()
+          event.currentTarget.value = ''
+        }}>
+          <option value="" disabled>เลือกส่วน</option>
+          <option value="budget-dashboard">ภาพรวมงบ</option>
+          <option value="signals">ตรวจรายการ</option>
+          <option value="sso-it">ประกันสังคม</option>
+          <option value="archive">ค้นหลักฐาน</option>
+          <option value="committee">ติดตาม กมธ.</option>
+        </select>
         <button className="mobile-chat-button" onClick={() => setChatOpen(true)}>ถามน้องเพนกวิน</button>
       </header>
 
@@ -162,14 +171,10 @@ function App() {
           <div className="mast-copy">
             <div className="kicker"><span>PUBLIC BUDGET WORKBENCH</span><span>ทดลองใช้</span></div>
             <h1><span>งบก้อนนี้</span><mark>ใช้ทำอะไร</mark><span>ได้ผลแค่ไหน</span></h1>
-            <p>ค้นและวิเคราะห์งบจากหลักฐาน 694 ไฟล์ ตั้งแต่ภาพรวมประเทศ โครงสร้างผู้รับผิดชอบ จนถึงรายการโครงการ พร้อมตัวเลขผิดสังเกต เอกสารต้นทาง และคำถามสำหรับตรวจต่อ</p>
+            <p>แพลตฟอร์มตรวจสอบงบประมาณภาครัฐที่เชื่อมรายการ หน่วยงาน การจัดซื้อ สัญญา เอกสาร กฎหมาย และผลลัพธ์ไว้ในที่เดียว พร้อมเหตุผลและหลักฐานสำหรับตรวจสอบต่อ</p>
             <div className="hero-actions">
-              <a className="primary-action" href="#signals" onClick={() => window.setTimeout(() => anomalySearchRef.current?.focus(), 500)}>ค้น {bigData.meta.candidateCount.toLocaleString('th-TH')} รายการที่ควรตรวจต่อ <span>↓</span></a>
-              <a className="text-action" href="#archive">ค้นหลักฐานทั้งหมด</a>
-              <a className="text-action" href="#data-api">เปิดตารางและ API</a>
-              <a className="text-action" href="#state-map">ดูว่าใครถือเงิน</a>
-              <a className="text-action" href="#committee">ติดตามงานกรรมาธิการ</a>
-              <button className="text-action" onClick={() => setChatOpen(true)}>ถามข้อมูลกับน้องเพนกวิน</button>
+              <a className="primary-action" href="#signals" onClick={() => window.setTimeout(() => anomalySearchRef.current?.focus(), 500)}>เริ่มตรวจรายการ <span>↓</span></a>
+              <a className="secondary-action" href="#sso-it">เจาะงบ IT ประกันสังคม</a>
             </div>
             <div className="hero-proof" role="list" aria-label="จุดเด่นเครื่องมือ"><span role="listitem"><b>{bigData.meta.candidateCount.toLocaleString('th-TH')}</b> รายการจัดอันดับ</span><span role="listitem"><b>417</b> หน่วยงานเชื่อมโครงสร้าง</span><span role="listitem"><b>7</b> เงื่อนไขคัดกรอง</span><span role="listitem"><b>5</b> ขั้นตามหลักฐาน</span></div>
           </div>
@@ -193,6 +198,20 @@ function App() {
           <div><span>02</span><strong>เห็นช่องว่าง</strong><p>แยกข้อมูลไม่ครบออกจากยอดศูนย์</p></div>
           <div><span>03</span><strong>ตามเอกสาร</strong><p>ไปต่อถึง TOR สัญญา งวดงาน และผลลัพธ์</p></div>
           <div><span>04</span><strong>ส่งต่อให้ตรวจได้</strong><p>ทุกข้อสังเกตมีคำถาม เอกสาร และลิงก์ต้นทาง</p></div>
+        </section>
+
+        <section className="task-launcher" aria-labelledby="task-launcher-title">
+          <header>
+            <span>เริ่มใช้งาน</span>
+            <h2 id="task-launcher-title">วันนี้คุณต้องการตรวจอะไร</h2>
+            <p>เลือกงานหนึ่งอย่าง ระบบจะพาไปยังข้อมูล เครื่องมือ และหลักฐานที่เกี่ยวข้องโดยตรง</p>
+          </header>
+          <div className="task-grid">
+            <a href="#signals"><b>01</b><strong>หารายการที่ควรตรวจต่อ</strong><span>ค้นและจัดอันดับจากวงเงิน การโอน และผลเบิกจ่าย</span><i>เปิดรายการ →</i></a>
+            <a href="#sso-it"><b>02</b><strong>เจาะงบ IT ประกันสังคม</strong><span>ดูโครงการ ผู้ชนะ คู่แข่ง สัญญา และโครงข่ายบริษัท</span><i>เปิดแฟ้มเฉพาะทาง →</i></a>
+            <a href="#archive"><b>03</b><strong>ค้นเอกสารและหลักฐาน</strong><span>ค้น 694 ไฟล์ อ่าน OCR และกลับไปเทียบต้นฉบับ</span><i>เปิดคลังหลักฐาน →</i></a>
+            <a href="#committee"><b>04</b><strong>ติดตามคำถามของกรรมาธิการ</strong><span>ดูคำถาม เอกสารที่ขอ ผู้รับผิดชอบ และสถานะคำตอบ</span><i>เปิดตัวติดตาม →</i></a>
+          </div>
         </section>
 
         <BudgetDashboard history={history} />

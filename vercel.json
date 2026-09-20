@@ -8,6 +8,12 @@
       "includeFiles": "public/data/**"
     }
   },
+  "rewrites": [
+    {
+      "source": "/corpus/:asset",
+      "destination": "https://github.com/champchitsa/ngob-gae/releases/download/corpus-v1/:asset"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

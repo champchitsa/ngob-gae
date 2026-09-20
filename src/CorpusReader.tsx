@@ -109,6 +109,21 @@ const signalViews = [
 
 const PAGE_SIZE = 100
 
+const previewRecords = (file: CorpusFile, query: string) => {
+  const needle = query.trim().toLocaleLowerCase('th')
+  if (!needle) return file.preview.slice(0, PAGE_SIZE)
+  const matches = file.preview.filter((record) =>
+    `${record.text || ''} ${(record.cells || []).join(' ')}`.toLocaleLowerCase('th').includes(needle),
+  )
+  return matches.length ? matches : file.preview.slice(0, PAGE_SIZE)
+}
+
+const corpusReaderUrl = (file: CorpusFile) => {
+  if (!file.corpus_url) return null
+  const asset = file.corpus_url.split('/').pop()
+  return asset ? `/corpus/${encodeURIComponent(asset)}` : file.corpus_url
+}
+
 const formatBytes = (value: number) => {
   if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)} GB`
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)} MB`
@@ -169,8 +184,9 @@ async function scanCorpus(
   signal: AbortSignal,
   onProgress: (units: number) => void,
 ) {
-  if (!file.corpus_url) throw new Error('ไฟล์นี้ยังไม่มีฉบับอ่านบนเว็บ')
-  const response = await fetch(file.corpus_url, { signal })
+  const readerUrl = corpusReaderUrl(file)
+  if (!readerUrl) throw new Error('ไฟล์นี้ยังไม่มีฉบับอ่านบนเว็บ')
+  const response = await fetch(readerUrl, { signal })
   if (!response.ok || !response.body) throw new Error(`ดาวน์โหลดข้อมูลไม่สำเร็จ (${response.status})`)
   const [probeStream, contentStream] = response.body.tee()
   const probeReader = probeStream.getReader()
@@ -245,6 +261,7 @@ export default function CorpusReader() {
   const [scanned, setScanned] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [readerSource, setReaderSource] = useState<'preview' | 'full'>('preview')
   const abortRef = useRef<AbortController | null>(null)
   const documentRef = useRef<HTMLDivElement>(null)
   const insideSearchRef = useRef<HTMLInputElement>(null)
@@ -310,11 +327,18 @@ export default function CorpusReader() {
     setSelected(file)
     setLoading(true)
     setError('')
-    setRecords([])
+    const fallback = previewRecords(file, nextQuery)
+    setRecords(fallback)
+    setReaderSource('preview')
+    setMatched(fallback.length)
+    setHasMore(false)
+    setPage(0)
+    setAppliedInsideQuery(nextQuery.trim())
     setScanned(0)
     try {
       const result = await scanCorpus(file, nextPage, nextQuery, controller.signal, setScanned)
       setRecords(result.records)
+      setReaderSource('full')
       setMatched(result.matched)
       setScanned(result.scanned)
       setHasMore(result.hasMore)
@@ -323,7 +347,9 @@ export default function CorpusReader() {
     } catch (reason) {
       if (reason instanceof DOMException && reason.name === 'AbortError') return
       const message = reason instanceof Error ? reason.message : 'อ่านเนื้อหาไม่สำเร็จ'
-      setError(message === 'Failed to fetch' ? 'ยังดาวน์โหลดฉบับอ่านบนเว็บไม่ได้ กรุณาลองใหม่อีกครั้ง' : message)
+      setError(message === 'Failed to fetch'
+        ? 'กำลังแสดงข้อความตัวอย่างจากดัชนี ฉบับเต็มยังโหลดไม่สำเร็จ'
+        : `กำลังแสดงข้อความตัวอย่างจากดัชนี ฉบับเต็มยังโหลดไม่สำเร็จ: ${message}`)
     } finally {
       if (!controller.signal.aborted) setLoading(false)
     }
@@ -428,18 +454,18 @@ export default function CorpusReader() {
           {appliedInsideQuery && <button type="button" onClick={() => { setInsideQuery(''); void loadPage(selected, 0, '') }}>ล้างคำค้น</button>}
         </form>
         <div className="reader-status" aria-live="polite">
-          {loading ? <span>กำลังอ่าน {formatCount(scanned)} หน่วยข้อมูล...</span> : appliedInsideQuery ? <span>พบ {formatCount(matched)} ตำแหน่งสำหรับ “{appliedInsideQuery}”</span> : records.length ? <span>แสดงลำดับ {formatCount(page * PAGE_SIZE + 1)} ถึง {formatCount(page * PAGE_SIZE + records.length)}</span> : <span>ยังไม่มีเนื้อหาที่แสดง</span>}
+          {loading ? <span>กำลังเปิดฉบับเต็ม ขณะนี้อ่านข้อความตัวอย่างได้แล้ว</span> : appliedInsideQuery ? <span>พบ {formatCount(matched)} ตำแหน่งสำหรับ “{appliedInsideQuery}” {readerSource === 'preview' ? 'ในข้อความตัวอย่าง' : ''}</span> : records.length ? <span>{readerSource === 'full' ? `แสดงลำดับ ${formatCount(page * PAGE_SIZE + 1)} ถึง ${formatCount(page * PAGE_SIZE + records.length)}` : `แสดงข้อความตัวอย่าง ${formatCount(records.length)} ตำแหน่ง`}</span> : <span>ยังไม่มีเนื้อหาที่แสดง</span>}
           <a href={selected.url} target="_blank" rel="noreferrer">เทียบกับต้นฉบับ</a>
         </div>
-        {error && <div className="reader-error">{error}</div>}
+        {error && <div className="reader-error"><span>{error}</span><button type="button" onClick={() => void loadPage(selected, page, appliedInsideQuery)}>ลองโหลดฉบับเต็มอีกครั้ง</button></div>}
         <div className="record-list">
           {records.map((record, index) => <article key={`${page}-${index}-${locator(record)}`}>
             <header><strong>{locator(record)}</strong>{record.method === 'ocr' && <span>อ่านข้อความด้วย OCR</span>}</header>
             <pre>{record.text || (record.cells || []).join(' | ') || 'ไม่มีข้อความในตำแหน่งนี้'}</pre>
           </article>)}
         </div>
-        {!loading && !error && records.length === 0 && <div className="corpus-empty">ไม่พบข้อความที่ตรงกับคำค้นในไฟล์นี้</div>}
-        {!loading && records.length > 0 && <div className="reader-pager">
+        {!loading && records.length === 0 && <div className="corpus-empty">ไม่พบข้อความที่ตรงกับคำค้นในไฟล์นี้</div>}
+        {!loading && readerSource === 'full' && records.length > 0 && <div className="reader-pager">
           <button disabled={page === 0} onClick={() => void loadPage(selected, page - 1, appliedInsideQuery)}>หน้าก่อน</button>
           <span>หน้าผลลัพธ์ {formatCount(page + 1)}</span>
           <button disabled={!hasMore} onClick={() => void loadPage(selected, page + 1, appliedInsideQuery)}>หน้าถัดไป</button>
