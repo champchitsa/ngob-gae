@@ -54,6 +54,12 @@ type SsoItData = {
   legalChecks: { section: string; title: string; action: string; sourceUrl: string }[]
   conclusions: { facts: string[]; patterns: string[]; next: string[] }
   answers: { question: string; answer: string; status: string }[]
+  assuranceFramework: {
+    title: string
+    detail: string
+    sourceStatus: string
+    steps: { code: string; title: string; detail: string; evidence: string }[]
+  }
   publicRecord: { date: string; title: string; detail: string; status: string; sourceUrl: string }[]
   sources: { label: string; detail: string; url: string; accessedAt: string }[]
 }
@@ -273,6 +279,13 @@ function SsoItProcurementLab({ onAsk }: { onAsk: () => void }) {
         <article><span>A</span><h3>ข้อเท็จจริงที่ยืนยันได้</h3><ol>{data.conclusions.facts.map((item) => <li key={item}>{item}</li>)}</ol></article>
         <article><span>B</span><h3>รูปแบบที่พบ</h3><ol>{data.conclusions.patterns.map((item) => <li key={item}>{item}</li>)}</ol></article>
         <article><span>C</span><h3>ประเด็นที่ควรตรวจสอบต่อ</h3><ol>{data.conclusions.next.map((item) => <li key={item}>{item}</li>)}</ol></article>
+      </div>
+      <div className="itlab-assurance">
+        <div className="itlab-section-intro"><div><span>CONTRACT TO OUTCOME</span><h3>{data.assuranceFramework.title}</h3></div><p>{data.assuranceFramework.detail}</p></div>
+        <div className="itlab-assurance-steps">
+          {data.assuranceFramework.steps.map((step) => <article key={step.code}><span>{step.code}</span><div><h4>{step.title}</h4><p>{step.detail}</p><small>หลักฐานที่ควรขอ</small><b>{step.evidence}</b></div></article>)}
+        </div>
+        <p className="itlab-assurance-status"><strong>สถานะข้อมูลจากไฟล์ประกอบ</strong>{data.assuranceFramework.sourceStatus}</p>
       </div>
       <div className="itlab-legal">
         <div className="itlab-section-intro"><div><span>LAW TO ACTION</span><h3>ตัวบทที่แปลงเป็นงานตรวจ</h3></div><p>ลิงก์ไปยังฐานกฎหมายของกรมบัญชีกลาง ใช้มาตราและข้อเป็นดัชนีเปิดตัวบทฉบับจริง</p></div>

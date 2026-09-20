@@ -160,6 +160,18 @@
 .itlab-three-levels h3 { min-height: 52px; margin: 14px 0 10px; font-size: 18px; line-height: 1.4; }
 .itlab-three-levels ol { margin: 0; padding-left: 18px; font-size: 11px; line-height: 1.7; }
 .itlab-three-levels li { margin-bottom: 8px; }
+.itlab-assurance { margin-top: 22px; border: 1px solid var(--it-black); background: white; }
+.itlab-assurance-steps { display: grid; grid-template-columns: repeat(3, 1fr); }
+.itlab-assurance-steps article { min-height: 220px; padding: 22px; display: grid; grid-template-columns: 42px 1fr; gap: 13px; border-right: 1px solid var(--it-black); border-bottom: 1px solid var(--it-black); }
+.itlab-assurance-steps article:nth-child(3n) { border-right: 0; }
+.itlab-assurance-steps article:nth-last-child(-n + 3) { border-bottom: 0; }
+.itlab-assurance-steps article > span { width: 34px; height: 34px; display: grid; place-items: center; background: var(--it-yellow); font: 800 11px 'IBM Plex Mono', monospace; }
+.itlab-assurance-steps h4 { margin: 3px 0 7px; font-size: 15px; }
+.itlab-assurance-steps p { margin: 0 0 15px; color: #55534c; font-size: 11px; line-height: 1.6; }
+.itlab-assurance-steps small { display: block; color: var(--it-red); font-size: 9px; font-weight: 800; }
+.itlab-assurance-steps b { display: block; margin-top: 4px; font-size: 10px; line-height: 1.5; }
+.itlab-assurance-status { margin: 0; padding: 16px 22px; display: grid; grid-template-columns: 190px 1fr; gap: 16px; background: #fff8bf; border-top: 1px solid var(--it-black); color: #4f4d47; font-size: 11px; line-height: 1.6; }
+.itlab-assurance-status strong { color: var(--it-black); }
 .itlab-legal { margin-top: 22px; border: 1px solid var(--it-black); background: white; }
 .itlab-legal > a { min-height: 92px; padding: 17px 20px; display: grid; grid-template-columns: 110px 1fr auto; align-items: center; gap: 18px; border-bottom: 1px solid var(--it-black); color: var(--it-black); text-decoration: none; }
 .itlab-legal > a:last-child { border-bottom: 0; }
@@ -206,6 +218,10 @@
   .itlab-three-levels { grid-template-columns: 1fr; }
   .itlab-three-levels article { border-right: 0; border-bottom: 1px solid var(--it-black); }
   .itlab-three-levels article:last-child { border-bottom: 0; }
+  .itlab-assurance-steps { grid-template-columns: repeat(2, 1fr); }
+  .itlab-assurance-steps article, .itlab-assurance-steps article:nth-child(3n) { border-right: 1px solid var(--it-black); border-bottom: 1px solid var(--it-black); }
+  .itlab-assurance-steps article:nth-child(2n) { border-right: 0; }
+  .itlab-assurance-steps article:nth-last-child(-n + 2) { border-bottom: 0; }
 }
 
 @media (max-width: 760px) {
@@ -252,6 +268,10 @@
   .itlab-timeline article > div { grid-column: 2; }
   .itlab-legal > a { grid-template-columns: 1fr; gap: 7px; }
   .itlab-public-record a { grid-template-columns: 1fr; gap: 8px; }
+  .itlab-assurance-steps { grid-template-columns: 1fr; }
+  .itlab-assurance-steps article, .itlab-assurance-steps article:nth-child(2n), .itlab-assurance-steps article:nth-child(3n), .itlab-assurance-steps article:nth-last-child(-n + 2) { min-height: auto; border-right: 0; border-bottom: 1px solid var(--it-black); }
+  .itlab-assurance-steps article:last-child { border-bottom: 0; }
+  .itlab-assurance-status { grid-template-columns: 1fr; gap: 5px; }
   .itlab-method { grid-template-columns: 1fr; gap: 8px; }
   .itlab-sources { grid-template-columns: 1fr; }
 }
