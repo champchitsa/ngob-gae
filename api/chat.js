@@ -321,9 +321,10 @@ function retrieve(question, focusId) {
       return { ref: `[ปี ${row.year}]`, label: `PBO ปี ${row.year}`, detail: `${row.rows.toLocaleString('th-TH')} แถว | เบิกจ่าย ${row.paid_rate ?? 'ไม่มีค่า'}%`, url: sourceFile?.url ?? SOURCE_URL }
     }),
     ...(asksSso ? sso.findings.map((finding, index) => ({ ref: `[ประกันสังคม ${index + 1}]`, label: finding.title, detail: 'ข้อสังเกตจากงบและเอกสารใน OPEN SSO', url: finding.sourceUrl || sso.meta.pboSource })) : []),
+    ...(asksSso ? sso.newsContext.map((item, index) => ({ ref: `[ข่าวประกันสังคม ${index + 1}]`, label: item.title, detail: `${item.date} | ${item.source} | ${item.status}`, url: item.url })) : []),
     ...relevantLaws.filter((law) => law.score > 0).map((law) => ({ ref: law.shortCode, label: law.code, detail: law.publication, url: law.sourceUrl })),
   ].filter((source, index, all) => all.findIndex((candidate) => candidate.label === source.label && candidate.url === source.url) === index)
-  return { context, sources, selectedCases: selectedCases.map(({ item }) => item), selectedItems: selected.map(({ item }) => item), relevantFacts, relevantLaws, relevantFiles, relevantHistory, relevantEvidence, relevantMeetings, relevantStructure, matchedSignal }
+  return { context, sources, selectedCases: selectedCases.map(({ item }) => item), selectedItems: selected.map(({ item }) => item), relevantFacts, relevantLaws, relevantFiles, relevantHistory, relevantEvidence, relevantMeetings, relevantStructure, matchedSignal, asksSso, sso }
 }
 
 function rateLimited(request) {
@@ -428,6 +429,24 @@ function buildCommitteeAnswer(question, meetings) {
   return `วาระกรรมาธิการที่ตรงคำค้น\n\n${rows.join('\n\n')}\n\nเปิดสาระฉบับเต็มบนเว็บหรือใช้ลิงก์ต้นทางใต้คำตอบ จากนั้นนำชื่อโครงการ หน่วยงาน และเอกสารที่ระบุไปค้นต่อในคลังหลักฐานของงบแกะ`
 }
 
+function buildSsoAnswer(question, sso) {
+  const normalized = question.toLocaleLowerCase('th')
+  let selected = sso.findings
+  if (/เฟิร์สคลาส|first\s*class|ชั้นหนึ่ง|เดินทาง|ดูงานต่างประเทศ/.test(normalized)) {
+    const news = sso.newsContext.find((item) => item.id === 'first-class')
+    const newsIndex = sso.newsContext.indexOf(news) + 1
+    return `ค่าโดยสารชั้นหนึ่งและการเดินทางต่างประเทศ\n\nข้อเท็จจริงที่ยืนยันได้\n${news.fact} [ข่าวประกันสังคม ${newsIndex}]\n\nสิ่งที่ข้อมูลยังไม่ตอบ\nรายงานกองทุนบริหารงานแสดงค่าใช้จ่ายเดินทางหลายรายการ แต่ยังไม่มีราคาบัตรโดยสารรายบุคคล ชั้นโดยสาร เส้นทาง รายชื่อผู้เดินทาง และผลลัพธ์หลังดูงานให้เทียบกัน จึงยังประเมินความคุ้มค่าไม่ได้\n\nเอกสารที่ควรขอ\n1. คำสั่งอนุมัติเดินทางและรายชื่อผู้เดินทาง\n2. ใบเสนอราคาและบัตรโดยสารแยกรายบุคคล\n3. หลักเกณฑ์สิทธิ ชั้นโดยสาร และผู้อนุมัติ\n4. กำหนดการ รายงานหลังเดินทาง และหลักฐานนำผลไปใช้\n5. ตารางเปรียบเทียบราคาชั้นหนึ่ง ชั้นธุรกิจ และทางเลือกที่ประหยัดกว่า\n\nสถานะจากข่าว: ${news.status}`
+  }
+  if (/สินทรัพย์|ทรัพย์สิน|gfm|ตรวจนับ|มูลค่า\s*1\s*บาท/.test(normalized)) selected = sso.findings.filter((item) => ['asset-reconciliation', 'audit-progress'].includes(item.id))
+  else if (/ปฏิทิน/.test(normalized)) selected = sso.findings.filter((item) => item.id === 'calendar-five-years')
+  else if (/contact\s*center|1506|social\s*media|สื่อออนไลน์/.test(normalized)) selected = sso.findings.filter((item) => item.id === 'contact-center-scope')
+  else if (/มาตรา\s*40|634/.test(normalized)) selected = sso.findings.filter((item) => item.id === 'transfer-pair')
+  else if (/10,?000|สินเชื่อ|จ้างงาน/.test(normalized)) selected = sso.findings.filter((item) => item.id === 'central-loan')
+  else if (/บุคลากร|43\.9216|เกินวงเงิน/.test(normalized)) selected = sso.findings.filter((item) => item.id === 'personnel-reconcile')
+  const rows = selected.slice(0, 4).map((item, index) => `${index + 1}. ${item.title} [ประกันสังคม ${sso.findings.indexOf(item) + 1}]\nข้อเท็จจริง: ${item.fact}\nข้อสังเกต: ${item.observation}\nเอกสารที่ควรขอ: ${item.documents.join(', ')}`)
+  return `ข้อสังเกตจากแฟ้มงบประกันสังคม\n\n${rows.join('\n\n')}\n\nระบบแยกงบแผ่นดิน กองทุนบริหารงาน และเงินลงทุนออกจากกันก่อนเปรียบเทียบ เพื่อไม่บวกยอดต่างฐานหรือสรุปว่าซ้ำกันจากชื่อรายการเพียงอย่างเดียว`
+}
+
 function buildStructureAnswer(entries) {
   if (!entries.length) return 'ยังไม่พบหน่วยงานที่ตรงคำค้นในแผนที่โครงสร้างรัฐ กรุณาระบุชื่อกระทรวง หน่วยงาน ภารกิจ หรือบริการสาธารณะให้ชัดขึ้น'
   const typeLabels = { regular: 'กรมหรือสำนักงาน', stateEnterprise: 'รัฐวิสาหกิจ', publicOrganization: 'องค์การมหาชน', other: 'หน่วยงานรูปแบบอื่น' }
@@ -466,7 +485,7 @@ export default async function handler(request, response) {
   const apiKey = process.env.PATHUMMA_API_KEY
   if (!apiKey) return response.status(503).json({ error: 'ระบบถามตอบยังรอการเชื่อมต่อ Pathumma API' })
 
-  const { context, sources, selectedCases, selectedItems, relevantFacts, relevantLaws, relevantFiles, relevantHistory, relevantMeetings, relevantStructure, matchedSignal } = retrieve(question, String(request.body?.focusId ?? ''))
+  const { context, sources, selectedCases, selectedItems, relevantFacts, relevantLaws, relevantFiles, relevantHistory, relevantMeetings, relevantStructure, matchedSignal, asksSso, sso } = retrieve(question, String(request.body?.focusId ?? ''))
   const history = Array.isArray(request.body?.history) ? request.body.history.slice(-6).map((message) => ({ role: message.role === 'assistant' ? 'assistant' : 'user', content: String(message.content ?? '').slice(0, 2500) })) : []
   const asksAboutFocus = /(รายการนี้|โครงการนี้|หน้านี้|ที่กำลังเปิด|แฟ้มนี้)/.test(question)
   const asksLegalQuestion = /มาตรา\s*[\d๐-๙]+|กฎหมาย|รัฐธรรมนูญ|พ\.ร\.บ\.\s*(การจัดซื้อ|วินัย|วิธีการงบประมาณ|ข้อมูลข่าวสาร)/.test(question)
@@ -480,6 +499,10 @@ export default async function handler(request, response) {
   }
   if (/โครงสร้าง|ใคร.{0,12}(รับผิดชอบ|ต้องตอบ|เป็นเจ้าภาพ)|เจ้าภาพ|สังกัด|กี่หน่วยงาน|กี่กอง/.test(question)) {
     const answer = buildStructureAnswer(relevantStructure)
+    return response.status(200).json({ answer, sources: visibleSourcesFor(answer, sources), model: process.env.PATHUMMA_MODEL ?? 'pathumma' })
+  }
+  if (asksSso) {
+    const answer = buildSsoAnswer(question, sso)
     return response.status(200).json({ answer, sources: visibleSourcesFor(answer, sources), model: process.env.PATHUMMA_MODEL ?? 'pathumma' })
   }
   if (matchedSignal) {
