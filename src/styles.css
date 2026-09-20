@@ -843,7 +843,7 @@ a { color: inherit; }
 .chat-launcher { position: fixed; right: 22px; bottom: 22px; z-index: 35; min-height: 54px; border: 1px solid var(--ink); background: var(--yellow); box-shadow: 5px 5px 0 var(--ink); padding: 8px 15px 8px 9px; display: flex; align-items: center; gap: 9px; cursor: pointer; }
 .chat-launcher:hover { transform: translate(2px, 2px); box-shadow: 3px 3px 0 var(--ink); }
 .chat-launcher span { width: 35px; height: 35px; display: grid; place-items: center; border-radius: 50%; background: var(--ink); color: var(--yellow); font: 600 11px 'IBM Plex Mono', monospace; }
-.chat-launcher strong { font-size: 13px; }
+.chat-launcher strong { font-size: 13px; white-space: nowrap; }
 .chat-backdrop { position: fixed; inset: 0; z-index: 60; background: rgba(25,25,22,.62); display: flex; justify-content: flex-end; padding: 16px; }
 .chat-panel { width: min(520px, 100%); height: min(780px, calc(100vh - 32px)); margin-top: auto; background: var(--paper); color: var(--ink); border: 1px solid var(--ink); box-shadow: 8px 8px 0 var(--yellow); display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto auto auto; overflow: hidden; animation: chat-in .2s ease; }
 @keyframes chat-in { from { transform: translateY(18px); opacity: .5; } }
