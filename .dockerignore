@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.workdata
+public/data/corpus-test
+.env*
+!.env.example
+*.log
+*.tsbuildinfo
+__pycache__
+*.pyc

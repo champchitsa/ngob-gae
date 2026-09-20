@@ -140,7 +140,7 @@ function BudgetChat({ activeItem, items, open, onOpen, onClose, onSelectItem }: 
           <textarea id="budget-question" ref={inputRef} value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={handleKey} placeholder="เช่น งบสำนักงานประกันสังคมมีจุดใดที่ควรกระทบยอด" rows={3} maxLength={1800} />
           <div><small>Enter เพื่อส่งคำถาม และ Shift + Enter เพื่อขึ้นบรรทัดใหม่</small><button disabled={!question.trim() || loading} type="submit">{loading ? 'กำลังตอบ' : 'ส่งคำถาม'} <span>↗</span></button></div>
         </form>
-        <footer className="chat-foot"><span>เทคโนโลยีภาษา Pathumma โดย NECTEC</span><span>ประมวลผลคลังเมื่อ 19 ก.ย. 2569</span></footer>
+        <footer className="chat-foot"><span>เทคโนโลยีภาษา Pathumma โดย NECTEC</span><span>ประมวลผลคลังเมื่อ 20 ก.ย. 2569</span></footer>
       </aside>
     </div>}
   </>

@@ -1,27 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { cases, corpusCollections, lawCards, methodology, sourceNotes, themes, type CaseFile, type ThemeId } from './data'
+import { cases, lawCards, methodology, sourceNotes, themes, type CaseFile, type ThemeId } from './data'
 import { bigData, investigationPath, legalActionMap, signalLawMap, signalQuestions, type AnomalyItem, type SignalId } from './bigData'
 import BudgetChat from './BudgetChat'
+import BudgetDashboard from './BudgetDashboard'
 import DataExplorer from './DataExplorer'
-
-type DriveFile = {
-  id: string
-  title: string
-  path: string
-  category: string
-  url: string
-  size: number
-  type: string
-}
-
-type DriveInventory = {
-  scannedAt: string
-  rootUrl: string
-  fileCount: number
-  folderCount: number
-  totalBytes: number
-  files: DriveFile[]
-}
+import CorpusReader from './CorpusReader'
+import CommitteeTracker from './CommitteeTracker'
 
 type PboYear = { year: number; rows: number; act: number; adjusted: number; paid: number; paid_rate: number | null }
 type PboHistory = { years: number; row_count: number; series: PboYear[] }
@@ -29,12 +13,6 @@ type SignalSort = 'score' | 'amount' | 'movement' | 'execution'
 
 const formatMoney = (value: number) =>
   new Intl.NumberFormat('th-TH', { maximumFractionDigits: value < 100 ? 1 : 0 }).format(value)
-
-const formatBytes = (value: number) => {
-  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)} GB`
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)} MB`
-  return `${Math.max(1, Math.round(value / 1000))} KB`
-}
 
 const statusIcon: Record<CaseFile['status'], string> = {
   gap: '◌',
@@ -52,11 +30,7 @@ function App() {
   const [activeId, setActiveId] = useState(cases[0].id)
   const [panel, setPanel] = useState<'method' | 'law' | 'sources' | null>(null)
   const [copied, setCopied] = useState(false)
-  const [inventory, setInventory] = useState<DriveInventory | null>(null)
   const [history, setHistory] = useState<PboHistory | null>(null)
-  const [archiveQuery, setArchiveQuery] = useState('')
-  const [archiveCategory, setArchiveCategory] = useState('all')
-  const [archiveLimit, setArchiveLimit] = useState(18)
   const [fullAnomalies, setFullAnomalies] = useState<AnomalyItem[]>([])
   const [anomalyQuery, setAnomalyQuery] = useState('')
   const [anomalySort, setAnomalySort] = useState<SignalSort>('score')
@@ -79,7 +53,6 @@ function App() {
   }, [])
 
   useEffect(() => {
-    fetch('/data/drive-inventory.json').then((response) => response.json()).then(setInventory).catch(() => undefined)
     fetch('/data/pbo-history.json').then((response) => response.json()).then(setHistory).catch(() => undefined)
     fetch('/data/big-data-findings.json').then((response) => response.json()).then((data) => setFullAnomalies(data.items ?? [])).catch(() => undefined)
   }, [])
@@ -128,20 +101,6 @@ function App() {
   const activeAnomalyQuestions = [...new Set(activeAnomaly.signals.flatMap((signal) => signalQuestions[signal]))].slice(0, 6)
   const activeAnomalyLaws = [...new Set(activeAnomaly.signals.flatMap((signal) => signalLawMap[signal]))]
 
-  const archiveFiles = useMemo(() => {
-    if (!inventory) return []
-    const needle = archiveQuery.trim().toLocaleLowerCase('th')
-    return inventory.files.filter((file) => {
-      const categoryMatch = archiveCategory === 'all' || file.category === archiveCategory
-      const queryMatch = !needle || `${file.title} ${file.path} ${file.category}`.toLocaleLowerCase('th').includes(needle)
-      return categoryMatch && queryMatch
-    })
-  }, [inventory, archiveCategory, archiveQuery])
-
-  useEffect(() => {
-    setArchiveLimit(18)
-  }, [archiveCategory, archiveQuery])
-
   const maxHistoryBudget = Math.max(...(history?.series.map((item) => item.adjusted) ?? [1]))
 
   const copyBrief = async () => {
@@ -178,11 +137,12 @@ function App() {
           <button onClick={() => document.getElementById('signals')?.scrollIntoView()}>Big Data</button>
           <button onClick={() => document.getElementById('workspace')?.scrollIntoView()}>โต๊ะแกะ</button>
           <button onClick={() => document.getElementById('data-api')?.scrollIntoView()}>ตารางและ API</button>
+          <button onClick={() => document.getElementById('committee')?.scrollIntoView()}>ติดตาม กมธ.</button>
           <button onClick={() => document.getElementById('archive')?.scrollIntoView()}>คลัง 694 ไฟล์</button>
           <button onClick={() => document.getElementById('law-workbench')?.scrollIntoView()}>กฎหมายลงมือใช้</button>
           <button onClick={() => setChatOpen(true)}>ถามน้องเพนกวิน</button>
         </nav>
-        <div className="data-stamp"><i /> ประมวลผล 19.09.69</div>
+        <div className="data-stamp"><i /> ประมวลผล 20.09.69</div>
         <button className="mobile-chat-button" onClick={() => setChatOpen(true)}>ถามน้องเพนกวิน</button>
       </header>
 
@@ -196,6 +156,7 @@ function App() {
               <a className="primary-action" href="#signals" onClick={() => window.setTimeout(() => anomalySearchRef.current?.focus(), 500)}>ค้น {bigData.meta.candidateCount.toLocaleString('th-TH')} รายการที่ควรตรวจต่อ <span>↓</span></a>
               <a className="text-action" href="#archive">ค้นหลักฐานทั้งหมด</a>
               <a className="text-action" href="#data-api">เปิดตารางและ API</a>
+              <a className="text-action" href="#committee">ติดตามงานกรรมาธิการ</a>
               <button className="text-action" onClick={() => setChatOpen(true)}>ถามข้อมูลกับน้องเพนกวิน</button>
             </div>
             <div className="hero-proof" role="list" aria-label="จุดเด่นเครื่องมือ"><span role="listitem"><b>{bigData.meta.candidateCount.toLocaleString('th-TH')}</b> รายการจัดอันดับ</span><span role="listitem"><b>7</b> เงื่อนไขคัดกรอง</span><span role="listitem"><b>5</b> ขั้นตามหลักฐาน</span></div>
@@ -208,7 +169,7 @@ function App() {
             <div className="board-grid">
               <div><strong>124</strong><span>workbook<br />เปิดอ่านครบ</span></div>
               <div><strong>{cases.length}</strong><span>แฟ้มวิเคราะห์<br />พร้อมคำถาม</span></div>
-              <div><strong>5</strong><span>ฐานกฎหมาย<br />สำหรับตรวจต่อ</span></div>
+              <div><strong>7</strong><span>มาตรากฎหมาย<br />ฉบับประกาศใช้จริง</span></div>
               <div><strong>11</strong><span>ปี PBO<br />2558 ถึง 2568</span></div>
             </div>
             <div className="scribble">ทุกตัวเลขมีที่มา<br />ทุกคำถามมีทางไปต่อ</div>
@@ -221,6 +182,8 @@ function App() {
           <div><span>03</span><strong>ตามเอกสาร</strong><p>ไปต่อถึง TOR สัญญา งวดงาน และผลลัพธ์</p></div>
           <div><span>04</span><strong>ส่งต่อให้ตรวจได้</strong><p>ทุกข้อสังเกตมีคำถาม เอกสาร และลิงก์ต้นทาง</p></div>
         </section>
+
+        <BudgetDashboard history={history} />
 
         <section className="signal-lab" id="signals">
           <div className="workspace-head inverse">
@@ -438,6 +401,8 @@ function App() {
 
         <DataExplorer />
 
+        <CommitteeTracker />
+
         <section className="archive" id="archive">
           <div className="workspace-head">
             <div><span className="section-no">04 / EVIDENCE ARCHIVE</span><h2>คลังหลักฐาน 694 ไฟล์</h2></div>
@@ -447,41 +412,15 @@ function App() {
           <div className="corpus-stats" role="group" aria-label="ภาพรวมคลังข้อมูล">
             <div><strong>694</strong><span>ไฟล์ทั้งหมด</span></div>
             <div><strong>113</strong><span>โฟลเดอร์ที่สำรวจ</span></div>
-            <div><strong>559</strong><span>เอกสาร PDF</span></div>
+            <div><strong>560</strong><span>เอกสาร PDF</span></div>
             <div><strong>124</strong><span>workbook ที่อ่านได้</span></div>
             <div><strong>856</strong><span>ชีตที่ตรวจโครงสร้าง</span></div>
             <div><strong>6.67 GB</strong><span>ขนาดรวมทั้งคลัง</span></div>
           </div>
 
-          <div className="collection-grid">
-            {corpusCollections.slice(1).map((collection) => (
-              <button key={collection.id} className={archiveCategory === collection.id ? 'active' : ''} onClick={() => setArchiveCategory(collection.id)}>
-                <small>{collection.label}</small><strong>{collection.files}</strong><span>ไฟล์ / ตาราง {collection.machine}</span><p>{collection.detail}</p><i>{collection.size}</i>
-              </button>
-            ))}
-          </div>
+          <CorpusReader />
 
-          <div className="archive-layout">
-            <div className="archive-browser">
-              <div className="archive-toolbar">
-                <label className="archive-search"><span>⌕</span><input value={archiveQuery} onChange={(event) => setArchiveQuery(event.target.value)} placeholder="ค้นชื่อไฟล์ หน่วยงาน พื้นที่ หรือปีงบประมาณ" /></label>
-                <button className={archiveCategory === 'all' ? 'active' : ''} onClick={() => setArchiveCategory('all')}>ทุกหมวด</button>
-                <a href="/data/drive-inventory.json" download>ดาวน์โหลดบัญชี .JSON</a>
-              </div>
-              <div className="archive-result-head"><strong>{archiveFiles.length.toLocaleString('th-TH')} ไฟล์</strong><span>สำรวจคลังเมื่อ 19 ก.ย. 2569</span></div>
-              <div className="file-ledger">
-                {inventory ? archiveFiles.slice(0, archiveLimit).map((file) => (
-                  <a href={file.url} target="_blank" rel="noreferrer" key={file.id}>
-                    <span className="file-type">{file.title.split('.').pop()?.slice(0, 5).toUpperCase() || 'FILE'}</span>
-                    <span className="file-ledger-copy"><strong>{file.title}</strong><small>{file.path || file.category}</small></span>
-                    <span className="file-size">{formatBytes(file.size)}<i>↗</i></span>
-                  </a>
-                )) : <div className="archive-loading">กำลังเปิดบัญชีหลักฐาน...</div>}
-                {inventory && archiveFiles.length === 0 && <div className="archive-loading">ไม่พบไฟล์ที่ตรงคำค้น</div>}
-              </div>
-              {archiveLimit < archiveFiles.length && <button className="load-more" onClick={() => setArchiveLimit((value) => value + 30)}>แสดงเพิ่มอีก 30 ไฟล์</button>}
-            </div>
-
+          <div className="archive-layout archive-insights-layout">
             <aside className="archive-analysis">
               <div className="analysis-card history-card">
                 <span className="panel-kicker">PBO / 11 YEAR SERIES</span>
@@ -562,14 +501,20 @@ function App() {
           </>}
           {panel === 'law' && <>
             <span className="panel-kicker">LEGAL LENS</span><h2>ตัวบทสำหรับเดินจากงบไปถึงความรับผิดชอบ</h2>
-            <p className="panel-intro">เปิดตัวบททางการพร้อมประเด็นที่ใช้ตรวจเรื่องความคุ้มค่า ความโปร่งใส การติดตามผล และสิทธิขอข้อมูล</p>
-            <div className="law-card-list">{lawCards.map((law) => <a href={law.url} target="_blank" rel="noreferrer" key={law.code}><small>{law.code}</small><strong>{law.title}</strong><p>{law.note}</p><span>เปิดแหล่งทางการ ↗</span></a>)}</div>
+            <p className="panel-intro">รวมตัวบทของมาตราที่อ้างไว้บนเว็บแบบครบถ้วนตามฉบับประกาศใช้จริง ส่วน “ใช้ตรวจเรื่อง” เป็นคำอธิบายของระบบและแยกออกจากตัวบทอย่างชัดเจน</p>
+            <div className="law-verification"><strong>ตรวจแหล่งแล้ว 20 กันยายน 2569</strong><p>ทุกลิงก์ด้านล่างชี้ไปยังไฟล์ประกาศในราชกิจจานุเบกษา ไม่ใช้ร่างกฎหมาย บทความ หรือเอกสารความเห็นแทนตัวบท</p></div>
+            <div className="law-card-list">{lawCards.map((law, index) => <details className="law-provision" key={law.id} open={index === 0}>
+              <summary><span>{String(index + 1).padStart(2, '0')}</span><div><small>{law.code}</small><strong>{law.title}</strong><p>{law.publication}</p></div><b>อ่านตัวบท</b></summary>
+              <div className="law-analysis"><small>ใช้ตรวจเรื่อง</small><p>{law.analysis}</p><strong>เอกสารที่เชื่อมต่อ</strong><p>{law.documents.join(' • ')}</p></div>
+              <div className="law-exact"><div><span>ตัวบทตามประกาศ</span><small>แสดงครบทั้งมาตราที่อ้าง โดยไม่เรียบเรียงใหม่</small></div><pre>{law.exactText}</pre></div>
+              <a className="law-source-link" href={law.sourceUrl} target="_blank" rel="noreferrer">เปิดฉบับประกาศในราชกิจจานุเบกษา ↗</a>
+            </details>)}</div>
           </>}
           {panel === 'sources' && <>
             <span className="panel-kicker">SOURCE LEDGER</span><h2>ทุกข้อสังเกตต้องย้อนกลับได้</h2>
             <p className="panel-intro">สำรวจ Drive ครบ 694 ไฟล์ เปิดอ่าน workbook ทั้ง 124 เล่ม และเก็บลิงก์ต้นทางไว้ในบัญชีค้นหา</p>
             <div className="source-list">{sourceNotes.map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={source.label}><small>{source.label}</small><strong>{source.value}</strong><p>{source.detail}</p><span>เปิดต้นทาง ↗</span></a>)}</div>
-            <div className="source-warning"><strong>เวอร์ชันข้อมูล</strong><p>บัญชีไฟล์และผลวิเคราะห์ชุดนี้จัดทำ ณ 19 กันยายน 2569 ตัวเลขแสดงความละเอียดเต็มในแฟ้มและปัดเฉพาะส่วนติดต่อผู้ใช้</p></div>
+            <div className="source-warning"><strong>เวอร์ชันข้อมูล</strong><p>บัญชีไฟล์และผลวิเคราะห์ชุดนี้จัดทำ ณ 20 กันยายน 2569 ตัวเลขแสดงความละเอียดเต็มในแฟ้มและปัดเฉพาะส่วนติดต่อผู้ใช้</p></div>
           </>}
         </aside>
       </div>}

@@ -11,6 +11,10 @@ function loadData() {
     cases: read('case-files.json'),
     inventory: read('drive-inventory.json'),
     history: read('pbo-history.json'),
+    corpus: read('corpus-index.json'),
+    corpusAnalysis: read('corpus-analysis.json'),
+    legal: read('legal-provisions.json'),
+    committee: read('committee-meetings.json'),
   }
   return cache
 }
@@ -22,10 +26,20 @@ const datasetLabels = {
   cases: 'แฟ้มวิเคราะห์พร้อมใช้',
   files: 'บัญชีหลักฐานทั้งหมด',
   history: 'อนุกรมเวลา PBO 11 ปี',
+  corpus: 'ดัชนีเนื้อหาหลักฐาน 694 ไฟล์',
+  evidence: 'สัญญาณจากข้อความและ OCR พร้อมตำแหน่งต้นทาง',
+  laws: 'ตัวบทกฎหมายฉบับประกาศใช้จริง',
+  committee: 'ดัชนีวาระและสรุปหลังประชุมของคณะกรรมาธิการ',
+}
+
+function scalarValues(value) {
+  if (Array.isArray(value)) return value.flatMap(scalarValues)
+  if (value && typeof value === 'object') return Object.values(value).flatMap(scalarValues)
+  return ['string', 'number'].includes(typeof value) ? [value] : []
 }
 
 function textOf(row) {
-  return Object.values(row).flatMap((value) => Array.isArray(value) ? value : [value]).filter((value) => ['string', 'number'].includes(typeof value)).join(' ').toLocaleLowerCase('th')
+  return scalarValues(row).join(' ').toLocaleLowerCase('th')
 }
 
 function facetCounts(rows, field) {
@@ -74,6 +88,58 @@ function selectDataset(name, source) {
     source: source.big.meta.source_url,
     columns: ['year', 'rows', 'act', 'adjusted', 'paid', 'paid_rate'],
   }
+  if (name === 'corpus') return {
+    rows: source.corpus.files.map((file) => ({
+      id: file.id,
+      title: file.title,
+      path: file.path,
+      category: file.category,
+      size: file.size,
+      type: file.type,
+      status: file.status,
+      units: file.units,
+      lines: file.lines,
+      characters: file.characters,
+      cells: file.cells,
+      ocr_units: file.ocr_units,
+      structure: file.structure,
+      keyword_hits: file.keyword_hits,
+      preview: file.preview.map((record) => record.text).filter(Boolean),
+      corpus_url: file.corpus_url,
+      url: file.url,
+    })),
+    filterField: 'category',
+    source: source.corpus.meta.source,
+    columns: ['title', 'path', 'category', 'status', 'units', 'lines', 'cells', 'ocr_units', 'corpus_url', 'url'],
+  }
+  if (name === 'laws') return {
+    rows: source.legal.provisions,
+    source: 'https://www.ratchakitcha.soc.go.th/',
+    columns: ['code', 'title', 'exactText', 'analysis', 'documents', 'publication', 'sourceUrl'],
+  }
+  if (name === 'evidence') return {
+    rows: Object.values(source.corpusAnalysis.signals).flat().map((item) => ({
+      ...item,
+      sourceUrl: item.source_url,
+      locatorLabel: item.locator_label,
+    })),
+    filterField: 'kind',
+    source: source.corpus.meta.source,
+    columns: ['label', 'title', 'category', 'locatorLabel', 'extraction', 'amount', 'explanation', 'context', 'kind', 'sourceUrl'],
+  }
+  if (name === 'committee') return {
+    rows: source.committee.meetings.map((meeting) => ({
+      ...meeting,
+      summaryOverview: meeting.summary?.overview ?? null,
+      summaryIssues: meeting.summary?.issues?.length ?? 0,
+      summaryObservations: meeting.summary?.observations?.length ?? 0,
+      summaryHomework: meeting.summary?.homework?.length ?? 0,
+      transcriptTurns: meeting.summary?.transcript?.turns?.length ?? 0,
+    })),
+    filterField: 'themes',
+    source: source.committee.meta.sourceUrl,
+    columns: ['dateLabel', 'roundLabel', 'session', 'title', 'description', 'themes', 'hasSummary', 'summaryOverview', 'summaryIssues', 'summaryObservations', 'summaryHomework', 'transcriptTurns', 'summaryUrl'],
+  }
   return null
 }
 
@@ -105,6 +171,10 @@ export default function handler(request, response) {
   if (dataset === 'patterns') rows = [...rows].sort((a, b) => b.adjusted - a.adjusted || b.count - a.count)
   if (dataset === 'cases') rows = [...rows].sort((a, b) => b.priority - a.priority)
   if (dataset === 'history') rows = [...rows].sort((a, b) => a.year - b.year)
+  if (dataset === 'corpus') rows = [...rows].sort((a, b) => (a.status === 'complete' ? -1 : 1) - (b.status === 'complete' ? -1 : 1) || b.lines - a.lines)
+  if (dataset === 'evidence') rows = [...rows].sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0) || a.title.localeCompare(b.title, 'th'))
+  if (dataset === 'laws') rows = [...rows].sort((a, b) => a.code.localeCompare(b.code, 'th'))
+  if (dataset === 'committee') rows = [...rows].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || (b.round ?? 0) - (a.round ?? 0))
 
   const payload = {
     meta: {
@@ -116,8 +186,8 @@ export default function handler(request, response) {
       offset,
       columns: selected.columns,
       source: selected.source,
-      dataCut: '2569-09-19',
-      processedAt: '2569-09-19',
+      dataCut: '2569-09-20',
+      processedAt: '2569-09-20',
       sourcePeriod: 'ตามปีและวันที่ที่ระบุในเอกสารต้นทาง',
       units: { money: 'ล้านบาท', size: 'ไบต์' },
     },

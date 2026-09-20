@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 
-type DatasetId = 'anomalies' | 'agencies' | 'patterns' | 'cases' | 'files' | 'history'
+type DatasetId = 'anomalies' | 'agencies' | 'patterns' | 'cases' | 'files' | 'history' | 'corpus' | 'evidence' | 'laws' | 'committee'
 type DataRow = {
   id?: string
   item?: string
@@ -32,6 +32,37 @@ type DataRow = {
   pattern?: string
   count?: number
   agencies?: number
+  status?: string
+  units?: number
+  lines?: number
+  characters?: number
+  cells?: number
+  ocr_units?: number
+  corpus_url?: string | null
+  preview?: string[]
+  code?: string
+  exactText?: string
+  analysis?: string
+  documents?: string[]
+  publication?: string
+  label?: string
+  explanation?: string
+  context?: string
+  kind?: string
+  amount?: number
+  locatorLabel?: string
+  extraction?: string
+  dateLabel?: string
+  roundLabel?: string
+  session?: string
+  description?: string
+  themes?: string[]
+  hasSummary?: boolean
+  summaryUrl?: string | null
+  summaryIssues?: number
+  summaryObservations?: number
+  summaryHomework?: number
+  transcriptTurns?: number
 }
 
 type ApiResponse = {
@@ -56,6 +87,10 @@ const datasets: { id: DatasetId; label: string; count: string; detail: string }[
   { id: 'cases', label: 'แฟ้มวิเคราะห์', count: '19', detail: 'ข้อค้นพบ คำถาม เอกสาร และขอบเขตการตีความ' },
   { id: 'files', label: 'บัญชีหลักฐาน', count: '694', detail: 'ชื่อไฟล์ เส้นทาง หมวด ขนาด และลิงก์ต้นทาง' },
   { id: 'history', label: 'PBO รายปี', count: '11', detail: 'จำนวนแถว วงเงิน และอัตราเบิกจ่ายตั้งแต่ 2558 ถึง 2568' },
+  { id: 'corpus', label: 'ดัชนีเนื้อหา', count: '694', detail: 'สถานะการอ่าน จำนวนหน้า แถว บรรทัด เซลล์ และงาน OCR ของทุกไฟล์' },
+  { id: 'evidence', label: 'คิวตรวจหลักฐาน', count: '4 แบบ', detail: 'จำนวนเงินมูลค่าสูง ยอดซ้ำ ตัวเลขหนาแน่น และตำแหน่งที่เปิดตรวจต่อได้' },
+  { id: 'laws', label: 'ตัวบทกฎหมาย', count: '7', detail: 'ข้อความเต็มของมาตราที่อ้าง แหล่งประกาศ และแนวทางใช้ตรวจงบ' },
+  { id: 'committee', label: 'งานกรรมาธิการ', count: '30', detail: 'วันประชุม วาระ สถานะ และลิงก์สรุปหลังประชุม' },
 ]
 
 const signalLabels: Record<string, string> = {
@@ -66,6 +101,21 @@ const signalLabels: Record<string, string> = {
   low_execution: 'ใช้จ่ายรวมยอดผูกพันต่ำกว่า 35%',
   over_execution: 'ยอดรายงานสูงกว่าวงเงินหลังโอน',
   vague_title: 'ชื่อรายการกว้างหรือเป็นรหัส',
+  high_value: 'จำนวนเงินมูลค่าสูง',
+  repeated_amount: 'จำนวนเงินซ้ำข้ามแฟ้ม',
+  amount_dense: 'ตัวเลขงบหนาแน่น',
+  round_amount: 'จำนวนเงินลงตัว',
+  ict: 'เทคโนโลยีและระบบดิจิทัล',
+  ai: 'ปัญญาประดิษฐ์',
+  procurement: 'จัดซื้อจัดจ้างและสัญญา',
+  construction: 'ก่อสร้างและโครงสร้างพื้นฐาน',
+  training: 'ทักษะ การฝึกอบรม และการสอบ',
+  sso: 'ประกันสังคม',
+  health: 'สาธารณสุข',
+  energy: 'พลังงาน',
+  tourism: 'ท่องเที่ยวและกิจกรรม',
+  agriculture: 'เกษตรกรรม',
+  oversight: 'การติดตามและตรวจสอบ',
 }
 
 const signalLabel = (value: string) => signalLabels[value] ?? value
@@ -168,6 +218,10 @@ function DataExplorer() {
         {dataset === 'cases' && <><thead><tr><th>แฟ้มและหน่วยงาน</th><th>วงเงิน</th><th>อัตรา</th><th>ลำดับอ่าน</th><th>ความพร้อมข้อมูล</th></tr></thead><tbody>{data?.rows.map((row, index) => <tr key={row.id ?? index}><td>{row.sourceUrl ? <a href={row.sourceUrl} target="_blank" rel="noreferrer"><strong>{row.title}</strong></a> : <strong>{row.title}</strong>}<small>{row.agency}<br />{row.statusLabel}</small></td><td>{number(row.budget)}<small>ล้านบาท</small></td><td>{number(row.rate)}<small>ร้อยละ</small></td><td><b>{row.priority}</b><small>จาก 100</small></td><td>{row.completeness}</td></tr>)}</tbody></>}
         {dataset === 'files' && <><thead><tr><th>ชื่อหลักฐาน</th><th>หมวด</th><th>ตำแหน่งในคลัง</th><th>ขนาด</th></tr></thead><tbody>{data?.rows.map((row, index) => <tr key={row.id ?? index}><td>{row.url ? <a href={row.url} target="_blank" rel="noreferrer"><strong>{row.title}</strong></a> : <strong>{row.title}</strong>}<small>{row.type ?? row.mimeType}</small></td><td>{row.category}</td><td className="path-cell">{row.path || 'โฟลเดอร์หลัก'}</td><td>{bytes(row.size)}</td></tr>)}</tbody></>}
         {dataset === 'history' && <><thead><tr><th>ปีงบประมาณ</th><th>จำนวนแถว</th><th>ตาม พ.ร.บ.</th><th>หลังโอน</th><th>เบิกจ่าย</th><th>อัตรา</th></tr></thead><tbody>{data?.rows.map((row) => <tr key={row.year}><td><strong>{row.year}</strong></td><td>{number(row.rows, 0)}</td><td>{number(row.act)}<small>ล้านบาท</small></td><td>{number(row.adjusted)}<small>ล้านบาท</small></td><td>{number(row.paid)}<small>ล้านบาท</small></td><td>{number(row.paid_rate)}<small>ร้อยละ</small></td></tr>)}</tbody></>}
+        {dataset === 'corpus' && <><thead><tr><th>ไฟล์และตำแหน่ง</th><th>สถานะ</th><th>หน่วยข้อมูล</th><th>บรรทัด</th><th>เซลล์</th><th>OCR</th></tr></thead><tbody>{data?.rows.map((row, index) => <tr key={row.id ?? index}><td><strong>{row.title}</strong><small>{row.path || row.category}<br />{row.preview?.[0]?.slice(0, 150)}</small></td><td><b>{row.status === 'complete' ? 'อ่านครบ' : row.status === 'error' ? 'ตรวจซ้ำ' : 'กำลังอ่าน'}</b></td><td>{number(row.units, 0)}</td><td>{number(row.lines, 0)}</td><td>{number(row.cells, 0)}</td><td>{number(row.ocr_units, 0)}</td></tr>)}</tbody></>}
+        {dataset === 'evidence' && <><thead><tr><th>สัญญาณและแฟ้ม</th><th>ตำแหน่ง</th><th>จำนวนเงิน</th><th>เหตุผลจัดคิว</th><th>บริบทต้นทาง</th></tr></thead><tbody>{data?.rows.map((row, index) => <tr key={`${row.kind}-${row.id ?? index}`}><td>{row.sourceUrl ? <a href={row.sourceUrl} target="_blank" rel="noreferrer"><strong>{row.title}</strong></a> : <strong>{row.title}</strong>}<small>{signalLabel(row.kind || '')}<br />{row.category}</small></td><td><b>{row.locatorLabel}</b><small>{row.extraction === 'ocr' ? 'อ่านข้อความด้วย OCR' : 'ข้อมูลมีโครงสร้างหรือข้อความฝัง'}</small></td><td>{number(row.amount, 0)}<small>บาท</small></td><td>{row.explanation}</td><td className="path-cell">{row.context}</td></tr>)}</tbody></>}
+        {dataset === 'laws' && <><thead><tr><th>กฎหมายและมาตรา</th><th>ตัวบทตามประกาศ</th><th>แนวทางใช้ตรวจงบ</th><th>ประกาศทางการ</th></tr></thead><tbody>{data?.rows.map((row, index) => <tr key={row.id ?? index}><td><strong>{row.code}</strong><small>{row.title}</small></td><td className="law-data-cell"><details><summary>อ่านข้อความเต็ม</summary><pre>{row.exactText}</pre></details></td><td>{row.analysis}<small>{row.documents?.join(' • ')}</small></td><td>{row.sourceUrl ? <a href={row.sourceUrl} target="_blank" rel="noreferrer"><strong>ราชกิจจานุเบกษา ↗</strong></a> : null}<small>{row.publication}</small></td></tr>)}</tbody></>}
+        {dataset === 'committee' && <><thead><tr><th>วันและครั้งประชุม</th><th>วาระ</th><th>กลุ่มประเด็น</th><th>เนื้อหาที่อ่านแล้ว</th></tr></thead><tbody>{data?.rows.map((row, index) => <tr key={row.id ?? index}><td><strong>{row.dateLabel}</strong><small>{row.roundLabel} / {row.session}</small></td><td>{row.summaryUrl ? <a href={row.summaryUrl} target="_blank" rel="noreferrer"><strong>{row.title}</strong></a> : <strong>{row.title}</strong>}<small>{row.description}</small></td><td>{row.themes?.filter((item) => item !== 'oversight').map(signalLabel).join(', ') || 'การติดตามงบประมาณ'}</td><td><b>{row.hasSummary ? 'มีสรุปหลังประชุม' : 'รอสรุป'}</b>{row.hasSummary && <small>สาระ {number(row.summaryIssues, 0)} ข้อ<br />ข้อสังเกต {number(row.summaryObservations, 0)} ข้อ<br />งานติดตาม {number(row.summaryHomework, 0)} รายการ<br />ถ้อยคำ {number(row.transcriptTurns, 0)} ช่วง</small>}</td></tr>)}</tbody></>}
       </table>}
     </div>
 

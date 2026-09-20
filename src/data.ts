@@ -1,3 +1,5 @@
+import legalProvisions from '../public/data/legal-provisions.json'
+
 export type ThemeId = 'all' | 'ict' | 'procurement' | 'training' | 'land' | 'ai' | 'sso'
 
 export type CaseFile = {
@@ -538,38 +540,7 @@ export const cases: CaseFile[] = [
   },
 ]
 
-export const lawCards = [
-  {
-    code: 'พ.ร.บ. จัดซื้อจัดจ้าง พ.ศ. 2560 ม.8',
-    title: 'คุ้มค่า โปร่งใส มีประสิทธิผล และตรวจสอบได้',
-    note: 'ใช้เป็นกรอบตั้งคำถามเรื่องราคา การแข่งขัน แผนล่วงหน้า ผลสัมฤทธิ์ และหลักฐานทุกขั้นตอน ไม่ใช้ฟันธงความผิดจากตัวเลขเพียงอย่างเดียว',
-    url: 'https://www.cgd.go.th/cs/Satellite?blobcol=urldata&blobkey=id&blobtable=MungoBlobs&blobwhere=1438171618792&ssbinary=true',
-  },
-  {
-    code: 'พ.ร.บ. วินัยการเงินการคลังของรัฐ พ.ศ. 2561 ม.6',
-    title: 'การใช้จ่ายต้องมีประสิทธิภาพ โปร่งใส และตรวจสอบได้',
-    note: 'ใช้ตรวจว่าการตัดสินใจเชิงงบประมาณมีเหตุผล ต้นทุน ผลประโยชน์ และร่องรอยที่ประชาชนตรวจสอบต่อได้หรือไม่',
-    url: 'https://www.fpo.go.th/main/The-law-in-charge-of-FPO/Law-of-Finance-and-Taxation/8519.aspx',
-  },
-  {
-    code: 'พ.ร.บ. วิธีการงบประมาณ พ.ศ. 2561 ม.46',
-    title: 'ติดตามและประเมินก่อน ระหว่าง และหลังใช้จ่าย',
-    note: 'เว็บจึงไม่หยุดที่ยอดเบิกจ่าย แต่เตรียมคำถามเรื่องผลผลิต ผลลัพธ์ และสิ่งที่เปลี่ยนจริงจากเงินที่ใช้',
-    url: 'https://www.bb.go.th/topic-detail.php?id=5649',
-  },
-  {
-    code: 'พ.ร.บ. ข้อมูลข่าวสารของราชการ พ.ศ. 2540 ม.9(3)',
-    title: 'แผนงาน โครงการ และงบประมาณรายจ่ายประจำปีควรตรวจดูได้',
-    note: 'ใช้เป็นฐานในการขอข้อมูลต้นทางที่ทำให้การวิเคราะห์ซ้ำได้ เช่น แผน โครงการ และรายละเอียดงบของปีที่ดำเนินการ',
-    url: 'https://infocenter.oic.go.th/FILEWEB/CABINFOCENTER12/DRAWER094/GENERAL/DATA0000/00000075.PDF',
-  },
-  {
-    code: 'รัฐธรรมนูญ พ.ศ. 2560 ม.144',
-    title: 'กำหนดขอบเขตการพิจารณาและการมีส่วนใช้งบของฝ่ายนิติบัญญัติ',
-    note: 'เครื่องมือนี้ช่วยตั้งคำถามและติดตามหลักฐาน ไม่ชี้นำให้กรรมาธิการหรือสมาชิกรัฐสภาเข้าไปมีส่วนในการใช้งบ',
-    url: 'https://www.constitutionalcourt.or.th/occ_web/ewt_dl_link.php?nid=18524',
-  },
-]
+export const lawCards = legalProvisions.provisions
 
 export const methodology = [
   { step: '01', title: 'สำรวจทั้งคลัง', text: 'ทำบัญชี 694 ไฟล์ 113 โฟลเดอร์ รวม 6.67 GB พร้อมรหัสไฟล์ เส้นทาง ชนิด ขนาด และลิงก์ต้นทาง' },
@@ -585,6 +556,7 @@ export const sourceNotes = [
   { label: 'เชียงใหม่', value: '55 ไฟล์', detail: 'งบส่วนกลางที่ลงพื้นที่ เทศบาลนคร และ อบจ.', url: 'https://drive.google.com/drive/folders/1RVC_vSVFcbgW2NMwwBroc3aowY1rChhT' },
   { label: 'สมุทรปราการ', value: '56 ไฟล์', detail: 'งบพื้นที่ อบจ. และ อบต.ราชาเทวะ', url: 'https://drive.google.com/drive/folders/1RVC_vSVFcbgW2NMwwBroc3aowY1rChhT' },
   { label: 'กรรมาธิการติดตามงบ', value: '189 ไฟล์', detail: 'เอกสารประชุม 13 ครั้งและข้อมูลโครงการประกอบการติดตาม', url: 'https://drive.google.com/drive/folders/1RVC_vSVFcbgW2NMwwBroc3aowY1rChhT' },
+  { label: 'วาระและสรุปหลังประชุม กมธ.', value: '30 นัด', detail: 'อ่านสรุปครบ 26 หน้า รวม 187 ประเด็นและงานติดตาม 188 รายการ', url: 'https://open.thaith.ai/budgetcom/' },
   { label: 'OPEN SSO', value: '6 รายงาน', detail: 'รายงานเงินกองทุนบริหารงานและทะเบียนสินทรัพย์ สปส.', url: 'https://drive.google.com/file/d/1ziFumeEdqg45Ghk_2lVdc1xdtPr3aC3I/view' },
 ]
 
