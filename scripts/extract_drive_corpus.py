@@ -30,6 +30,7 @@ import time
 import urllib.parse
 import urllib.request
 import zipfile
+import xml.etree.ElementTree as ET
 from collections import Counter
 from typing import Iterable
 
@@ -38,6 +39,7 @@ import xlrd
 from docx import Document
 from PIL import Image, ImageOps
 from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pypdf import PdfReader
 
 
@@ -58,6 +60,18 @@ THEMES = {
 
 NUMBER_RE = re.compile(r"(?<![\w.])[-+]?\d[\d,]*(?:\.\d+)?")
 SPACE_RE = re.compile(r"[ \t\u00a0]+")
+WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+W_P = f"{{{WORD_NS}}}p"
+W_T = f"{{{WORD_NS}}}t"
+W_TAB = f"{{{WORD_NS}}}tab"
+W_BR = f"{{{WORD_NS}}}br"
+W_CR = f"{{{WORD_NS}}}cr"
+W_TBL = f"{{{WORD_NS}}}tbl"
+W_TR = f"{{{WORD_NS}}}tr"
+W_TC = f"{{{WORD_NS}}}tc"
+W_TXBX_CONTENT = f"{{{WORD_NS}}}txbxContent"
+W_ID = f"{{{WORD_NS}}}id"
+W_TYPE = f"{{{WORD_NS}}}type"
 
 
 def clean_text(value: object) -> str:
@@ -391,12 +405,127 @@ def ocr_embedded_blob(blob: bytes, suffix: str, tools: dict) -> str:
         image_path.unlink(missing_ok=True)
 
 
+def word_paragraph_text(paragraph: object, *, exclude_nested_textboxes: bool = False) -> str:
+    parts = []
+    for node in paragraph.iter():
+        if exclude_nested_textboxes and node.tag == W_T and has_word_ancestor(node, paragraph, {W_TXBX_CONTENT}):
+            continue
+        if node.tag == W_T:
+            parts.append(node.text or "")
+        elif node.tag == W_TAB:
+            parts.append("\t")
+        elif node.tag in {W_BR, W_CR}:
+            parts.append("\n")
+    return clean_text("".join(parts))
+
+
+def word_block_text(element: object) -> str:
+    return clean_text("\n".join(filter(None, (word_paragraph_text(paragraph) for paragraph in element.iter(W_P)))))
+
+
+def has_word_ancestor(element: object, root: object, tags: set[str]) -> bool:
+    parent = element.getparent() if hasattr(element, "getparent") else None
+    while parent is not None and parent is not root:
+        if parent.tag in tags:
+            return True
+        parent = parent.getparent() if hasattr(parent, "getparent") else None
+    return False
+
+
+def extract_word_story(
+    element: object,
+    story: str,
+    writer: JsonlWriter,
+    stats: FileStats,
+    *,
+    part: str | None = None,
+    paragraphs: bool = True,
+    tables: bool = True,
+    textboxes: bool = True,
+) -> dict:
+    counts = {"paragraphs": 0, "table_rows": 0, "textboxes": 0}
+    base = {"story": story}
+    if part:
+        base["part"] = part
+
+    if paragraphs:
+        for source_index, paragraph in enumerate(element.iter(W_P), start=1):
+            if has_word_ancestor(paragraph, element, {W_TBL, W_TXBX_CONTENT}):
+                continue
+            text = word_paragraph_text(paragraph, exclude_nested_textboxes=True)
+            if not text:
+                continue
+            counts["paragraphs"] += 1
+            stats.add(text, "document")
+            writer.write({"type": f"{story}_paragraph", **base, "paragraph": source_index, "text": text})
+
+    if tables:
+        table_index = 0
+        for table in element.iter(W_TBL):
+            if has_word_ancestor(table, element, {W_TBL, W_TXBX_CONTENT}):
+                continue
+            table_index += 1
+            row_index = 0
+            for row in table.iter(W_TR):
+                if has_word_ancestor(row, table, {W_TBL}):
+                    continue
+                cells = [child for child in row if child.tag == W_TC]
+                values = []
+                for cell in cells:
+                    cell_lines = [
+                        word_paragraph_text(paragraph, exclude_nested_textboxes=True)
+                        for paragraph in cell.iter(W_P)
+                        if not has_word_ancestor(paragraph, cell, {W_TBL, W_TXBX_CONTENT})
+                    ]
+                    values.append(clean_text("\n".join(filter(None, cell_lines))))
+                if not any(values):
+                    continue
+                row_index += 1
+                counts["table_rows"] += 1
+                text = "\t".join(values)
+                stats.add(text, "document", sum(bool(value) for value in values))
+                writer.write({"type": f"{story}_table_row", **base, "table": table_index, "row": row_index, "cells": values, "text": text})
+
+    if textboxes:
+        for textbox_index, textbox in enumerate(element.iter(W_TXBX_CONTENT), start=1):
+            text = word_block_text(textbox)
+            if not text:
+                continue
+            counts["textboxes"] += 1
+            stats.add(text, "document")
+            writer.write({"type": "textbox", **base, "textbox": textbox_index, "text": text})
+    return counts
+
+
+def extract_word_notes(path: pathlib.Path, writer: JsonlWriter, stats: FileStats) -> dict:
+    counts = {"footnotes": 0, "endnotes": 0}
+    with zipfile.ZipFile(path) as archive:
+        names = set(archive.namelist())
+        for note_type, member, element_name in (
+            ("footnote", "word/footnotes.xml", "footnote"),
+            ("endnote", "word/endnotes.xml", "endnote"),
+        ):
+            if member not in names:
+                continue
+            root = ET.fromstring(archive.read(member))
+            for note in root.findall(f"{{{WORD_NS}}}{element_name}"):
+                if note.attrib.get(W_TYPE) in {"separator", "continuationSeparator", "continuationNotice"}:
+                    continue
+                text = word_block_text(note)
+                if not text:
+                    continue
+                counts[f"{note_type}s"] += 1
+                stats.add(text, "document")
+                writer.write({"type": note_type, "note_id": note.attrib.get(W_ID), "text": text})
+    return counts
+
+
 def extract_docx(path: pathlib.Path, writer: JsonlWriter, stats: FileStats, tools: dict) -> dict:
     document = Document(path)
     paragraphs = 0
     table_rows = 0
     for index, paragraph in enumerate(document.paragraphs, start=1):
-        text = clean_text(paragraph.text)
+        text = word_paragraph_text(paragraph._p, exclude_nested_textboxes=True)
         if not text:
             continue
         paragraphs += 1
@@ -409,54 +538,187 @@ def extract_docx(path: pathlib.Path, writer: JsonlWriter, stats: FileStats, tool
             table_rows += 1
             stats.add(text, "document", sum(bool(value) for value in values))
             writer.write({"type": "table_row", "table": table_index, "row": row_index, "cells": values, "text": text})
+    body_extra = extract_word_story(document.element.body, "body", writer, stats, paragraphs=False, tables=False)
+
+    header_parts = 0
+    footer_parts = 0
+    header_paragraphs = 0
+    footer_paragraphs = 0
+    header_table_rows = 0
+    footer_table_rows = 0
+    header_textboxes = 0
+    footer_textboxes = 0
+    seen_story_parts = set()
+    for relation in document.part.rels.values():
+        relation_type = str(relation.reltype)
+        if not (relation_type.endswith("/header") or relation_type.endswith("/footer")):
+            continue
+        part = relation.target_part
+        part_name = str(part.partname)
+        if part_name in seen_story_parts:
+            continue
+        seen_story_parts.add(part_name)
+        story = "header" if relation_type.endswith("/header") else "footer"
+        story_counts = extract_word_story(part.element, story, writer, stats, part=part_name)
+        if story == "header":
+            header_parts += 1
+            header_paragraphs += story_counts["paragraphs"]
+            header_table_rows += story_counts["table_rows"]
+            header_textboxes += story_counts["textboxes"]
+        else:
+            footer_parts += 1
+            footer_paragraphs += story_counts["paragraphs"]
+            footer_table_rows += story_counts["table_rows"]
+            footer_textboxes += story_counts["textboxes"]
+
+    comments = 0
+    for comment in document.comments:
+        text = word_block_text(comment._element)
+        if not text:
+            continue
+        comments += 1
+        stats.add(text, "document")
+        writer.write({
+            "type": "comment",
+            "comment_id": comment.comment_id,
+            "author": comment.author,
+            "initials": comment.initials,
+            "timestamp": comment.timestamp.isoformat() if comment.timestamp else None,
+            "text": text,
+        })
+    note_counts = extract_word_notes(path, writer, stats)
+
     images = 0
     image_errors = []
-    for relation_id, relation in document.part.rels.items():
-        if not str(relation.reltype).endswith("/image"):
+    seen_image_parts = set()
+    for part in document.part.package.parts:
+        if not str(getattr(part, "content_type", "")).startswith("image/"):
             continue
+        part_name = str(part.partname)
+        if part_name in seen_image_parts:
+            continue
+        seen_image_parts.add(part_name)
         images += 1
         try:
-            part = relation.target_part
-            extension = pathlib.Path(str(getattr(part, "partname", "image.png"))).suffix or ".png"
+            extension = pathlib.Path(part_name).suffix or ".png"
             text = ocr_embedded_blob(part.blob, extension, tools)
             stats.add(text, "ocr")
-            writer.write({"type": "embedded_image", "image": images, "relationship": relation_id, "method": "ocr", "text": text})
+            writer.write({"type": "embedded_image", "image": images, "part": part_name, "method": "ocr", "text": text})
         except Exception as error:
-            image_errors.append({"image": images, "relationship": relation_id, "error": f"{type(error).__name__}: {error}"})
+            image_errors.append({"image": images, "part": part_name, "error": f"{type(error).__name__}: {error}"})
             stats.add("", "ocr")
-            writer.write({"type": "embedded_image", "image": images, "relationship": relation_id, "method": "ocr_error", "text": ""})
-    return {"paragraphs": paragraphs, "tables": len(document.tables), "table_rows": table_rows, "images": images, "image_errors": image_errors}
+            writer.write({"type": "embedded_image", "image": images, "part": part_name, "method": "ocr_error", "text": ""})
+    return {
+        "paragraphs": paragraphs,
+        "tables": len(document.tables),
+        "table_rows": table_rows,
+        "textboxes": body_extra["textboxes"] + header_textboxes + footer_textboxes,
+        "header_parts": header_parts,
+        "header_paragraphs": header_paragraphs,
+        "header_table_rows": header_table_rows,
+        "footer_parts": footer_parts,
+        "footer_paragraphs": footer_paragraphs,
+        "footer_table_rows": footer_table_rows,
+        "comments": comments,
+        **note_counts,
+        "images": images,
+        "image_errors": image_errors,
+    }
+
+
+def iter_pptx_shapes(shapes: object, prefix: tuple[int, ...] = ()):
+    for index, shape in enumerate(shapes, start=1):
+        path = (*prefix, index)
+        yield shape, path
+        if shape.shape_type == MSO_SHAPE_TYPE.GROUP:
+            yield from iter_pptx_shapes(shape.shapes, path)
 
 
 def extract_pptx(path: pathlib.Path, writer: JsonlWriter, stats: FileStats, tools: dict) -> dict:
     presentation = Presentation(path)
     images = 0
+    text_shapes = 0
+    table_rows = 0
+    notes = 0
     image_errors = []
-    for slide_number, slide in enumerate(presentation.slides, start=1):
-        parts = []
-        for shape in slide.shapes:
-            if hasattr(shape, "text") and clean_text(shape.text):
-                parts.append(clean_text(shape.text))
-            if getattr(shape, "has_table", False):
-                for row in shape.table.rows:
-                    parts.append("\t".join(clean_text(cell.text) for cell in row.cells))
-        text = "\n".join(parts)
-        stats.add(text, "slide")
-        writer.write({"type": "slide", "slide": slide_number, "text": text})
-        for shape in slide.shapes:
-            if not hasattr(shape, "image"):
-                continue
-            images += 1
-            try:
+    image_cache = {}
+
+    def shape_path_label(shape_path: tuple[int, ...]) -> str:
+        return ".".join(str(value) for value in shape_path)
+
+    def write_image(shape: object, slide_number: int, shape_path: tuple[int, ...], record_type: str, locator: str | None = None) -> None:
+        nonlocal images
+        if not hasattr(shape, "image"):
+            return
+        images += 1
+        part_label = locator or shape_path_label(shape_path)
+        try:
+            blob = shape.image.blob
+            digest = hashlib.sha256(blob).hexdigest()
+            if digest not in image_cache:
                 extension = f".{shape.image.ext or 'png'}"
-                image_text = ocr_embedded_blob(shape.image.blob, extension, tools)
-                stats.add(image_text, "ocr")
-                writer.write({"type": "slide_image", "slide": slide_number, "image": images, "method": "ocr", "text": image_text})
-            except Exception as error:
-                image_errors.append({"slide": slide_number, "image": images, "error": f"{type(error).__name__}: {error}"})
-                stats.add("", "ocr")
-                writer.write({"type": "slide_image", "slide": slide_number, "image": images, "method": "ocr_error", "text": ""})
-    return {"slides": len(presentation.slides), "images": images, "image_errors": image_errors}
+                try:
+                    image_cache[digest] = (ocr_embedded_blob(blob, extension, tools), None)
+                except Exception as error:
+                    image_cache[digest] = ("", f"{type(error).__name__}: {error}")
+            image_text, cached_error = image_cache[digest]
+            if cached_error:
+                raise RuntimeError(cached_error)
+            stats.add(image_text, "ocr")
+            writer.write({"type": record_type, "slide": slide_number, "shape_path": part_label, "image": images, "method": "ocr", "text": image_text})
+        except Exception as error:
+            image_errors.append({"slide": slide_number, "shape_path": part_label, "image": images, "error": f"{type(error).__name__}: {error}"})
+            stats.add("", "ocr")
+            writer.write({"type": record_type, "slide": slide_number, "shape_path": part_label, "image": images, "method": "ocr_error", "text": ""})
+
+    for slide_number, slide in enumerate(presentation.slides, start=1):
+        slide_texts = set()
+        for shape, shape_path in iter_pptx_shapes(slide.shapes):
+            path_label = shape_path_label(shape_path)
+            if getattr(shape, "has_text_frame", False):
+                text = clean_text(shape.text)
+                if text:
+                    text_shapes += 1
+                    slide_texts.add(text)
+                    stats.add(text, "slide")
+                    writer.write({"type": "slide_text", "slide": slide_number, "shape_path": path_label, "text": text})
+            if getattr(shape, "has_table", False):
+                for row_index, row in enumerate(shape.table.rows, start=1):
+                    values = [clean_text(cell.text) for cell in row.cells]
+                    if not any(values):
+                        continue
+                    table_rows += 1
+                    text = "\t".join(values)
+                    stats.add(text, "slide", sum(bool(value) for value in values))
+                    writer.write({"type": "slide_table_row", "slide": slide_number, "shape_path": path_label, "row": row_index, "cells": values, "text": text})
+            write_image(shape, slide_number, shape_path, "slide_image")
+
+        if slide.has_notes_slide:
+            note_text_frame = slide.notes_slide.notes_text_frame
+            primary_note = clean_text(note_text_frame.text) if note_text_frame else ""
+            if primary_note:
+                notes += 1
+                stats.add(primary_note, "slide")
+                writer.write({"type": "slide_note", "slide": slide_number, "note": notes, "shape_path": "notes", "text": primary_note})
+            for shape, shape_path in iter_pptx_shapes(slide.notes_slide.shapes):
+                path_label = f"notes.{shape_path_label(shape_path)}"
+                if getattr(shape, "has_text_frame", False):
+                    text = clean_text(shape.text)
+                    if text and text != primary_note and text not in slide_texts:
+                        notes += 1
+                        stats.add(text, "slide")
+                        writer.write({"type": "slide_note", "slide": slide_number, "note": notes, "shape_path": path_label, "text": text})
+                if getattr(shape, "has_table", False):
+                    for row_index, row in enumerate(shape.table.rows, start=1):
+                        values = [clean_text(cell.text) for cell in row.cells]
+                        if not any(values):
+                            continue
+                        table_rows += 1
+                        text = "\t".join(values)
+                        stats.add(text, "slide", sum(bool(value) for value in values))
+                        writer.write({"type": "slide_note_table_row", "slide": slide_number, "shape_path": path_label, "row": row_index, "cells": values, "text": text})
+                write_image(shape, slide_number, shape_path, "slide_note_image", path_label)
+    return {"slides": len(presentation.slides), "text_shapes": text_shapes, "table_rows": table_rows, "notes": notes, "images": images, "image_errors": image_errors}
 
 
 def extract_image(path: pathlib.Path, writer: JsonlWriter, stats: FileStats, tools: dict) -> dict:

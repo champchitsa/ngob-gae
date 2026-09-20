@@ -7,6 +7,8 @@ import DataExplorer from './DataExplorer'
 import CorpusReader from './CorpusReader'
 import CommitteeTracker from './CommitteeTracker'
 import GovernmentMap from './GovernmentMap'
+import SsoBudgetLab from './SsoBudgetLab'
+import { useModalAccessibility } from './useModalAccessibility'
 
 type PboYear = { year: number; rows: number; act: number; adjusted: number; paid: number; paid_rate: number | null }
 type PboHistory = { years: number; row_count: number; series: PboYear[] }
@@ -40,14 +42,19 @@ function App() {
   const [chatOpen, setChatOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
   const anomalySearchRef = useRef<HTMLInputElement>(null)
+  const infoPanelRef = useRef<HTMLElement>(null)
+  const infoPanelCloseRef = useRef<HTMLButtonElement>(null)
+
+  useModalAccessibility(Boolean(panel), infoPanelRef, infoPanelCloseRef, () => setPanel(null))
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === '/' && document.activeElement?.tagName !== 'INPUT') {
+      const target = event.target instanceof HTMLElement ? event.target : null
+      const isTyping = target?.matches('input, textarea, select, [contenteditable="true"]') ?? false
+      if (event.key === '/' && !isTyping) {
         event.preventDefault()
         searchRef.current?.focus()
       }
-      if (event.key === 'Escape') setPanel(null)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -137,6 +144,7 @@ function App() {
         <nav className="topnav" aria-label="เมนูหลัก">
           <button onClick={() => document.getElementById('signals')?.scrollIntoView()}>Big Data</button>
           <button onClick={() => document.getElementById('state-map')?.scrollIntoView()}>แผนที่รัฐ</button>
+          <button onClick={() => document.getElementById('sso-lab')?.scrollIntoView()}>ประกันสังคม</button>
           <button onClick={() => document.getElementById('data-api')?.scrollIntoView()}>ตารางและ API</button>
           <button onClick={() => document.getElementById('committee')?.scrollIntoView()}>ติดตาม กมธ.</button>
           <button onClick={() => document.getElementById('archive')?.scrollIntoView()}>คลัง 694 ไฟล์</button>
@@ -196,6 +204,8 @@ function App() {
           }, 50)
         }} />
 
+        <SsoBudgetLab onAsk={() => setChatOpen(true)} />
+
         <section className="signal-lab" id="signals">
           <div className="workspace-head inverse">
             <div>
@@ -219,18 +229,18 @@ function App() {
             <p>รายการที่มีวงเงินสูงสุด 1% แรกคิดเป็น 80.3% ของวงเงินทั้งหมด ขณะที่ครึ่งหนึ่งของรายการมีวงเงินไม่เกิน 0.499 ล้านบาท ระบบจึงจัดลำดับการตรวจด้วยมูลค่า การเปลี่ยนแปลงวงเงิน ความคืบหน้าการใช้จ่าย และความชัดเจนของชื่อรายการ</p>
           </div>
 
-          <div className="flag-rack" role="tablist" aria-label="เงื่อนไขคัดกรอง">
-            <button className={activeSignal === 'all' ? 'active' : ''} onClick={() => setActiveSignal('all')} role="tab" aria-selected={activeSignal === 'all'}>
+          <div className="flag-rack" role="group" aria-label="เงื่อนไขคัดกรอง">
+            <button className={activeSignal === 'all' ? 'active' : ''} onClick={() => setActiveSignal('all')} aria-pressed={activeSignal === 'all'}>
               <span>ทุกเงื่อนไข</span><strong>{analysisItems.length}</strong><small>รายการจัดอันดับที่เปิดดูได้</small>
             </button>
-            {bigData.flags.map((flag) => <button key={flag.id} className={activeSignal === flag.id ? 'active' : ''} onClick={() => setActiveSignal(flag.id)} role="tab" aria-selected={activeSignal === flag.id} title={flag.definition}>
+            {bigData.flags.map((flag) => <button key={flag.id} className={activeSignal === flag.id ? 'active' : ''} onClick={() => setActiveSignal(flag.id)} aria-pressed={activeSignal === flag.id} title={flag.definition}>
               <span>{flag.label}</span><strong>{flag.count.toLocaleString('th-TH')}</strong><small>{formatMoney(flag.amount)} ล้านบาท</small>
             </button>)}
           </div>
           <div className="flag-tools"><p className="flag-note">รายการหนึ่งอาจเข้าได้หลายเงื่อนไข จำนวนจึงนำมาบวกกันตรงๆ ไม่ได้</p><a href="/data/big-data-findings.json" download>ดาวน์โหลดผลเต็ม {analysisItems.length} รายการ .JSON</a></div>
 
           <div className="anomaly-controls">
-            <label className="anomaly-search"><span>⌕</span><input ref={anomalySearchRef} value={anomalyQuery} onChange={(event) => setAnomalyQuery(event.target.value)} placeholder="ค้นชื่อรายการ หน่วยงาน กระทรวง หรือโครงการ" /></label>
+            <label className="anomaly-search"><span aria-hidden="true">⌕</span><input ref={anomalySearchRef} aria-label="ค้นรายการคัดกรอง" value={anomalyQuery} onChange={(event) => setAnomalyQuery(event.target.value)} placeholder="ค้นชื่อรายการ หน่วยงาน กระทรวง หรือโครงการ" /></label>
             <label className="anomaly-sort"><span>เรียงตาม</span><select value={anomalySort} onChange={(event) => setAnomalySort(event.target.value as SignalSort)}><option value="score">คะแนนคัดกรอง</option><option value="amount">วงเงินหลังโอน</option><option value="movement">มูลค่าที่เปลี่ยน</option><option value="execution">อัตราใช้จ่ายต่ำก่อน</option></select></label>
             <div className="anomaly-count" aria-live="polite"><strong>{anomalyItems.length.toLocaleString('th-TH')}</strong><span>รายการที่ตรงเงื่อนไข</span></div>
           </div>
@@ -317,17 +327,17 @@ function App() {
 
           <div className="command-row">
             <label className="search-box">
-              <span>⌕</span>
-              <input ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหน่วยงาน โครงการ หรือคำสำคัญ" />
-              <kbd>/</kbd>
+              <span aria-hidden="true">⌕</span>
+              <input ref={searchRef} aria-label="ค้นแฟ้มตรวจสอบ" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหน่วยงาน โครงการ หรือคำสำคัญ" />
+              <kbd aria-hidden="true">/</kbd>
             </label>
             <button className="download-button" onClick={downloadData}>ดาวน์โหลด {filtered.length} เคส .JSON</button>
           </div>
 
-          <div className="theme-tabs" role="tablist" aria-label="กลุ่มประเด็น">
+          <div className="theme-tabs" role="group" aria-label="กลุ่มประเด็น">
             {themes.map((theme) => {
               const count = theme.id === 'all' ? cases.length : cases.filter((item) => item.themes.includes(theme.id)).length
-              return <button key={theme.id} className={activeTheme === theme.id ? 'active' : ''} onClick={() => setActiveTheme(theme.id)} role="tab" aria-selected={activeTheme === theme.id}><span>{theme.short}</span><small>{count}</small></button>
+              return <button key={theme.id} className={activeTheme === theme.id ? 'active' : ''} onClick={() => setActiveTheme(theme.id)} aria-pressed={activeTheme === theme.id}><span>{theme.short}</span><small>{count}</small></button>
             })}
           </div>
 
@@ -498,8 +508,8 @@ function App() {
       />
 
       {panel && <div className="panel-backdrop" role="presentation" onMouseDown={() => setPanel(null)}>
-        <aside className="info-panel" role="dialog" aria-modal="true" aria-label={panel === 'method' ? 'วิธีแกะ' : panel === 'law' ? 'ตัวบทกฎหมาย' : 'แหล่งข้อมูล'} onMouseDown={(event) => event.stopPropagation()}>
-          <button className="panel-close" onClick={() => setPanel(null)} aria-label="ปิด">×</button>
+        <aside ref={infoPanelRef} className="info-panel" role="dialog" aria-modal="true" aria-label={panel === 'method' ? 'วิธีแกะ' : panel === 'law' ? 'ตัวบทกฎหมาย' : 'แหล่งข้อมูล'} tabIndex={-1} onMouseDown={(event) => event.stopPropagation()}>
+          <button ref={infoPanelCloseRef} className="panel-close" onClick={() => setPanel(null)} aria-label="ปิด">×</button>
           {panel === 'method' && <>
             <span className="panel-kicker">OPEN METHOD</span><h2>คะแนนใช้จัดลำดับการตรวจ</h2>
             <p className="panel-intro">คะแนน 100 แบ่งเป็น 4 มิติ มิติละ 25 คะแนน ได้แก่ มูลค่า อัตราใช้จ่าย ขนาดการโอนเปลี่ยนแปลง และความชัดเจนของข้อมูล ใช้เรียงแฟ้มที่ควรเปิดก่อน</p>

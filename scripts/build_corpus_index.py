@@ -9,6 +9,8 @@ import pathlib
 import time
 from collections import Counter, defaultdict
 
+from corpus_pipeline import atomic_write_json, collect_record_assets, sha256_file
+
 
 def read_manifest(path: pathlib.Path) -> dict:
     if not path.exists():
@@ -41,7 +43,7 @@ def preview_records(path: pathlib.Path, limit: int = 4) -> list[dict]:
             if not text:
                 continue
             locator = {}
-            for key in ("page", "sheet", "row", "paragraph", "table", "slide", "image"):
+            for key in ("page", "sheet", "row", "paragraph", "table", "slide", "image", "story", "part", "textbox", "comment_id", "note_id", "note", "shape_path"):
                 if key in record:
                     locator[key] = record[key]
             records.append({"type": record.get("type"), **locator, "text": text[:700]})
@@ -56,21 +58,20 @@ def main() -> None:
     parser.add_argument("output", type=pathlib.Path)
     parser.add_argument("corpus_dirs", nargs="+", type=pathlib.Path)
     parser.add_argument("--release-base", default="https://github.com/champchitsa/ngob-gae/releases/download/corpus-v1")
+    parser.add_argument("--duplicate-precedence", choices=["first", "last"], default="first")
     args = parser.parse_args()
 
     inventory = json.loads(args.inventory.read_text(encoding="utf-8"))
-    summaries = {}
-    record_paths = {}
+    record_paths, identical_duplicates, conflicting_duplicates = collect_record_assets(
+        args.corpus_dirs, precedence=args.duplicate_precedence
+    )
+    if conflicting_duplicates:
+        raise RuntimeError(f"conflicting duplicate corpus assets: {', '.join(sorted(conflicting_duplicates))}")
+
+    summaries_by_dir = {}
     for corpus_dir in args.corpus_dirs:
         manifest = read_manifest(corpus_dir / "manifest.json")
-        for file_id, summary in manifest.get("items", {}).items():
-            if summary.get("status") in {"complete", "cached"}:
-                summaries[file_id] = summary
-                candidate = corpus_dir / "records" / f"{file_id}.jsonl.gz"
-                if candidate.exists():
-                    record_paths[file_id] = candidate
-            elif file_id not in summaries:
-                summaries[file_id] = summary
+        summaries_by_dir[corpus_dir.resolve()] = manifest.get("items", {})
 
     files = []
     by_category = defaultdict(lambda: {"files": 0, "bytes": 0, "complete": 0, "errors": 0, "pending": 0, "units": 0, "lines": 0, "characters": 0, "ocr_units": 0})
@@ -78,8 +79,11 @@ def main() -> None:
     totals = Counter()
     theme_files = Counter()
     for source in inventory["files"]:
-        summary = summaries.get(source["id"], {})
-        status = "complete" if source["id"] in record_paths else summary.get("status", "pending")
+        record_path = record_paths.get(source["id"])
+        selected_dir = record_path.parent.parent.resolve() if record_path else None
+        summary = summaries_by_dir.get(selected_dir, {}).get(source["id"], {}) if selected_dir else {}
+        manifest_status = summary.get("status", "pending")
+        status = "complete" if record_path and manifest_status in {"complete", "cached"} else manifest_status
         if status == "cached":
             status = "complete"
         category = source.get("category") or "ไม่ระบุหมวด"
@@ -106,13 +110,13 @@ def main() -> None:
         for theme, hits in keyword_hits.items():
             if hits:
                 theme_files[theme] += 1
-        record_path = record_paths.get(source["id"])
         files.append({
             **source,
             "status": status,
             "error": summary.get("error"),
             "duration_seconds": summary.get("duration_seconds"),
-            "output_bytes": summary.get("output_bytes"),
+            "output_bytes": record_path.stat().st_size if record_path else summary.get("output_bytes"),
+            "corpus_sha256": sha256_file(record_path) if status == "complete" and record_path else None,
             "units": summary.get("units", 0),
             "lines": summary.get("lines", 0),
             "characters": summary.get("characters", 0),
@@ -134,6 +138,8 @@ def main() -> None:
             "inventory_folders": inventory["folderCount"],
             "source_bytes": inventory["totalBytes"],
             "status": dict(status_counts),
+            "duplicate_precedence": args.duplicate_precedence,
+            "identical_duplicate_files": len(identical_duplicates),
             **dict(totals),
         },
         "types": [{"type": key, "files": value} for key, value in by_type.most_common()],
@@ -141,8 +147,7 @@ def main() -> None:
         "theme_files": dict(theme_files),
         "files": files,
     }
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    atomic_write_json(args.output, payload)
     print(json.dumps(payload["meta"], ensure_ascii=False))
 
 

@@ -55,6 +55,7 @@ function loadKnowledge() {
     legal: JSON.parse(readFileSync(join(process.cwd(), 'public', 'data', 'legal-provisions.json'), 'utf8')),
     committee: JSON.parse(readFileSync(join(process.cwd(), 'public', 'data', 'committee-meetings.json'), 'utf8')),
     structure: JSON.parse(readFileSync(join(process.cwd(), 'public', 'data', 'government-structure.json'), 'utf8')),
+    sso: JSON.parse(readFileSync(join(process.cwd(), 'public', 'data', 'sso-budget-analysis.json'), 'utf8')),
   }
   return knowledgeCache
 }
@@ -139,8 +140,29 @@ function formatBytes(value) {
   return `${Math.max(1, Math.round(value / 1000))} KB`
 }
 
+function normalizeThaiDigits(value) {
+  return String(value).replace(/[๐-๙]/g, (digit) => String('๐๑๒๓๔๕๖๗๘๙'.indexOf(digit)))
+}
+
+function requestedProvisionFor(question) {
+  const normalized = normalizeThaiDigits(question)
+  const sectionMatch = normalized.match(/(?:มาตรา|ม\.)\s*(\d+)/)
+  if (!sectionMatch) return { section: undefined, subsection: undefined }
+  const tail = normalized.slice((sectionMatch.index ?? 0) + sectionMatch[0].length)
+  const subsection = tail.match(/^\s*(?:วรรค(?:ที่)?\s*(?:หนึ่ง|1)\s*)?(?:ข้อ\s*)?\(\s*(\d+)\s*\)/)?.[1]
+  return { section: sectionMatch[1], subsection }
+}
+
+function subsectionText(exactText, requestedSubsection) {
+  if (!requestedSubsection) return ''
+  return exactText.split(/\n\s*\n/).find((paragraph) => {
+    const marker = paragraph.trim().match(/^\(([๐-๙\d]+)\)/)?.[1]
+    return marker && normalizeThaiDigits(marker) === requestedSubsection
+  })?.trim() ?? ''
+}
+
 function retrieve(question, focusId) {
-  const { big: data, cases, inventory, history, corpus, corpusAnalysis, legal, committee, structure } = loadKnowledge()
+  const { big: data, cases, inventory, history, corpus, corpusAnalysis, legal, committee, structure, sso } = loadKnowledge()
   const terms = termsFor(question)
   const topicPattern = topicPatternFor(question)
   const matchedSignal = signalFor(question, data.flags)
@@ -178,8 +200,8 @@ function retrieve(question, focusId) {
     .filter((fact) => fact.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 5) : []
-  const arabicQuestion = question.replace(/[๐-๙]/g, (digit) => String('๐๑๒๓๔๕๖๗๘๙'.indexOf(digit)))
-  const requestedSection = arabicQuestion.match(/(?:มาตรา|ม\.)\s*(\d+)/)?.[1]
+  const requestedProvision = requestedProvisionFor(question)
+  const requestedSection = requestedProvision.section
   const relevantLaws = legal.provisions
     .map((law) => {
       const lawSection = law.code.match(/มาตรา\s*(\d+)/)?.[1]
@@ -187,7 +209,11 @@ function retrieve(question, focusId) {
       const searchable = `${law.code} ${law.shortCode} ${law.title} ${law.analysis} ${law.exactText} ${(law.aliases ?? []).join(' ')}`.toLocaleLowerCase('th')
       const aliasScore = (law.aliases ?? []).some((alias) => question.toLocaleLowerCase('th').includes(alias.toLocaleLowerCase('th'))) ? 25 : 0
       const caseScore = selectedCases.some(({ item }) => item.laws.some((label) => (law.aliases ?? []).includes(label))) ? 5 : 0
-      return { ...law, score: sectionScore + aliasScore + terms.filter((term) => searchable.includes(term)).length + caseScore }
+      return {
+        ...law,
+        requestedSubsection: sectionScore ? requestedProvision.subsection : undefined,
+        score: sectionScore + aliasScore + terms.filter((term) => searchable.includes(term)).length + caseScore,
+      }
     })
     .filter((law) => law.score >= (asksAboutLaw ? 1 : 5))
     .sort((a, b) => b.score - a.score)
@@ -278,8 +304,10 @@ function retrieve(question, focusId) {
   }).join('\n\n')
   const historyText = relevantHistory.map((row) => `[ปี ${row.year}] จำนวน ${row.rows.toLocaleString('th-TH')} แถว | ตาม พ.ร.บ. ${row.act.toLocaleString('th-TH')} ล้านบาท | หลังโอน ${row.adjusted.toLocaleString('th-TH')} ล้านบาท | เบิกจ่าย ${row.paid.toLocaleString('th-TH')} ล้านบาท | อัตรา ${row.paid_rate ?? 'ไม่มีค่า'}%`).join('\n')
   const structureText = relevantStructure.map(({ ministry, department }, index) => `[โครงสร้าง ${index + 1}] ${department.name}\nสังกัด: ${ministry.name}\nภารกิจที่แหล่งต้นทางระบุ: ${department.description || 'ไม่ระบุ'}\nรูปแบบหน่วยงาน: ${department.type}\nหน่วยย่อยที่นับได้: ${department.divisionCount}\nPBO 2568: ${department.pbo2568 ? `วงเงินหลังโอน ${department.pbo2568.adjusted.toLocaleString('th-TH')} ล้านบาท | เบิกจ่ายรวมยอดผูกพัน (PO) ${department.pbo2568.committed.toLocaleString('th-TH')} ล้านบาท | อัตรา ${department.pbo2568.rate ?? 'ไม่พบข้อมูล'}% | รายการที่ผ่านเกณฑ์คัดกรอง ${department.pbo2568.candidateCount}` : 'ยังไม่พบชื่อหน่วยงานที่ตรงกัน ระบบจึงไม่รวมยอดจากชื่อที่ใกล้เคียงโดยอัตโนมัติ'}\nที่มาโครงสร้าง: ${department.sourceUrl}\nที่มางบประมาณ: ${structure.meta.budgetSourceUrl}`).join('\n\n')
+  const asksSso = /ประกันสังคม|ผู้ประกันตน|สปส|มาตรา\s*40|skyy9|ปฏิทิน|เฟิร์สคลาส|first\s*class|contact\s*center|1506|sso\s*plus/i.test(question)
+  const ssoText = asksSso ? `ภาพรวมงบประกันสังคมเฉพาะเรื่อง:\nงบแผ่นดินสำนักงานประกันสังคมโดยตรงปี 2568 จำนวน ${sso.pbo.agencyAdjusted} ล้านบาท จาก ${sso.pbo.agencyRows} แถว ยอดก่อนและหลังโอนรวมเท่ากัน\nงบกองทุนบริหารงานปี 2563 ถึง 2567 จัดสรรรวม ${sso.administration.history.reduce((sum, row) => sum + row.allocated, 0).toFixed(4)} ล้านบาท ใช้จ่ายรวมก่อหนี้ ${sso.administration.history.reduce((sum, row) => sum + row.committed, 0).toFixed(4)} ล้านบาท\nทะเบียนสินทรัพย์ปี 2567 อ่านได้ ${sso.assets.parsedRows.toLocaleString('th-TH')} รายการ จาก ${sso.assets.pages.toLocaleString('th-TH')} หน้า ราคาทุนที่คำนวณได้ ${sso.assets.acquisitionCost} ล้านบาท มูลค่าตามบัญชี ${sso.assets.bookValue} ล้านบาท รายการมูลค่าตามบัญชี 1 บาท ${sso.assets.oneBahtRows.toLocaleString('th-TH')} รายการ\n\n${sso.findings.map((finding, index) => `[ประกันสังคม ${index + 1}] ${finding.title}\nข้อเท็จจริง: ${finding.fact}\nข้อสังเกต: ${finding.observation}\nเอกสารที่ควรขอ: ${finding.documents.join(' | ')}\nที่มา: ${finding.sourceUrl || sso.meta.pboSource}`).join('\n\n')}\n\nรูปแบบที่เกิดซ้ำในรายงาน 5 ปี:\n${sso.administration.recurring.map((group) => `- ${group.label}: พบ ${group.yearCount} ปี จัดสรรรวม ${group.allocated} ล้านบาท ใช้จ่ายรวมก่อหนี้ ${group.committed} ล้านบาท`).join('\n')}\n\nบริบทข่าวและสถานะ:\n${sso.newsContext.map((item) => `- ${item.date} ${item.title}: ${item.fact} สถานะ: ${item.status} ที่มา: ${item.url}`).join('\n')}` : ''
   const focusText = focus ? `\nรายการที่ผู้ใช้กำลังเปิดดูและถามถึงโดยตรง:\n${JSON.stringify(focus)}` : ''
-  const context = `ข้อมูลภาพรวม:\n${relevantFacts.length ? relevantFacts.map((fact, index) => `[ข้อมูล ${index + 1}] ${fact.text}`).join('\n') : 'ไม่พบตัวเลขภาพรวมที่ตรงคำค้นโดยตรง'}\n\nโครงสร้างรัฐเชื่อมงบประมาณ:\n${structureText || 'ไม่พบหน่วยงานที่ตรงคำค้นโดยตรง'}\n\nอนุกรมเวลา PBO:\n${historyText}\n\nวาระและสรุปหลังประชุมของคณะกรรมาธิการ:\n${committeeText || 'ไม่พบวาระที่ตรงคำค้นโดยตรง'}\n\nแฟ้มวิเคราะห์ที่ค้นคืนจากเว็บ:\n${caseText || 'ไม่พบแฟ้มเฉพาะที่ตรงคำค้น'}\n\nรายการที่ค้นคืนจาก PBO 2568:\n${itemText || 'ไม่พบรายการ PBO ที่ตรงคำค้นโดยตรง'}\n\nหลักฐานในคลังที่ค้นคืน:\n${fileText || 'ไม่พบชื่อไฟล์ที่ตรงคำค้นโดยตรง'}\n\nสัญญาณจากข้อความและ OCR:\n${evidenceText || 'ไม่พบสัญญาณที่ตรงคำค้นโดยตรง'}\n\nกฎหมายที่เกี่ยวข้อง:\n${relevantLaws.map((law) => `${law.code}\nตัวบทตามประกาศ:\n${law.exactText}\n\nแนวทางใช้ตรวจงบของระบบ:\n${law.analysis}\nเอกสารที่เชื่อมต่อ: ${law.documents.join(' | ')}\nประกาศ: ${law.publication}\nที่มา: ${law.sourceUrl}`).join('\n\n')}${focusText}`
+  const context = `ข้อมูลภาพรวม:\n${relevantFacts.length ? relevantFacts.map((fact, index) => `[ข้อมูล ${index + 1}] ${fact.text}`).join('\n') : 'ไม่พบตัวเลขภาพรวมที่ตรงคำค้นโดยตรง'}\n\nแฟ้มเจาะงบประกันสังคม:\n${ssoText || 'คำถามนี้ไม่ตรงกับแฟ้มประกันสังคมเฉพาะเรื่อง'}\n\nโครงสร้างรัฐเชื่อมงบประมาณ:\n${structureText || 'ไม่พบหน่วยงานที่ตรงคำค้นโดยตรง'}\n\nอนุกรมเวลา PBO:\n${historyText}\n\nวาระและสรุปหลังประชุมของคณะกรรมาธิการ:\n${committeeText || 'ไม่พบวาระที่ตรงคำค้นโดยตรง'}\n\nแฟ้มวิเคราะห์ที่ค้นคืนจากเว็บ:\n${caseText || 'ไม่พบแฟ้มเฉพาะที่ตรงคำค้น'}\n\nรายการที่ค้นคืนจาก PBO 2568:\n${itemText || 'ไม่พบรายการ PBO ที่ตรงคำค้นโดยตรง'}\n\nหลักฐานในคลังที่ค้นคืน:\n${fileText || 'ไม่พบชื่อไฟล์ที่ตรงคำค้นโดยตรง'}\n\nสัญญาณจากข้อความและ OCR:\n${evidenceText || 'ไม่พบสัญญาณที่ตรงคำค้นโดยตรง'}\n\nกฎหมายที่เกี่ยวข้อง:\n${relevantLaws.map((law) => `${law.code}\nตัวบทตามประกาศ:\n${law.exactText}\n\nแนวทางใช้ตรวจงบของระบบ:\n${law.analysis}\nเอกสารที่เชื่อมต่อ: ${law.documents.join(' | ')}\nประกาศ: ${law.publication}\nที่มา: ${law.sourceUrl}`).join('\n\n')}${focusText}`
 
   const sources = [
     ...selectedCases.map(({ item }, index) => ({ ref: `[แฟ้ม ${index + 1}]`, label: item.title, detail: `${item.agency} | ${item.sourceLabel}`, url: item.sourceUrl })),
@@ -292,6 +320,7 @@ function retrieve(question, focusId) {
       const sourceFile = inventory.files.find((file) => file.category === 'PBO' && file.title === `${row.year}.xlsx`)
       return { ref: `[ปี ${row.year}]`, label: `PBO ปี ${row.year}`, detail: `${row.rows.toLocaleString('th-TH')} แถว | เบิกจ่าย ${row.paid_rate ?? 'ไม่มีค่า'}%`, url: sourceFile?.url ?? SOURCE_URL }
     }),
+    ...(asksSso ? sso.findings.map((finding, index) => ({ ref: `[ประกันสังคม ${index + 1}]`, label: finding.title, detail: 'ข้อสังเกตจากงบและเอกสารใน OPEN SSO', url: finding.sourceUrl || sso.meta.pboSource })) : []),
     ...relevantLaws.filter((law) => law.score > 0).map((law) => ({ ref: law.shortCode, label: law.code, detail: law.publication, url: law.sourceUrl })),
   ].filter((source, index, all) => all.findIndex((candidate) => candidate.label === source.label && candidate.url === source.url) === index)
   return { context, sources, selectedCases: selectedCases.map(({ item }) => item), selectedItems: selected.map(({ item }) => item), relevantFacts, relevantLaws, relevantFiles, relevantHistory, relevantEvidence, relevantMeetings, relevantStructure, matchedSignal }
@@ -351,7 +380,11 @@ function buildLawAnswer(relevantLaws) {
   const exactSection = relevantLaws.filter((law) => law.score >= 20)
   const matched = exactSection.length ? exactSection : relevantLaws.filter((law) => law.score > 0).slice(0, 2)
   if (!matched.length) return 'กรุณาระบุมาตรา หรือชื่อกฎหมายที่ต้องการใช้ตรวจสอบ เพื่อให้ระบบเชื่อมตัวบทกับคำถามและเอกสารได้ตรงประเด็น'
-  return matched.map((law, index) => `${index + 1}. ${law.code}\n\nตัวบทตามประกาศ\n${law.exactText}\n\nใช้ตรวจเรื่อง\n${law.analysis}\n\nเอกสารที่ควรเชื่อมต่อ\n${law.documents.join(', ')}\n\nประกาศ\n${law.publication} [${law.shortCode}]`).join('\n\n')
+  return matched.map((law, index) => {
+    const focusedSubsection = subsectionText(law.exactText, law.requestedSubsection)
+    const subsectionLead = focusedSubsection ? `ข้อความส่วนที่ถาม\n${focusedSubsection}\n\n` : ''
+    return `${index + 1}. ${law.code}\n\n${subsectionLead}ตัวบททั้งมาตราตามประกาศ\n${law.exactText}\n\nใช้ตรวจเรื่อง\n${law.analysis}\n\nเอกสารที่ควรเชื่อมต่อ\n${law.documents.join(', ')}\n\nประกาศ\n${law.publication} [${law.shortCode}]`
+  }).join('\n\n')
 }
 
 function buildOverviewAnswer(relevantFacts, selectedCases) {

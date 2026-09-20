@@ -144,8 +144,8 @@ function GovernmentMap({ onInspectMinistry }: { onInspectMinistry: (ministry: st
     <div className="state-map-grid">
       <aside className="ministry-picker">
         <label><span>ค้นและเลือกกระทรวง</span><input value={ministryQuery} onChange={(event) => setMinistryQuery(event.target.value)} placeholder="พิมพ์ชื่อกระทรวง" /></label>
-        <div className="ministry-list" role="listbox" aria-label="รายชื่อกระทรวง">
-          {ministries.map((item) => <button key={item.id} type="button" role="option" aria-selected={selected.id === item.id} className={selected.id === item.id ? 'active' : ''} onClick={() => setSelectedId(item.id)}>
+        <div className="ministry-list" role="group" aria-label="รายชื่อกระทรวง">
+          {ministries.map((item) => <button key={item.id} type="button" aria-pressed={selected.id === item.id} className={selected.id === item.id ? 'active' : ''} onClick={() => setSelectedId(item.id)}>
             <span>{item.name}</span><small>{item.pbo2568 ? money(item.pbo2568.adjusted) : `${number(item.departmentCount)} หน่วยงาน`}</small><b>{number(item.pbo2568?.candidateCount ?? 0)}</b>
           </button>)}
           {!ministries.length && <p>ไม่พบชื่อกระทรวงที่ค้น</p>}

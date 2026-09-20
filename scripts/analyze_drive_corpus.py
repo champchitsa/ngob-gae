@@ -16,6 +16,8 @@ import re
 import sys
 from collections import Counter, defaultdict
 
+from corpus_pipeline import atomic_write_json, collect_record_assets
+
 
 THAI_DIGITS = str.maketrans("๐๑๒๓๔๕๖๗๘๙", "0123456789")
 NUMBER_RE = re.compile(r"(?<!\d)(?:\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?(?=\s*ล้าน\s*บาท)|\d{4,}(?:\.\d+)?)(?!\d)")
@@ -58,11 +60,19 @@ def clean(value: object) -> str:
 
 
 def locator(record: dict) -> dict:
-    return {key: record[key] for key in ("page", "sheet", "row", "paragraph", "table", "slide", "image") if key in record}
+    return {
+        key: record[key]
+        for key in ("page", "sheet", "row", "paragraph", "table", "slide", "image", "story", "part", "textbox", "comment_id", "note_id", "note", "shape_path")
+        if key in record
+    }
 
 
 def locator_label(position: dict) -> str:
-    labels = {"page": "หน้า", "sheet": "ชีต", "row": "แถว", "paragraph": "ย่อหน้า", "table": "ตาราง", "slide": "สไลด์", "image": "ภาพ"}
+    labels = {
+        "page": "หน้า", "sheet": "ชีต", "row": "แถว", "paragraph": "ย่อหน้า", "table": "ตาราง",
+        "slide": "สไลด์", "image": "ภาพ", "story": "ส่วน", "part": "พาร์ต", "textbox": "กล่องข้อความ",
+        "comment_id": "ความเห็น", "note_id": "เชิงอรรถ", "note": "บันทึก", "shape_path": "วัตถุ",
+    }
     return " / ".join(f"{labels[key]} {value}" for key, value in position.items()) or "เนื้อหาในไฟล์"
 
 
@@ -106,14 +116,6 @@ def credible_amounts(text: str) -> list[dict]:
     return amounts
 
 
-def read_assets(corpus_dirs: list[pathlib.Path]) -> dict[str, pathlib.Path]:
-    assets = {}
-    for corpus_dir in corpus_dirs:
-        for path in (corpus_dir / "records").glob("*.jsonl.gz"):
-            assets[path.name.removesuffix(".jsonl.gz")] = path
-    return assets
-
-
 def signal(kind: str, label: str, explanation: str, file: dict, position: dict, context: str, amount: float | None = None, extraction: str | None = None) -> dict:
     return {
         "kind": kind,
@@ -139,11 +141,19 @@ def main() -> None:
     parser.add_argument("inventory", type=pathlib.Path)
     parser.add_argument("output", type=pathlib.Path)
     parser.add_argument("corpus_dirs", nargs="+", type=pathlib.Path)
+    parser.add_argument("--duplicate-precedence", choices=["first", "last"], default="first")
     args = parser.parse_args()
 
     inventory = json.loads(args.inventory.read_text(encoding="utf-8"))
     files = {item["id"]: item for item in inventory["files"]}
-    assets = read_assets(args.corpus_dirs)
+    assets, identical_duplicates, conflicting_duplicates = collect_record_assets(
+        args.corpus_dirs, precedence=args.duplicate_precedence
+    )
+    if conflicting_duplicates:
+        raise RuntimeError(f"conflicting duplicate corpus assets: {', '.join(sorted(conflicting_duplicates))}")
+    unexpected_assets = sorted(file_id for file_id in assets if file_id not in files)
+    if unexpected_assets:
+        raise RuntimeError(f"corpus assets not present in inventory: {', '.join(unexpected_assets)}")
     theme_files = Counter()
     theme_units = Counter()
     evidence_files = Counter()
@@ -303,6 +313,8 @@ def main() -> None:
             "money_mentions": money_mentions,
             "method": "ตัวกรองจำนวนเงินต้องพบคำบอกบริบททางการเงิน และตัดปี เลขผู้เสียภาษี เบอร์โทร และรหัสเอกสารที่ตรวจพบออก",
             "interpretation": "สัญญาณใช้จัดลำดับการเปิดหลักฐาน ไม่ใช่ข้อสรุปว่ามีความผิดหรือความเสียหาย",
+            "duplicate_precedence": args.duplicate_precedence,
+            "identical_duplicate_files": len(identical_duplicates),
         },
         "themes": [
             {"id": key, "label": config["label"], "files": theme_files[key], "units": theme_units[key]}
@@ -318,8 +330,7 @@ def main() -> None:
         "signals": signals,
         "top_amounts": top_amount_rows,
     }
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    atomic_write_json(args.output, payload)
     print(json.dumps({**payload["meta"], "signal_counts": payload["signal_counts"]}, ensure_ascii=False))
 
 

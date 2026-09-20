@@ -43,8 +43,8 @@ function BudgetDashboard({ history }: { history: PboHistory | null }) {
       <p>เปลี่ยนมุมมองและปีได้ทันที ตัวเลขสำคัญอยู่บนเว็บ พร้อมทางลงไปถึงรายการคัดกรองและหลักฐาน</p>
     </div>
 
-    <div className="dashboard-switcher" role="tablist" aria-label="มุมมองแดชบอร์ด">
-      {views.map((item) => <button key={item.id} className={view === item.id ? 'active' : ''} onClick={() => setView(item.id)} role="tab" aria-selected={view === item.id}>
+    <div className="dashboard-switcher" role="group" aria-label="มุมมองแดชบอร์ด">
+      {views.map((item) => <button key={item.id} className={view === item.id ? 'active' : ''} onClick={() => setView(item.id)} aria-pressed={view === item.id}>
         <strong>{item.label}</strong><small>{item.detail}</small>
       </button>)}
     </div>

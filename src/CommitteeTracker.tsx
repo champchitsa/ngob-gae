@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useModalAccessibility } from './useModalAccessibility'
 
 type Meeting = {
   id: string
@@ -98,6 +99,10 @@ export default function CommitteeTracker() {
   const [limit, setLimit] = useState(12)
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<Meeting | null>(null)
+  const modalRef = useRef<HTMLElement>(null)
+  const modalCloseRef = useRef<HTMLButtonElement>(null)
+
+  useModalAccessibility(Boolean(selected?.summary), modalRef, modalCloseRef, () => setSelected(null))
 
   useEffect(() => {
     fetch('/data/committee-meetings.json')
@@ -121,20 +126,6 @@ export default function CommitteeTracker() {
   }, [data, query, theme, onlySummaries])
 
   useEffect(() => setLimit(12), [query, theme, onlySummaries])
-
-  useEffect(() => {
-    if (!selected) return
-    const close = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSelected(null)
-    }
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    window.addEventListener('keydown', close)
-    return () => {
-      document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', close)
-    }
-  }, [selected])
 
   return <section className="committee-tracker" id="committee">
     <div className="committee-heading">
@@ -180,8 +171,8 @@ export default function CommitteeTracker() {
     {!data && !error && <div className="committee-empty">กำลังเปิดดัชนีการประชุม...</div>}
     {error && <div className="committee-empty">{error}</div>}
     {selected?.summary && <div className="committee-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelected(null) }}>
-      <article className="committee-modal" role="dialog" aria-modal="true" aria-labelledby="committee-modal-title">
-        <header><div><span>ข้อมูลจากหน้าสรุปหลังประชุม</span><h3 id="committee-modal-title">{selected.summary.title || selected.title}</h3><p>{selected.dateLabel} / {selected.roundLabel} {selected.session}</p></div><button onClick={() => setSelected(null)} aria-label="ปิดหน้าสรุป">×</button></header>
+      <article ref={modalRef} className="committee-modal" role="dialog" aria-modal="true" aria-labelledby="committee-modal-title" tabIndex={-1}>
+        <header><div><span>ข้อมูลจากหน้าสรุปหลังประชุม</span><h3 id="committee-modal-title">{selected.summary.title || selected.title}</h3><p>{selected.dateLabel} / {selected.roundLabel} {selected.session}</p></div><button ref={modalCloseRef} onClick={() => setSelected(null)} aria-label="ปิดหน้าสรุป">×</button></header>
         <div className="committee-modal-body">
           <section className="committee-summary-overview"><span>ภาพรวมจากแหล่งต้นทาง</span><p>{selected.summary.overview || selected.description}</p></section>
           <section><div className="committee-modal-section-title"><span>สาระรายประเด็น</span><strong>{selected.summary.issues.length} ข้อ</strong></div><div className="committee-detail-list">{selected.summary.issues.map((issue, index) => <article key={String(issue.id ?? index)}><div><small>{issue.sevLabel || issue.sev || `ประเด็น ${index + 1}`}</small><b>{issue.title}</b></div>{issue.desc && <p>{issue.desc}</p>}{issue.public && <p><strong>สิ่งที่หน้าสรุประบุ:</strong> {issue.public}</p>}{issue.details?.map((detail, detailIndex) => detail.text && <p key={`${detail.label}-${detailIndex}`}><strong>{detail.label || 'รายละเอียด'}:</strong> {detail.text}</p>)}{!issue.details?.length && issue.why && <p><strong>เหตุที่แหล่งต้นทางให้ความสำคัญ:</strong> {issue.why}</p>}{issue.evidence && <p><strong>หลักฐานที่หน้าสรุประบุ:</strong> {issue.evidence}</p>}{!issue.details?.length && (issue.q || issue.ask) && <p><strong>คำถามติดตาม:</strong> {issue.q || issue.ask}</p>}{!issue.details?.length && (issue.a || issue.agency) && <p><strong>คำชี้แจงที่บันทึกไว้:</strong> {issue.a || issue.agency}</p>}{issue.refer && <p><strong>ปลายทางที่แหล่งต้นทางเสนอ:</strong> {issue.refer}</p>}{issue.ref && issue.ref.length > 0 && <p className="committee-law-reference"><strong>หน่วยงานหรือกฎหมายที่หน้าสรุประบุ:</strong> {issue.ref.join(' / ')}</p>}</article>)}</div></section>

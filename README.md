@@ -35,7 +35,7 @@
 - แสดงหลักฐานต้นทางที่ใช้ตอบ และใช้คำตอบแบบมีโครงสร้างสำหรับคำถามจัดลำดับรายการหรือเอกสารที่ควรขอ
 - อ่านข้อมูลบนเว็บได้โดยตรง 10 ชุด ได้แก่ รายการคัดกรอง ภาพรวมหน่วยงาน ชื่อรายการที่พบซ้ำ แฟ้มวิเคราะห์ บัญชีหลักฐาน อนุกรมเวลา PBO ดัชนีเนื้อหา คิวตรวจจากข้อความและ OCR ตัวบทกฎหมาย และงานกรรมาธิการ
 - ใช้ Public JSON API เพื่อค้น กรอง แบ่งหน้า และดาวน์โหลดข้อมูลชุดเดียวกับที่หน้าเว็บและผู้ช่วย AI ใช้
-- อ่านทุกหน้า ทุกแถว ทุกย่อหน้า และทุกสไลด์บนเว็บ พร้อมตำแหน่งในต้นฉบับและการค้นภายในไฟล์
+- อ่านเนื้อหาที่ตัวแปลงรองรับในระดับหน้า แถว ย่อหน้า สไลด์ ส่วนหัว ส่วนท้าย เชิงอรรถ ความเห็น กล่องข้อความ และบันทึกผู้นำเสนอ พร้อมตำแหน่งในต้นฉบับและการค้นภายในไฟล์
 - ใช้ OCR ภาษาไทยและอังกฤษกับหน้าสแกนและรูปภาพที่ไม่มีข้อความฝังในไฟล์
 - วิเคราะห์จำนวนเงินจากบริบทจริง ตัดปี เลขผู้เสียภาษี เบอร์โทร และรหัสเอกสารออก แล้วจัดคิวมูลค่าสูง จำนวนเงินซ้ำ ตัวเลขหนาแน่น และจำนวนเงินลงตัวพร้อมพิกัดต้นทาง
 
@@ -123,22 +123,43 @@ python scripts/analyze_big_data.py path/to/pbo-2568.xlsx output.json
 python scripts/fetch_committee_meetings.py public/data/committee-meetings.json
 ```
 
-ติดตั้งไลบรารีสำหรับอ่านคลังเอกสาร จากนั้นแปลงไฟล์ทั้งหมดเป็น JSONL ที่บีบอัดแบบ gzip:
+ติดตั้งไลบรารีสำหรับอ่านคลังเอกสาร จากนั้นแปลงไฟล์เป็น JSONL ที่บีบอัดแบบ gzip กระบวนการปัจจุบันแยก PDF ออกจากไฟล์ชนิดอื่นเพื่อให้เริ่มต่อจาก checkpoint ได้โดยไม่ทำงานที่เสร็จแล้วซ้ำ:
 
 ```bash
 python -m pip install -r requirements-corpus.txt
 python scripts/extract_drive_corpus.py public/data/drive-inventory.json .workdata/drive-corpus --workers 4
+python scripts/extract_drive_corpus.py public/data/drive-inventory.json .workdata/drive-corpus-pdf --only pdf --workers 12
 ```
 
-เครื่องที่รันต้องมี Tesseract พร้อมภาษา `tha` และ `eng` และมี Poppler คำสั่ง `pdftoppm` ใน PATH เมื่อประมวลผลเสร็จให้สร้างดัชนีสำหรับหน้าเว็บ:
+เครื่องที่รันต้องมี Tesseract พร้อมภาษา `tha` และ `eng` และมี Poppler คำสั่ง `pdftoppm` ใน PATH หลัง asset ครบ ให้ตรวจ corpus ก่อนสร้างดัชนี ตัว validator จะหยุดด้วย exit code 1 เมื่อไฟล์ขาด เสีย มีข้อมูลซ้ำที่ขัดกัน หรือมี page/image warning ที่ยังไม่ได้ทบทวน:
 
 ```bash
-python scripts/build_corpus_index.py public/data/drive-inventory.json public/data/corpus-index.json .workdata/drive-corpus
-python scripts/analyze_drive_corpus.py public/data/drive-inventory.json public/data/corpus-analysis.json .workdata/drive-corpus
-python scripts/validate_corpus.py public/data/drive-inventory.json .workdata/corpus-validation.json .workdata/drive-corpus
+python scripts/validate_corpus.py public/data/drive-inventory.json .workdata/corpus-validation.json .workdata/drive-corpus .workdata/drive-corpus-pdf
 ```
 
-แต่ละไฟล์ผลลัพธ์เริ่มด้วยข้อมูลไฟล์ ตามด้วยระเบียนรายหน้า รายแถว รายย่อหน้า หรือรายสไลด์ และจบด้วยสรุปจำนวนหน่วยข้อมูล บรรทัด อักขระ เซลล์ งาน OCR คำสำคัญ และ SHA-256 ของข้อความทั้งหมด กระบวนการทำงานต่อจากครั้งก่อนและลบไฟล์ต้นทางชั่วคราวหลังอ่านเสร็จ สคริปต์วิเคราะห์จะแยกจำนวนเงินจากข้อความอีกชั้นหนึ่งโดยต้องพบคำบอกบริบททางการเงิน และเก็บชื่อไฟล์กับตำแหน่งต้นทางของทุกสัญญาณที่นำขึ้นเว็บ
+ถ้าตรวจต้นฉบับของ warning แล้วและยอมรับผลได้ ให้สร้างไฟล์ทบทวนแยกต่างหาก แต่ละรายการต้องมี `id`, `warning_fingerprint`, `reason`, `reviewed_by` และ `reviewed_at` จากรายงาน validation แล้วรันด้วย `--reviewed-warnings path/to/reviewed-warnings.json` ลายนิ้วมือต้องตรงทุกตัวจึงจะผ่าน เมื่อ validation ผ่านแล้วจึงสร้างดัชนีและผลวิเคราะห์:
+
+```bash
+python scripts/build_corpus_index.py public/data/drive-inventory.json public/data/corpus-index.json .workdata/drive-corpus .workdata/drive-corpus-pdf
+python scripts/analyze_drive_corpus.py public/data/drive-inventory.json public/data/corpus-analysis.json .workdata/drive-corpus .workdata/drive-corpus-pdf
+```
+
+แต่ละไฟล์ผลลัพธ์เริ่มด้วยข้อมูลไฟล์ ตามด้วยระเบียนที่ตัวแปลงรองรับ และจบด้วยสรุปจำนวนหน่วยข้อมูล บรรทัด อักขระ เซลล์ งาน OCR คำสำคัญ และ SHA-256 ของข้อความทั้งหมด การเริ่มต่อทำได้ในระดับไฟล์ที่เขียน `.jsonl.gz` สำเร็จแล้วเท่านั้น หากหยุดระหว่างไฟล์ ไฟล์นั้นจะเริ่มดาวน์โหลดและประมวลผลใหม่ในรอบถัดไป ไฟล์ `.part` ไม่ใช่ checkpoint ที่นำมาทำต่อภายในไฟล์ได้ สคริปต์วิเคราะห์จะแยกจำนวนเงินจากข้อความอีกชั้นหนึ่งโดยต้องพบคำบอกบริบททางการเงิน และเก็บชื่อไฟล์กับตำแหน่งต้นทางของทุกสัญญาณที่นำขึ้นเว็บ
+
+ตรวจ draft release โดยไม่อัปโหลดก่อน แล้วจึงอัปโหลดเป็นชุดเมื่อรายงาน validation ยืนยัน asset เดิมครบ 694 รายการ:
+
+```bash
+python scripts/sync_corpus_release.py public/data/drive-inventory.json .workdata/corpus-validation.json .workdata/drive-corpus .workdata/drive-corpus-pdf --repo champchitsa/ngob-gae --tag corpus-v1 --report .workdata/corpus-release-verification.json
+python scripts/sync_corpus_release.py public/data/drive-inventory.json .workdata/corpus-validation.json .workdata/drive-corpus .workdata/drive-corpus-pdf --repo champchitsa/ngob-gae --tag corpus-v1 --upload --batch-size 25 --report .workdata/corpus-release-verification.json
+```
+
+สคริปต์ release ไม่เผยแพร่ release และปฏิเสธ release ที่ไม่ใช่ draft ผลตรวจถือว่าผ่านเมื่อชื่อไม่ซ้ำครบ 694 รายการ ไม่มีชื่อเกินหรือขาด สถานะทุกชิ้นเป็น `uploaded` และขนาดกับ SHA-256 จาก GitHub ตรงกับไฟล์ที่ผ่าน validation ห้าม deploy ดัชนีที่มี `corpus_url` จน release เผยแพร่และทดสอบดาวน์โหลดแบบไม่ใช้ GitHub token แล้ว เพราะปุ่มอ่านในเว็บของผู้ใช้ทั่วไปต้องเข้าถึง asset ได้จริง
+
+รัน regression tests ของ pipeline โดยใช้ข้อมูลจำลองใน temporary directory และไม่แตะ corpus จริง:
+
+```bash
+python -m unittest discover -s tests -p "test_*.py"
+```
 
 ## ตัวบทที่ใช้ในแฟ้ม
 

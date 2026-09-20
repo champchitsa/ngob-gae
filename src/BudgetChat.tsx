@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import type { AnomalyItem } from './bigData'
+import { useModalAccessibility } from './useModalAccessibility'
 
 type Source = { label: string; detail: string; url: string }
 type Message = { role: 'assistant' | 'user'; content: string; sources?: Source[] }
@@ -32,19 +33,9 @@ function BudgetChat({ activeItem, items, open, onOpen, onClose, onSelectItem }: 
   const [loading, setLoading] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
 
-  useEffect(() => {
-    if (!open) return
-    const timer = window.setTimeout(() => inputRef.current?.focus(), 120)
-    const onKey = (event: globalThis.KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      window.clearTimeout(timer)
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [open, onClose])
+  useModalAccessibility(open, panelRef, inputRef, onClose)
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -108,8 +99,8 @@ function BudgetChat({ activeItem, items, open, onOpen, onClose, onSelectItem }: 
 
   return <>
     <button className="chat-launcher" onClick={onOpen} aria-label="เปิดน้องเพนกวิน ผู้ช่วยถามตอบงบประมาณ"><span>AI</span><strong>ถามน้องเพนกวิน</strong></button>
-    {open && <div className="chat-backdrop" onMouseDown={onClose}>
-      <aside className="chat-panel" role="dialog" aria-modal="true" aria-labelledby="chat-title" onMouseDown={(event) => event.stopPropagation()}>
+    {open && <div className="chat-backdrop" role="presentation" onMouseDown={onClose}>
+      <aside ref={panelRef} className="chat-panel" role="dialog" aria-modal="true" aria-labelledby="chat-title" tabIndex={-1} onMouseDown={(event) => event.stopPropagation()}>
         <header className="chat-head">
           <div><span>น้องเพนกวิน / BUDGET RESEARCH</span><h2 id="chat-title">ผู้ช่วยค้นคว้างบประมาณ</h2><p>ค้นคำตอบจากข้อมูลในงบแกะและแสดงหลักฐานที่เกี่ยวข้อง</p></div>
           <button onClick={onClose} aria-label="ปิดผู้ช่วยถามตอบ">×</button>
@@ -117,7 +108,7 @@ function BudgetChat({ activeItem, items, open, onOpen, onClose, onSelectItem }: 
         <div className="chat-focus">
           <label htmlFor="chat-budget-search">ค้นและเลือกรายการงบ ({items.length.toLocaleString('th-TH')} รายการ)</label>
           <input id="chat-budget-search" value={itemQuery} onChange={(event) => setItemQuery(event.target.value)} placeholder="พิมพ์ชื่อรายการ หน่วยงาน หรือโครงการ" />
-          <select id="chat-budget-item" value={activeItem.id} onChange={(event) => selectItem(event.target.value)}>
+          <select id="chat-budget-item" aria-label="รายการงบที่เลือก" value={activeItem.id} onChange={(event) => selectItem(event.target.value)}>
             {!activeItemIsListed && <optgroup label="รายการที่เลือกอยู่"><option value={activeItem.id}>{activeItem.score} คะแนน | {activeItem.item} | {activeItem.agency}</option></optgroup>}
             <optgroup label={itemQuery ? `ผลค้นหา ${matchingItems.length.toLocaleString('th-TH')} รายการ` : 'รายการคะแนนสูงสุด 200 รายการ'}>
               {matchingItems.map((item) => <option value={item.id} key={item.id}>{item.score} คะแนน | {item.item} | {item.agency}</option>)}

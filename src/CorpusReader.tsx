@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useModalAccessibility } from './useModalAccessibility'
 
 type CorpusRecord = {
   type: string
@@ -11,6 +12,13 @@ type CorpusRecord = {
   table?: number
   slide?: number
   image?: number
+  story?: string
+  part?: string
+  textbox?: number
+  comment_id?: number | string
+  note_id?: number | string
+  note?: number
+  shape_path?: string
   cells?: string[]
 }
 
@@ -132,6 +140,13 @@ const locator = (record: CorpusRecord) => {
   if (record.table) parts.push(`ตาราง ${formatCount(record.table)}`)
   if (record.slide) parts.push(`สไลด์ ${formatCount(record.slide)}`)
   if (record.image) parts.push(`ภาพ ${formatCount(record.image)}`)
+  if (record.story) parts.push(`ส่วน ${record.story}`)
+  if (record.part) parts.push(`พาร์ต ${record.part}`)
+  if (record.textbox) parts.push(`กล่องข้อความ ${formatCount(record.textbox)}`)
+  if (record.comment_id !== undefined) parts.push(`ความเห็น ${record.comment_id}`)
+  if (record.note_id !== undefined) parts.push(`เชิงอรรถ ${record.note_id}`)
+  if (record.note) parts.push(`บันทึก ${formatCount(record.note)}`)
+  if (record.shape_path) parts.push(`วัตถุ ${record.shape_path}`)
   return parts.join(' / ') || 'เนื้อหาในไฟล์'
 }
 
@@ -231,6 +246,17 @@ export default function CorpusReader() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const abortRef = useRef<AbortController | null>(null)
+  const documentRef = useRef<HTMLDivElement>(null)
+  const insideSearchRef = useRef<HTMLInputElement>(null)
+
+  const closeDocument = () => {
+    abortRef.current?.abort()
+    setSelected(null)
+    setRecords([])
+    setError('')
+  }
+
+  useModalAccessibility(Boolean(selected), documentRef, insideSearchRef, closeDocument)
 
   useEffect(() => {
     Promise.all([
@@ -250,24 +276,6 @@ export default function CorpusReader() {
       .catch((reason) => setError(reason instanceof Error ? reason.message : 'เปิดดัชนีไม่สำเร็จ'))
     return () => abortRef.current?.abort()
   }, [])
-
-  useEffect(() => {
-    if (!selected) return
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
-      abortRef.current?.abort()
-      setSelected(null)
-      setRecords([])
-      setError('')
-    }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => {
-      document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', closeOnEscape)
-    }
-  }, [selected])
 
   const analysisContextByFile = useMemo(() => {
     const byFile = new Map<string, string[]>()
@@ -336,8 +344,8 @@ export default function CorpusReader() {
       <div className="corpus-reader-head">
         <div>
           <span className="panel-kicker">FULL TEXT CORPUS</span>
-          <h3>อ่านเนื้อหาทุกหน้าและทุกแถวบนเว็บ</h3>
-          <p>เลือกไฟล์แล้วอ่านต่อได้ทันที ตำแหน่งหน้า ชีต แถว ย่อหน้า และสไลด์จะติดอยู่กับข้อความทุกชิ้น</p>
+          <h3>อ่านเนื้อหาที่จัดทำดัชนีบนเว็บ</h3>
+          <p>เลือกไฟล์แล้วอ่านต่อได้ทันที ระเบียนระบุตำแหน่งตามชนิดต้นฉบับ เช่น หน้า ชีต แถว ย่อหน้า สไลด์ ส่วนหัว เชิงอรรถ และกล่องข้อความ</p>
         </div>
         <div className="corpus-coverage" aria-live="polite">
           <strong>{formatCount(completed)}<small> / {formatCount(meta?.inventory_files || 694)}</small></strong>
@@ -354,7 +362,7 @@ export default function CorpusReader() {
 
       {analysis && <section className="corpus-analysis-panel" aria-labelledby="corpus-analysis-title">
         <header className="corpus-analysis-head">
-          <div><span className="panel-kicker">EVIDENCE MAP / REVIEW QUEUE</span><h4 id="corpus-analysis-title">วิเคราะห์ข้อความทุกหน้า แล้วจัดลำดับหลักฐานที่ควรตรวจสอบต่อ</h4></div>
+          <div><span className="panel-kicker">EVIDENCE MAP / REVIEW QUEUE</span><h4 id="corpus-analysis-title">วิเคราะห์ข้อความที่จัดทำดัชนี แล้วจัดลำดับหลักฐานที่ควรตรวจสอบต่อ</h4></div>
           <div className="corpus-analysis-totals"><span><b>{formatCount(analysis.meta.analyzed_files)}</b> แฟ้ม</span><span><b>{formatCount(analysis.meta.analyzed_units)}</b> หน้าและแถว</span><span><b>{formatCount(analysis.meta.money_mentions)}</b> จุดที่กล่าวถึงเงิน</span></div>
         </header>
 
@@ -364,8 +372,8 @@ export default function CorpusReader() {
           </div>)}
         </div>
 
-        <div className="signal-switcher" role="tablist" aria-label="ชนิดสัญญาณจากคลังเอกสาร">
-          {signalViews.map((item) => <button key={item.id} className={signalKind === item.id ? 'active' : ''} onClick={() => setSignalKind(item.id)} role="tab" aria-selected={signalKind === item.id}>
+        <div className="signal-switcher" role="group" aria-label="ชนิดสัญญาณจากคลังเอกสาร">
+          {signalViews.map((item) => <button key={item.id} className={signalKind === item.id ? 'active' : ''} onClick={() => setSignalKind(item.id)} aria-pressed={signalKind === item.id}>
             <strong>{item.label}</strong><small>{formatCount(analysis.signal_counts[item.id] || 0)} รายการ</small>
           </button>)}
         </div>
@@ -394,7 +402,7 @@ export default function CorpusReader() {
       <div className="corpus-result-line"><strong>{formatCount(files.length)} ไฟล์</strong><span>ค้นจากชื่อ เส้นทาง ตัวอย่างข้อความ และบริบทตัวเลข</span></div>
       <div className="corpus-file-grid">
         {files.slice(0, limit).map((file) => <article className={selected?.id === file.id ? 'active' : ''} key={file.id}>
-          <div className="corpus-file-top"><span>{fileKind(file)}</span><i className={`corpus-status ${file.status}`}>{file.status === 'complete' ? 'อ่านครบ' : file.status === 'error' ? 'ตรวจซ้ำ' : 'กำลังอ่าน'}</i></div>
+          <div className="corpus-file-top"><span>{fileKind(file)}</span><i className={`corpus-status ${file.status}`}>{file.status === 'complete' ? 'จัดทำดัชนีแล้ว' : file.status === 'error' ? 'ตรวจซ้ำ' : 'กำลังจัดทำดัชนี'}</i></div>
           <h4>{file.title}</h4>
           <p>{file.path || file.category}</p>
           <div className="corpus-file-facts"><span>{formatBytes(file.size)}</span><span>{structureText(file)}</span>{file.lines > 0 && <span>{formatCount(file.lines)} บรรทัด</span>}</div>
@@ -409,14 +417,14 @@ export default function CorpusReader() {
       {index && files.length === 0 && <div className="corpus-empty">ไม่พบไฟล์ที่ตรงกับเงื่อนไข</div>}
       {limit < files.length && <button className="load-more" onClick={() => setLimit((value) => value + 24)}>แสดงอีก 24 ไฟล์</button>}
 
-      {selected && <div className="corpus-document" role="dialog" aria-modal="true" aria-label={`เนื้อหา ${selected.title}`}>
+      {selected && <div ref={documentRef} className="corpus-document" role="dialog" aria-modal="true" aria-label={`เนื้อหา ${selected.title}`} tabIndex={-1}>
         <div className="corpus-document-head">
           <div><span>{fileKind(selected)} / {structureText(selected)}</span><h3>{selected.title}</h3><p>{selected.path}</p></div>
-          <button onClick={() => { abortRef.current?.abort(); setSelected(null); setRecords([]); setError('') }} aria-label="ปิดตัวอ่าน">×</button>
+          <button onClick={closeDocument} aria-label="ปิดตัวอ่าน">×</button>
         </div>
         <form className="inside-search" onSubmit={(event) => { event.preventDefault(); void loadPage(selected, 0, insideQuery) }}>
-          <label><span>ค้นภายในไฟล์นี้</span><input value={insideQuery} onChange={(event) => setInsideQuery(event.target.value)} placeholder="พิมพ์ชื่อโครงการ รายการ หรือจำนวนเงิน" /></label>
-          <button type="submit">ค้นทุกหน้าและทุกแถว</button>
+          <label><span>ค้นภายในไฟล์นี้</span><input ref={insideSearchRef} value={insideQuery} onChange={(event) => setInsideQuery(event.target.value)} placeholder="พิมพ์ชื่อโครงการ รายการ หรือจำนวนเงิน" /></label>
+          <button type="submit">ค้นเนื้อหาที่จัดทำดัชนี</button>
           {appliedInsideQuery && <button type="button" onClick={() => { setInsideQuery(''); void loadPage(selected, 0, '') }}>ล้างคำค้น</button>}
         </form>
         <div className="reader-status" aria-live="polite">
