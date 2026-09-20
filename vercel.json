@@ -3,6 +3,9 @@
     "api/chat.js": {
       "includeFiles": "public/data/**",
       "maxDuration": 30
+    },
+    "api/data.js": {
+      "includeFiles": "public/data/**"
     }
   },
   "headers": [

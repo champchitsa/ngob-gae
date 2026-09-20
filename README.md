@@ -56,13 +56,9 @@ docker compose -p ngob-gae-dev-2569 up --build
 
 คำสั่งนี้ไม่กำหนดชื่อ container แบบตายตัวและไม่ใช้ network หรือ volume ร่วมกับโปรเจกต์อื่น จึงหยุดเฉพาะชุดนี้ได้ด้วย `docker compose -p ngob-gae-dev-2569 down`
 
-คำสั่งข้างต้นเปิดเฉพาะส่วนติดต่อผู้ใช้ หากต้องการทดสอบน้องเพนกวินซึ่งใช้ Pathumma เป็นเทคโนโลยีภาษา ให้คัดลอก `.env.example` เป็น `.env.local` ใส่ `PATHUMMA_API_KEY` แล้วใช้ Vercel Development Server:
+`npm run dev` เปิดส่วนติดต่อผู้ใช้สำหรับงานหน้าเว็บ ส่วน Docker เปิดทั้งหน้าเว็บ `/api/data` และ `/api/chat` หากต้องการทดสอบน้องเพนกวิน ให้คัดลอก `.env.example` เป็น `.env.local` และใส่ `PATHUMMA_API_KEY` ก่อนสั่ง Docker Compose ไฟล์ Compose จะส่ง environment เข้า container โดยไม่คัดลอกไฟล์ลับเข้า image
 
-```bash
-npx vercel dev
-```
-
-กุญแจ API อยู่ฝั่ง server เท่านั้น เบราว์เซอร์เรียก `/api/chat` และไม่เห็นค่ากุญแจ ระบบค้นคืนข้อมูลจาก `public/data/case-files.json` และ `public/data/big-data-findings.json` จำกัดความยาวคำถาม จำกัดอัตราการเรียก และตั้งเวลาสูงสุดของ Vercel Function ไว้ 30 วินาที
+กุญแจ API อยู่ฝั่ง server เท่านั้น เบราว์เซอร์เรียก `/api/chat` และไม่เห็นค่ากุญแจ ระบบค้นคืนข้อมูลจากดัชนี PBO คลังหลักฐาน กรรมาธิการ และตัวบทกฎหมาย จำกัดความยาวคำถาม จำกัดอัตราการเรียก และตั้งเวลาสูงสุดของ Vercel Function ไว้ 30 วินาที
 
 ## Public JSON API
 

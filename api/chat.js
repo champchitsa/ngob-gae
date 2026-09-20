@@ -187,6 +187,7 @@ function retrieve(question, focusId) {
       const caseScore = selectedCases.some(({ item }) => item.laws.some((label) => (law.aliases ?? []).includes(label))) ? 5 : 0
       return { ...law, score: sectionScore + aliasScore + terms.filter((term) => searchable.includes(term)).length + caseScore }
     })
+    .filter((law) => law.score >= (asksAboutLaw ? 1 : 5))
     .sort((a, b) => b.score - a.score)
     .slice(0, 3)
 
@@ -203,7 +204,7 @@ function retrieve(question, focusId) {
   const bestFileScore = rankedFiles[0]?.score ?? 0
   const relevantFiles = rankedFiles
     .filter((entry) => entry.score >= Math.max(3, bestFileScore * 0.45))
-    .slice(0, 6)
+    .slice(0, 4)
     .map(({ file }) => file)
   const evidenceSignals = Object.values(corpusAnalysis.signals ?? {}).flat()
   const relevantEvidence = evidenceSignals
@@ -222,7 +223,7 @@ function retrieve(question, focusId) {
     .map((meeting) => {
       const title = meeting.title.toLocaleLowerCase('th')
       const summary = meeting.summary
-      const summaryText = summary ? `${summary.overview} ${summary.issues.map((item) => `${item.title} ${item.desc}`).join(' ')} ${summary.homework.map((item) => `${item.task} ${item.detail}`).join(' ')}` : ''
+      const summaryText = summary ? JSON.stringify(summary) : ''
       const description = `${meeting.description} ${summaryText}`.toLocaleLowerCase('th')
       const score = meetingTerms.reduce((sum, term) => sum + (title.includes(term) ? 6 : 0) + (description.includes(term) ? 2 : 0), 0)
       return { meeting, score }
@@ -231,8 +232,9 @@ function retrieve(question, focusId) {
   const hasMeetingMatch = bestMeetingScore > 0
   const relevantMeetings = rankedMeetings
     .filter((entry) => hasMeetingMatch ? entry.score >= Math.max(4, bestMeetingScore * 0.45) : asksCommittee)
+    .filter((entry) => asksCommittee || entry.score >= 6)
     .sort((a, b) => b.score - a.score || (b.meeting.date ?? '').localeCompare(a.meeting.date ?? ''))
-    .slice(0, 6)
+    .slice(0, asksCommittee ? 6 : 2)
     .map(({ meeting }) => meeting)
   const asksHistory = /ย้อนหลัง|แนวโน้ม|เทียบปี|เปรียบเทียบปี|อนุกรมเวลา|ตั้งแต่ปี|ปี\s*(?:25|20)\d{2}/.test(question)
   const requestedYears = [...question.matchAll(/(?:25|20)\d{2}/g)].map((match) => Number(match[0]))
@@ -248,11 +250,11 @@ function retrieve(question, focusId) {
 
   const itemText = selected.map(({ item }, index) => `[รายการ ${index + 1}] ${item.item}\nหน่วยงาน: ${item.agency}\nกระทรวง: ${item.ministry}\nโครงการ: ${item.project}\nตาม พ.ร.บ.: ${item.act} ล้านบาท | หลังโอน: ${item.adjusted} ล้านบาท | เปลี่ยนแปลง: ${item.delta} ล้านบาท | เบิกจ่ายรวม PO: ${item.committed} ล้านบาท | อัตรา: ${item.rate ?? 'ไม่มีค่า'}%\nสัญญาณ: ${item.signals.join(', ')}\nที่มา: ${SOURCE_URL}`).join('\n\n')
   const caseText = selectedCases.map(({ item }, index) => `[แฟ้ม ${index + 1}] ${item.title}\nหน่วยงาน: ${item.agency}\nประเด็น: ${item.lead}\nสิ่งที่ข้อมูลบอก: ${item.finding}\nข้อควรระวัง: ${item.caution}\nระดับข้อมูล: ${item.dataLevel}\nความครบถ้วน: ${item.completeness}\nคำถามตรวจต่อ: ${item.questions.join(' | ')}\nเอกสารที่ควรขอ: ${item.requestDocs.join(' | ')}\nกฎหมาย: ${item.laws.join(' | ')}\nที่มา: ${item.sourceUrl}`).join('\n\n')
-  const fileText = relevantFiles.map((file, index) => `[ไฟล์ ${index + 1}] ${file.title}\nหมวด: ${file.category}\nตำแหน่งในคลัง: ${file.path || 'โฟลเดอร์หลัก'}\nชนิด: ${file.type}\nขนาด: ${formatBytes(file.size)}\nสถานะการอ่าน: ${file.status === 'complete' ? 'อ่านและจัดทำดัชนีแล้ว' : file.status === 'error' ? 'ต้องตรวจซ้ำ' : 'อยู่ระหว่างประมวลผล'}\nโครงสร้าง: ${file.units ?? 0} หน้า แถว หรือส่วนเนื้อหา | ${file.lines ?? 0} บรรทัด | ${file.cells ?? 0} เซลล์ | OCR ${file.ocr_units ?? 0} หน่วย\nตัวอย่างข้อความ: ${(file.preview ?? []).map((record) => record.text).filter(Boolean).slice(0, 3).join(' | ') || 'ยังไม่มีข้อความตัวอย่าง'}\nที่มา: ${file.url}`).join('\n\n')
+  const fileText = relevantFiles.map((file, index) => `[ไฟล์ ${index + 1}] ${file.title}\nหมวด: ${file.category}\nตำแหน่งในคลัง: ${file.path || 'โฟลเดอร์หลัก'}\nชนิด: ${file.type}\nขนาด: ${formatBytes(file.size)}\nสถานะการอ่าน: ${file.status === 'complete' ? 'อ่านและจัดทำดัชนีแล้ว' : file.status === 'error' ? 'ต้องตรวจซ้ำ' : 'อยู่ระหว่างประมวลผล'}\nโครงสร้าง: ${file.units ?? 0} หน้า แถว หรือส่วนเนื้อหา | ${file.lines ?? 0} บรรทัด | ${file.cells ?? 0} เซลล์ | OCR ${file.ocr_units ?? 0} หน่วย\nตัวอย่างข้อความ: ${(file.preview ?? []).map((record) => record.text).filter(Boolean).slice(0, 1).map((text) => text.slice(0, 500)).join(' | ') || 'ยังไม่มีข้อความตัวอย่าง'}\nที่มา: ${file.url}`).join('\n\n')
   const evidenceText = relevantEvidence.map((item, index) => `[หลักฐาน ${index + 1}] ${item.label}\nแฟ้ม: ${item.title}\nตำแหน่ง: ${item.locator_label}\nวิธีอ่านข้อความ: ${item.extraction === 'ocr' ? 'OCR ภาษาไทยและอังกฤษ' : 'ข้อความฝังหรือข้อมูลมีโครงสร้าง'}\nจำนวนเงิน: ${item.amount ? `${item.amount.toLocaleString('th-TH')} บาท` : 'ไม่ระบุ'}\nเหตุผลที่จัดคิว: ${item.explanation}\nบริบทจากต้นทาง: ${item.context}\nที่มา: ${item.source_url}`).join('\n\n')
   const committeeText = relevantMeetings.map((meeting, index) => {
     const summary = meeting.summary
-    const issues = summary?.issues.slice(0, 4).map((item, itemIndex) => `${itemIndex + 1}) ${item.title}: ${item.desc}`).join('\n') || 'ไม่มีข้อมูลสาระรายประเด็นในดัชนี'
+    const issues = summary?.issues.slice(0, 4).map((item, itemIndex) => `${itemIndex + 1}) ${item.title}: ${item.desc || item.public || item.why || item.q || item.ask || 'ไม่มีคำอธิบายเพิ่มเติม'}`).join('\n') || 'ไม่มีข้อมูลสาระรายประเด็นในดัชนี'
     const homework = summary?.homework.slice(0, 4).map((item, itemIndex) => `${itemIndex + 1}) ${item.task}: ${item.detail}`).join('\n') || 'ไม่มีข้อมูลงานติดตามต่อในดัชนี'
     return `[กมธ. ${index + 1}] ${meeting.title}\nวันประชุม: ${meeting.dateLabel} | ${meeting.roundLabel} ${meeting.session}\nขอบเขตวาระ: ${meeting.description}\nสถานะ: ${meeting.hasSummary ? 'มีสรุปหลังประชุม' : 'ยังไม่มีสรุปหลังประชุม'}\nภาพรวมจากหน้าสรุปต้นทาง: ${summary?.overview || 'ไม่มีข้อมูล'}\nสาระรายประเด็นจากหน้าสรุปต้นทาง:\n${issues}\nงานติดตามต่อจากหน้าสรุปต้นทาง:\n${homework}\nที่มา: ${meeting.summaryUrl ?? committee.meta.sourceUrl}`
   }).join('\n\n')
@@ -366,7 +368,7 @@ function buildCommitteeAnswer(question, meetings) {
   const rows = meetings.slice(0, wantsDates ? 6 : 3).map((meeting, index) => {
     const summary = meeting.summary
     const includeDetail = wantsDetails && index < 3
-    const issues = includeDetail ? summary?.issues.slice(0, 2).map((item) => `- ${item.title || 'ไม่ระบุชื่อประเด็น'}: ${clip(item.desc || 'ไม่มีคำอธิบายเพิ่มเติม', 230)}`).join('\n') : ''
+    const issues = includeDetail ? summary?.issues.slice(0, 2).map((item) => `- ${item.title || 'ไม่ระบุชื่อประเด็น'}: ${clip(item.desc || item.public || item.why || item.q || item.ask || 'ไม่มีคำอธิบายเพิ่มเติม', 230)}`).join('\n') : ''
     const homework = includeDetail ? summary?.homework.slice(0, 2).map((item) => `- ${item.task || 'ไม่ระบุชื่องาน'}: ${clip(item.detail || 'ไม่มีรายละเอียดเพิ่มเติม', 200)}`).join('\n') : ''
     return `${index + 1}. ${meeting.title} [กมธ. ${index + 1}]\nวันประชุม: ${meeting.dateLabel} | ${meeting.roundLabel} ${meeting.session}\nขอบเขตวาระ: ${meeting.description}\nสถานะ: ${meeting.hasSummary ? 'มีสรุปหลังประชุมและอ่านสาระในเว็บได้' : 'ยังไม่มีสรุปหลังประชุม'}${includeDetail && summary?.overview ? `\nภาพรวมที่หน้าสรุปต้นทางระบุ: ${clip(summary.overview, 420)}` : ''}${issues ? `\nสาระรายประเด็นจากต้นทาง\n${issues}` : ''}${homework ? `\nงานติดตามต่อที่ต้นทางบันทึก\n${homework}` : ''}`
   })
@@ -444,14 +446,19 @@ export default async function handler(request, response) {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({ model: process.env.PATHUMMA_MODEL ?? 'pathumma', messages: [{ role: 'system', content: system }, ...history, { role: 'user', content: `/no_think\n${question}` }], max_tokens: 1200, temperature: 0.2, chat_template_kwargs: { enable_thinking: false } }),
     })
-    if (!upstream.ok) return response.status(502).json({ error: `Pathumma ตอบกลับด้วยสถานะ ${upstream.status}` })
+    if (!upstream.ok) {
+      const answer = buildEvidenceAnswer(question, selectedCases, selectedItems)
+      return response.status(200).json({ answer, sources: visibleSourcesFor(answer, sources), model: 'ngob-gae-index', fallback: true })
+    }
     const payload = await upstream.json()
     const generatedAnswer = cleanAnswer(payload.choices?.[0]?.message?.content ?? payload.choices?.[0]?.text)
-    const answerIsMalformed = !generatedAnswer || generatedAnswer.includes('undefined') || generatedAnswer.length > 5000 || hasRepeatedLines(generatedAnswer) || (selectedCases.length && !generatedAnswer.includes('[แฟ้ม 1]'))
+    const hasTraceableCitation = /\[(?:ข้อมูล|แฟ้ม|รายการ|ไฟล์|หลักฐาน|กมธ\.|ปี)\s*\d+\]/.test(generatedAnswer)
+    const answerIsMalformed = !generatedAnswer || generatedAnswer.includes('undefined') || generatedAnswer.length > 5000 || hasRepeatedLines(generatedAnswer) || (sources.length > 0 && !hasTraceableCitation) || (selectedCases.length && !generatedAnswer.includes('[แฟ้ม 1]'))
     const answer = answerIsMalformed ? buildEvidenceAnswer(question, selectedCases, selectedItems) : generatedAnswer
     if (!answer) return response.status(502).json({ error: 'Pathumma ไม่ได้ส่งข้อความตอบกลับ' })
     return response.status(200).json({ answer, sources: visibleSourcesFor(answer, sources), model: process.env.PATHUMMA_MODEL ?? 'pathumma' })
   } catch {
-    return response.status(502).json({ error: 'เชื่อมต่อ Pathumma ไม่สำเร็จ กรุณาลองใหม่' })
+    const answer = buildEvidenceAnswer(question, selectedCases, selectedItems)
+    return response.status(200).json({ answer, sources: visibleSourcesFor(answer, sources), model: 'ngob-gae-index', fallback: true })
   }
 }

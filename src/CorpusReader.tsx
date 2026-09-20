@@ -321,9 +321,9 @@ export default function CorpusReader() {
     }
   }
 
-  const openFile = (file: CorpusFile) => {
-    setInsideQuery('')
-    void loadPage(file, 0, '')
+  const openFile = (file: CorpusFile, search = '') => {
+    setInsideQuery(search)
+    void loadPage(file, 0, search)
   }
 
   const meta = index?.meta
@@ -378,7 +378,7 @@ export default function CorpusReader() {
               <h5>{item.title}</h5>
               <p>{item.explanation}</p>
               <blockquote>{item.context}</blockquote>
-              <footer>{file?.status === 'complete' && file.corpus_url ? <button onClick={() => openFile(file)}>เปิดตำแหน่งในเว็บ</button> : <span>อยู่ระหว่างจัดทำฉบับอ่านบนเว็บ</span>}<a href={item.source_url} target="_blank" rel="noreferrer">เทียบต้นฉบับ</a></footer>
+              <footer>{file?.status === 'complete' && file.corpus_url ? <button onClick={() => openFile(file, item.context)}>เปิดตำแหน่งในเว็บ</button> : <span>อยู่ระหว่างจัดทำฉบับอ่านบนเว็บ</span>}<a href={item.source_url} target="_blank" rel="noreferrer">เทียบต้นฉบับ</a></footer>
             </article>
           })}
         </div>
