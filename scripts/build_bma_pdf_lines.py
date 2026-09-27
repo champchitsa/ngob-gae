@@ -72,6 +72,8 @@ def main() -> None:
                 if record.get("type") != "page":
                     continue
                 pages += 1
+                if record.get("ocr_unresolved"):
+                    continue
                 for line_number, text in enumerate(str(record.get("text") or "").splitlines(), start=1):
                     found = budget_line(text)
                     if found is None:

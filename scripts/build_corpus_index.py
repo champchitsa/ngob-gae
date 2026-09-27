@@ -36,6 +36,8 @@ def compact_structure(structure: dict) -> dict:
             result[f"{key.removesuffix('s')}_count"] = len(value)
         elif key == "ocr_repaired_pages":
             result["ocr_repaired_count"] = len(value)
+        elif key == "ocr_unresolved_pages":
+            result["ocr_unresolved_count"] = len(value)
         elif key == "sheets":
             result["sheets"] = value
         else:

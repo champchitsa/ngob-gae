@@ -31,7 +31,7 @@ from extract_drive_corpus import (
 
 
 def needs_repair(record: dict, *, cover: bool = False) -> bool:
-    if record.get("type") != "page" or record.get("ocr_repaired") or record.get("method") not in {"ocr", "ocr_error"}:
+    if record.get("type") != "page" or record.get("ocr_repaired") or record.get("ocr_unresolved") or record.get("method") not in {"ocr", "ocr_error"}:
         return False
     text = str(record.get("text") or "")
     return record.get("method") == "ocr_error" or poor_thai_ocr(text) or (cover and ocr_quality_score(text) < 100)
@@ -54,6 +54,7 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
     owns_source = not cached.exists()
     source = cached if cached.exists() else args.temp_dir / f'{item["id"]}{suffix}'
     repaired_pages: list[int] = []
+    unresolved_pages: list[int] = []
     unresolved: list[dict] = []
     try:
         if owns_source:
@@ -77,18 +78,21 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
                     record.update({"text": candidate, "line_count": len(candidate.splitlines()), "method": "ocr", "ocr_repaired": True})
                     repaired_pages.append(page)
                 else:
+                    record["ocr_unresolved"] = True
+                    unresolved_pages.append(page)
                     unresolved.append({"page": page, "reason": "no readability improvement"})
             except Exception as error:
                 unresolved.append({"page": page, "reason": f"{type(error).__name__}: {error}"})
 
-        if repaired_pages:
+        if repaired_pages or unresolved_pages:
             stats = FileStats()
             for record in records:
                 if record.get("type") == "page":
                     stats.add(str(record.get("text") or ""), str(record.get("method") or "embedded"))
             summary = next(record for record in records if record.get("type") == "summary")
             summary.update(stats.as_dict())
-            summary["structure"]["ocr_repaired_pages"] = sorted(repaired_pages)
+            summary["structure"]["ocr_repaired_pages"] = sorted(set(summary["structure"].get("ocr_repaired_pages", [])) | set(repaired_pages))
+            summary["structure"]["ocr_unresolved_pages"] = sorted(set(summary["structure"].get("ocr_unresolved_pages", [])) | set(unresolved_pages))
             summary["structure"]["page_errors"] = [
                 error for error in summary["structure"].get("page_errors", [])
                 if error.get("page") not in repaired_pages
@@ -101,7 +105,7 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
             except Exception:
                 writer.abort()
                 raise
-        return {"id": item["id"], "title": item["title"], "targets": len(targets), "repaired": len(repaired_pages), "pages": repaired_pages, "unresolved": unresolved}
+        return {"id": item["id"], "title": item["title"], "targets": len(targets), "repaired": len(repaired_pages), "pages": repaired_pages, "unresolved_pages": len(unresolved_pages), "unresolved": unresolved}
     finally:
         if owns_source:
             source.unlink(missing_ok=True)
@@ -157,7 +161,7 @@ def main() -> None:
                 temporary = args.report.with_suffix(args.report.suffix + ".part")
                 temporary.write_text(json.dumps({"elapsed_seconds": round(time.time() - started, 1), "files_checked": len(results), "results": results}, ensure_ascii=False, indent=2), encoding="utf-8")
                 temporary.replace(args.report)
-    print(json.dumps({"files_checked": len(results), "pages_repaired": sum(result.get("repaired", 0) for result in results), "errors": sum(bool(result.get("error")) for result in results)}, ensure_ascii=False), flush=True)
+    print(json.dumps({"files_checked": len(results), "pages_repaired": sum(result.get("repaired", 0) for result in results), "pages_unresolved": sum(result.get("unresolved_pages", 0) for result in results), "errors": sum(bool(result.get("error")) for result in results)}, ensure_ascii=False), flush=True)
 
 
 if __name__ == "__main__":

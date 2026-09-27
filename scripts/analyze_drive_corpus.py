@@ -189,6 +189,8 @@ def main() -> None:
                 analyzed_units += 1
                 if record.get("method") == "ocr":
                     ocr_units += 1
+                if record.get("ocr_unresolved"):
+                    continue
                 text = clean(record.get("text") or " ".join(record.get("cells") or []))
                 if not text:
                     continue

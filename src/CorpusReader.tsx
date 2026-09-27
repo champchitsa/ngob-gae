@@ -5,6 +5,8 @@ type CorpusRecord = {
   type: string
   text?: string
   method?: string
+  ocr_unresolved?: boolean
+  ocr_repaired?: boolean
   page?: number
   sheet?: string
   row?: number
@@ -233,6 +235,7 @@ const structureText = (file: CorpusFile) => {
   if (Number(structure.table_rows)) parts.push(`${formatCount(Number(structure.table_rows))} แถวในตาราง`)
   if (Number(structure.images)) parts.push(`${formatCount(Number(structure.images))} ภาพ`)
   if (Number(structure.ocr_repaired_count)) parts.push(`ตรวจ OCR ซ้ำ ${formatCount(Number(structure.ocr_repaired_count))} หน้า`)
+  if (Number(structure.ocr_unresolved_count)) parts.push(`OCR ต้องเทียบต้นฉบับ ${formatCount(Number(structure.ocr_unresolved_count))} หน้า`)
   return parts.join(' / ') || `${formatCount(file.units)} หน่วยข้อมูล`
 }
 
@@ -542,7 +545,7 @@ export default function CorpusReader() {
         <div className="corpus-document-summary"><strong>ภาพรวมเอกสาร</strong><p>{selected.category} · {structureText(selected)} จำนวนเงินด้านล่างเป็นตัวอย่างที่พบพร้อมตำแหน่ง ไม่ใช่ผลรวมงบประมาณ</p><div>{analysis?.file_insights?.[selected.id]?.amounts?.length ? analysis.file_insights[selected.id].amounts.map((item) => <span key={`${item.value}-${item.locator_label}`}><b>{formatBaht(item.value)}</b><small>{item.locator_label}{item.extraction === 'ocr' ? ' · OCR' : ''}</small></span>) : <span><b>ค้นเนื้อหาในเอกสาร</b><small>ยังไม่มีจำนวนเงินที่ผ่านตัวกรองบริบท</small></span>}</div></div>
         <details className="corpus-raw-records" open={Boolean(appliedInsideQuery) || undefined}><summary>อ่านเนื้อหาและตารางจากไฟล์ <span>{appliedInsideQuery ? `ผลค้นหา “${appliedInsideQuery}”` : 'แสดงทีละ 20 ตำแหน่ง'}</span></summary><div className="record-list">
           {records.map((record, index) => <article key={`${page}-${index}-${locator(record)}`}>
-            <header><strong>{locator(record)}</strong>{record.method === 'ocr' && <span>อ่านข้อความด้วย OCR</span>}</header>
+            <header><strong>{locator(record)}</strong>{record.ocr_unresolved ? <span>OCR อ่านไม่ชัด · เทียบต้นฉบับ</span> : record.method === 'ocr' && <span>อ่านข้อความด้วย OCR</span>}</header>
             <RecordBody record={record} query={appliedInsideQuery} file={selected} />
           </article>)}
         </div>
