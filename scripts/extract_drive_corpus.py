@@ -189,13 +189,36 @@ def download_file(item: dict, target: pathlib.Path, retries: int = 3) -> None:
         {"id": item["id"], "export": "download", "confirm": "t"}
     )
     last_error: Exception | None = None
+    ranged = expected >= 80 * 1024 * 1024
+    range_size = 8 * 1024 * 1024
     for attempt in range(1, retries + 1):
-        temp.unlink(missing_ok=True)
+        if not ranged:
+            temp.unlink(missing_ok=True)
         try:
-            request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(request, timeout=300) as response, temp.open("wb") as handle:
-                while chunk := response.read(1024 * 1024):
-                    handle.write(chunk)
+            if ranged:
+                completed = min(expected, (temp.stat().st_size // range_size) * range_size) if temp.exists() else 0
+                with temp.open("r+b" if temp.exists() else "wb") as handle:
+                    handle.truncate(completed)
+                    handle.seek(completed)
+                    for start in range(completed, expected, range_size):
+                        end = min(expected - 1, start + range_size - 1)
+                        request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "Range": f"bytes={start}-{end}"})
+                        with urllib.request.urlopen(request, timeout=90) as response:
+                            content_range = response.headers.get("Content-Range", "")
+                            if response.status != 206 or not content_range.startswith(f"bytes {start}-{end}/{expected}"):
+                                raise IOError(f"unexpected byte range: {content_range or response.status}")
+                            remaining = end - start + 1
+                            while remaining:
+                                chunk = response.read(min(1024 * 1024, remaining))
+                                if not chunk:
+                                    raise IOError(f"range ended early at byte {start}")
+                                handle.write(chunk)
+                                remaining -= len(chunk)
+            else:
+                request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(request, timeout=300) as response, temp.open("wb") as handle:
+                    while chunk := response.read(1024 * 1024):
+                        handle.write(chunk)
             actual = temp.stat().st_size
             if expected and actual != expected:
                 raise IOError(f"downloaded {actual} bytes, expected {expected}")
@@ -203,7 +226,8 @@ def download_file(item: dict, target: pathlib.Path, retries: int = 3) -> None:
             return
         except Exception as error:
             last_error = error
-            temp.unlink(missing_ok=True)
+            if not ranged:
+                temp.unlink(missing_ok=True)
             if attempt < retries:
                 time.sleep(attempt * 2)
     raise RuntimeError(f"download failed after {retries} attempts: {last_error}")
