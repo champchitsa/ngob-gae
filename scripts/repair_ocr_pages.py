@@ -154,6 +154,7 @@ def main() -> None:
     parser.add_argument("--workers", type=int, default=3)
     parser.add_argument("--retry-unresolved", action="store_true", help="recheck pages previously marked hard to read")
     parser.add_argument("--machine-dir", type=pathlib.Path, default=pathlib.Path(".workdata/drive-machine"))
+    parser.add_argument("--tessdata-dir", type=pathlib.Path, default=pathlib.Path.home() / ".cache/ngob-gae-tessdata")
     parser.add_argument("--temp-dir", type=pathlib.Path, default=pathlib.Path.home() / ".cache/ngob-gae-ocr-repair")
     parser.add_argument("--report", type=pathlib.Path)
     args = parser.parse_args()
@@ -166,7 +167,9 @@ def main() -> None:
         items = [item for item in items if item["id"] in set(args.ids)]
     if args.limit:
         items = items[:args.limit]
-    tessdata = pathlib.Path.home() / ".cache/ngob-gae-tessdata"
+    tessdata = args.tessdata_dir
+    if not (tessdata / "tha.traineddata").is_file() or not (tessdata / "eng.traineddata").is_file():
+        raise FileNotFoundError(f"Thai and English OCR models are required in {tessdata}")
     tools = {
         "pdftoppm": find_binary("pdftoppm", [pathlib.Path.home() / ".cache/codex-runtimes/codex-primary-runtime/dependencies/native/poppler/Library/bin/pdftoppm.exe"]),
         "tesseract": find_binary("tesseract", [pathlib.Path("C:/Program Files/Tesseract-OCR/tesseract.exe")]),
