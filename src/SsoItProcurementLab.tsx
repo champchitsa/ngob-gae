@@ -154,7 +154,7 @@ function ProjectEvidence({ project }: { project: Project }) {
 function SsoItProcurementLab({ onAsk }: { onAsk: () => void }) {
   const [data, setData] = useState<SsoItData | null>(null)
   const [catalogue, setCatalogue] = useState<Catalogue | null>(null)
-  const [view, setView] = useState<View>('catalogue')
+  const [view, setView] = useState<View>('overview')
   const [selectedId, setSelectedId] = useState('')
   const [query, setQuery] = useState('')
   const [mode, setMode] = useState<'all' | 'direct' | 'consortium'>('all')
@@ -266,7 +266,7 @@ function SsoItProcurementLab({ onAsk }: { onAsk: () => void }) {
 
     {view === 'overview' && <div className="itlab-view">
       {catalogue && <button className="itlab-catalogue-callout" onClick={() => focusView('catalogue')}>
-        <span><b>เริ่มจากภาพรวม</b><strong>{catalogue.metrics.projects} โครงการ IT และบริการข้อมูลดิจิทัล</strong><small>งบตั้งแต่ 10 ล้านบาท คัดจากตารางรัฐปี 2560 ถึง 2568 • มูลค่าสัญญาที่พบ {money(catalogue.metrics.contractPrice)} ล้านบาท</small></span>
+        <span><b>เปิดทะเบียนโครงการ</b><strong>{catalogue.metrics.projects} โครงการ IT และบริการข้อมูลดิจิทัล</strong><small>งบตั้งแต่ 10 ล้านบาท คัดจากตารางรัฐปี 2560 ถึง 2568 • มูลค่าสัญญาที่พบ {money(catalogue.metrics.contractPrice)} ล้านบาท</small></span>
         <em>ค้นและกรองรายชื่อ →</em>
       </button>}
       <div className="itlab-metrics">
