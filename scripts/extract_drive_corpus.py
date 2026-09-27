@@ -241,6 +241,13 @@ def poor_thai_ocr(text: str) -> bool:
     return latin > max(150, thai) and short_latin > latin * 0.4
 
 
+def broken_embedded_thai_text(text: str) -> bool:
+    """Detect Thai PDF font bytes decoded as Latin-1 instead of Thai glyphs."""
+    broken = sum(1 for char in text if 0x80 <= ord(char) <= 0x9F or char in "¦µ¤ÂÃÎ°®¢¨¥")
+    thai = len(re.findall(r"[ก-๙]", text))
+    return broken >= 20 and broken > thai * 0.1
+
+
 def osd_pillow_rotation(output: str) -> int | None:
     """Convert Tesseract's clockwise rotation to Pillow's counterclockwise angle."""
     rotate = re.search(r"^Rotate:\s*(\d+)", output, re.MULTILINE)

@@ -26,7 +26,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 from corpus_pipeline import atomic_write_json, collect_record_assets, sha256_file  # noqa: E402
 from analyze_drive_corpus import credible_amounts  # noqa: E402
-from extract_drive_corpus import FileStats, contiguous_page_batches, extract_docx, extract_pptx, ocr_quality_score, osd_pillow_rotation, poor_thai_ocr  # noqa: E402
+from extract_drive_corpus import FileStats, broken_embedded_thai_text, contiguous_page_batches, extract_docx, extract_pptx, ocr_quality_score, osd_pillow_rotation, poor_thai_ocr  # noqa: E402
 from repair_ocr_pages import needs_repair  # noqa: E402
 
 
@@ -57,6 +57,13 @@ def test_ocr_repair_only_rechecks_suspect_pages() -> None:
     assert not needs_repair({**noisy, "ocr_repaired": True})
     assert not needs_repair({**noisy, "ocr_unresolved": True})
     assert not needs_repair({**noisy, "method": "embedded"})
+
+
+def test_broken_pdf_font_text_is_reocrd_from_the_rendered_page() -> None:
+    broken = ("\x9f¦µ¤ÂÃÎ°®¢¨¥" * 8) + " 39,691.7986 "
+    assert broken_embedded_thai_text(broken)
+    assert needs_repair({"type": "page", "page": 14, "method": "embedded", "text": broken})
+    assert not broken_embedded_thai_text("สำนักงานประกันสังคม งบประมาณ 39,691.7986 บาท")
 
 
 def test_osd_rotation_requires_confidence_and_uses_pillow_direction() -> None:

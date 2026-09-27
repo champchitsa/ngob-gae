@@ -25,15 +25,18 @@ from extract_drive_corpus import (
     find_binary,
     ocr_image,
     ocr_quality_score,
+    broken_embedded_thai_text,
     poor_thai_ocr,
     render_pdf_pages,
 )
 
 
 def needs_repair(record: dict, *, cover: bool = False) -> bool:
-    if record.get("type") != "page" or record.get("ocr_repaired") or record.get("ocr_unresolved") or record.get("method") not in {"ocr", "ocr_error"}:
+    if record.get("type") != "page" or record.get("ocr_repaired") or record.get("ocr_unresolved") or record.get("method") not in {"ocr", "ocr_error", "embedded"}:
         return False
     text = str(record.get("text") or "")
+    if record.get("method") == "embedded":
+        return broken_embedded_thai_text(text)
     return record.get("method") == "ocr_error" or poor_thai_ocr(text) or (cover and ocr_quality_score(text) < 100)
 
 
@@ -67,7 +70,7 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
             try:
                 with tempfile.TemporaryDirectory(dir=args.temp_dir) as directory:
                     folder = pathlib.Path(directory)
-                    image = extract_largest_page_image(reader.pages[page - 1], folder)
+                    image = None if record.get("method") == "embedded" else extract_largest_page_image(reader.pages[page - 1], folder)
                     if image is None:
                         image = render_pdf_pages(source, page, page, folder, tools["pdftoppm"]).get(page)
                     if image is None:
