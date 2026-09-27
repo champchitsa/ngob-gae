@@ -219,6 +219,22 @@ def find_binary(name: str, candidates: Iterable[pathlib.Path]) -> pathlib.Path:
     raise FileNotFoundError(f"required binary not found: {name}")
 
 
+def ocr_quality_score(text: str) -> float:
+    """Prefer legible Thai over stray Latin glyphs on scanned Thai pages."""
+    thai = len(re.findall(r"[ก-๙]", text))
+    latin_tokens = re.findall(r"[A-Za-z]+", text)
+    stray_latin = sum(len(token) for token in latin_tokens if len(token) <= 2)
+    words_latin = sum(len(token) for token in latin_tokens if len(token) > 2)
+    budget_words = sum(text.count(word) for word in ("งบประมาณ", "กรุงเทพมหานคร", "สำนักงาน", "รายจ่าย"))
+    return thai - 2 * stray_latin + 0.2 * words_latin + 12 * budget_words
+
+
+def poor_thai_ocr(text: str) -> bool:
+    thai = len(re.findall(r"[ก-๙]", text))
+    latin = len(re.findall(r"[A-Za-z]", text))
+    return 12 <= thai < 200 and latin > max(20, thai * 0.28)
+
+
 def ocr_image(image_path: pathlib.Path, tesseract: pathlib.Path, tessdata: pathlib.Path) -> str:
     descriptor, prepared_name = tempfile.mkstemp(suffix=".png", dir=tessdata.parent)
     os.close(descriptor)
@@ -233,14 +249,36 @@ def ocr_image(image_path: pathlib.Path, tesseract: pathlib.Path, tessdata: pathl
                 image = image.resize((max(1, int(image.width * scale)), max(1, int(image.height * scale))), Image.Resampling.LANCZOS)
             image = ImageOps.autocontrast(image.convert("L"))
             image.save(prepared, format="PNG", optimize=True)
-        command = [
-            str(tesseract), str(prepared), "stdout", "--tessdata-dir", str(tessdata),
-            "-l", "tha+eng", "--psm", "6", "-c", "preserve_interword_spaces=1",
-        ]
-        result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
-        if result.returncode:
-            raise RuntimeError(result.stderr.strip() or f"tesseract exited {result.returncode}")
-        return clean_text(result.stdout)
+        def recognize(source: pathlib.Path, psm: int) -> str:
+            command = [
+                str(tesseract), str(source), "stdout", "--tessdata-dir", str(tessdata),
+                "-l", "tha+eng", "--psm", str(psm), "-c", "preserve_interword_spaces=1",
+            ]
+            result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
+            if result.returncode:
+                raise RuntimeError(result.stderr.strip() or f"tesseract exited {result.returncode}")
+            return clean_text(result.stdout)
+
+        best = recognize(prepared, 6)
+        if poor_thai_ocr(best):
+            with contextlib.suppress(Exception):
+                alternate = recognize(prepared, 4)
+                if ocr_quality_score(alternate) > ocr_quality_score(best):
+                    best = alternate
+            if poor_thai_ocr(best) or ocr_quality_score(best) < 60:
+                with Image.open(prepared) as image:
+                    for angle in (90, 270):
+                        rotated = prepared.with_name(f"{prepared.stem}-{angle}.png")
+                        try:
+                            image.rotate(angle, expand=True).save(rotated, format="PNG")
+                            alternate = recognize(rotated, 6)
+                            if ocr_quality_score(alternate) > ocr_quality_score(best):
+                                best = alternate
+                        except Exception:
+                            pass
+                        finally:
+                            rotated.unlink(missing_ok=True)
+        return best
     finally:
         prepared.unlink(missing_ok=True)
 
@@ -780,6 +818,9 @@ def process_item(item: dict, args: argparse.Namespace, tools: dict) -> dict:
     suffix = pathlib.Path(item["title"]).suffix.lower() or ".bin"
     output_path = args.output_dir / "records" / f'{item["id"]}.jsonl.gz'
     if output_path.exists() and not args.force:
+        known = tools.get("cached_manifest", {}).get(item["id"])
+        if known and known.get("status") in {"complete", "cached"} and int(known.get("output_bytes") or 0) == output_path.stat().st_size:
+            return {**known, "status": "cached", "output": str(output_path)}
         cached_summary = None
         with gzip.open(output_path, "rt", encoding="utf-8") as handle:
             for line in handle:
@@ -853,6 +894,7 @@ def main() -> None:
     parser.add_argument("--only", choices=["pdf", "sheet", "image", "document", "other"])
     parser.add_argument("--id", action="append", dest="ids", help="process only the selected Drive file id; may be repeated")
     parser.add_argument("--force", action="store_true")
+    parser.add_argument("--manifest-path", type=pathlib.Path, help="write extraction progress outside a synchronized output directory")
     args = parser.parse_args()
 
     inventory = json.loads(args.inventory.read_text(encoding="utf-8"))
@@ -890,12 +932,14 @@ def main() -> None:
     ocr_temp_root = pathlib.Path(os.environ.get("NGOB_GAE_OCR_TEMP", pathlib.Path.home() / ".cache/ngob-gae-ocr-temp"))
     ocr_temp_root.mkdir(parents=True, exist_ok=True)
     tools = {"pdftoppm": pdftoppm, "tesseract": tesseract, "tessdata": tessdata, "temp_root": ocr_temp_root}
-    manifest_path = args.output_dir / "manifest.json"
+    manifest_path = args.manifest_path or args.output_dir / "manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest = {"started_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "inventory_count": len(inventory["files"]), "items": {}}
     if manifest_path.exists():
         with contextlib.suppress(Exception):
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["inventory_count"] = len(inventory["files"])
+    tools["cached_manifest"] = manifest["items"].copy()
 
     lock = threading.Lock()
     completed = 0
@@ -909,9 +953,10 @@ def main() -> None:
                 statuses = Counter(value.get("status") for value in manifest["items"].values())
                 manifest["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
                 manifest["status_counts"] = dict(statuses)
-                temp_manifest = manifest_path.with_suffix(".json.part")
-                temp_manifest.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-                temp_manifest.replace(manifest_path)
+                if completed % 10 == 0 or completed == len(items) or result["status"] == "error":
+                    temp_manifest = manifest_path.with_suffix(".json.part")
+                    temp_manifest.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+                    temp_manifest.replace(manifest_path)
             print(f'[{completed}/{len(items)}] {result["status"]}: {result["title"]}', flush=True)
 
     complete = [value for value in manifest["items"].values() if value.get("status") in {"complete", "cached"}]

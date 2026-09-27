@@ -234,29 +234,27 @@ const structureText = (file: CorpusFile) => {
   return parts.join(' / ') || `${formatCount(file.units)} หน่วยข้อมูล`
 }
 
-const readableOcrText = (record: CorpusRecord, raw: string) => {
+const readableOcrText = (record: CorpusRecord, raw: string, file: CorpusFile) => {
   if (record.method !== 'ocr') return raw
   const normalized = raw.replace(/ํา/g, 'ำ')
-  if (record.page !== 1 || !normalized.includes('ข้อบัญญัติกรุงเทพมหานคร') || !normalized.includes('งบประมาณ')) return normalized
-  return normalized.split('\n')
-    .map((line) => line.trim().replace(/^เร[ืี]?อง(?=\s)/, 'เรื่อง').replace(/งบประมาณรายจาย/g, 'งบประมาณรายจ่าย').replace(/กรง\s+เทพมหานคร/g, 'กรุงเทพมหานคร'))
-    .filter((line) => {
-      const thai = (line.match(/[ก-๙]/g) || []).length
-      const latin = (line.match(/[A-Za-z]/g) || []).length
-      return thai >= 6 && thai / (thai + latin || 1) >= 0.72
-    })
-    .join('\n')
+  if (record.page === 1 && /^ลำดับ\s*\d+/.test(file.title) && (file.category.includes('ข้อบัญญัติ') || file.category.includes('เอกสารประกอบการพิจารณา 70'))) {
+    return `หน้าปกเอกสาร\n${file.title.replace(/\.pdf$/i, '')}\n\nข้อความข้างต้นเรียบเรียงจากชื่อไฟล์ในคลังเอกสาร`
+  }
+  return normalized
 }
 
-function RecordBody({ record, query }: { record: CorpusRecord; query: string }) {
+function RecordBody({ record, query, file }: { record: CorpusRecord; query: string; file: CorpusFile }) {
   const [expanded, setExpanded] = useState(false)
-  const text = readableOcrText(record, record.text || (record.cells || []).join(' | ') || 'ไม่มีข้อความในตำแหน่งนี้')
+  const [showRaw, setShowRaw] = useState(false)
+  const raw = record.text || (record.cells || []).join(' | ') || 'ไม่มีข้อความในตำแหน่งนี้'
+  const readable = readableOcrText(record, raw, file)
+  const text = showRaw ? raw : readable
   const limit = 1800
   const needle = query.trim().toLocaleLowerCase('th')
   const match = needle ? text.toLocaleLowerCase('th').indexOf(needle) : -1
   const start = !expanded && text.length > limit && match > limit ? Math.max(0, match - 300) : 0
   const visible = expanded ? text : text.slice(start, start + limit)
-  return <div className="record-body"><pre>{start > 0 ? '…' : ''}{visible}{!expanded && start + limit < text.length ? '…' : ''}</pre>{text.length > limit && <button type="button" onClick={() => setExpanded((value) => !value)}>{expanded ? 'ย่อข้อความ' : `แสดงข้อความครบ ${formatCount(text.length)} ตัวอักษร`}</button>}</div>
+  return <div className="record-body"><pre>{start > 0 ? '…' : ''}{visible}{!expanded && start + limit < text.length ? '…' : ''}</pre>{text.length > limit && <button type="button" onClick={() => setExpanded((value) => !value)}>{expanded ? 'ย่อข้อความ' : `แสดงข้อความครบ ${formatCount(text.length)} ตัวอักษร`}</button>}{record.method === 'ocr' && readable !== raw && <button type="button" onClick={() => { setShowRaw((value) => !value); setExpanded(false) }}>{showRaw ? 'กลับไปอ่านแบบจัดรูป' : 'ดูข้อความ OCR ดิบ'}</button>}</div>
 }
 
 async function scanCorpus(
@@ -543,7 +541,7 @@ export default function CorpusReader() {
         <details className="corpus-raw-records" open={Boolean(appliedInsideQuery) || undefined}><summary>อ่านเนื้อหาและตารางจากไฟล์ <span>{appliedInsideQuery ? `ผลค้นหา “${appliedInsideQuery}”` : 'แสดงทีละ 20 ตำแหน่ง'}</span></summary><div className="record-list">
           {records.map((record, index) => <article key={`${page}-${index}-${locator(record)}`}>
             <header><strong>{locator(record)}</strong>{record.method === 'ocr' && <span>อ่านข้อความด้วย OCR</span>}</header>
-            <RecordBody record={record} query={appliedInsideQuery} />
+            <RecordBody record={record} query={appliedInsideQuery} file={selected} />
           </article>)}
         </div>
         {!loading && records.length === 0 && <div className="corpus-empty">ไม่พบข้อความที่ตรงกับคำค้นในไฟล์นี้</div>}
