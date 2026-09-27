@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import contextlib
 import gzip
 import json
 import pathlib
@@ -101,7 +102,13 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
             try:
                 with tempfile.TemporaryDirectory(dir=args.temp_dir) as directory:
                     folder = pathlib.Path(directory)
-                    image = None if record.get("method") == "embedded" else extract_largest_page_image(reader.pages[page - 1], folder)
+                    image = None
+                    if record.get("method") != "embedded":
+                        # Some scanned PDFs use JBIG2 images. pypdf raises while
+                        # enumerating them when jbig2dec is absent, but Poppler
+                        # can still render the original page for OCR.
+                        with contextlib.suppress(Exception):
+                            image = extract_largest_page_image(reader.pages[page - 1], folder)
                     used_embedded_image = image is not None
                     if image is None:
                         image = render_pdf_pages(source, page, page, folder, tools["pdftoppm"]).get(page)

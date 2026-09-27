@@ -232,6 +232,11 @@ function SsoItProcurementLab({ onAsk }: { onAsk: () => void }) {
     window.setTimeout(() => document.getElementById(`it-project-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 10)
   }
 
+  const focusView = (next: View) => {
+    setView(next)
+    window.requestAnimationFrame(() => document.querySelector('.itlab-tabs')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }))
+  }
+
   return <section className="itlab" id="sso-it" aria-labelledby="sso-it-title">
     <div className="itlab-hero">
       <div className="itlab-hero-copy">
@@ -239,8 +244,8 @@ function SsoItProcurementLab({ onAsk }: { onAsk: () => void }) {
         <h2 id="sso-it-title">เจาะงบ IT ประกันสังคม</h2>
         <p>ค้นทะเบียนโครงการ IT จากข้อมูลจัดซื้อภาครัฐ แล้วเจาะแฟ้มหลักฐานผู้รับงาน ราคาที่เสนอ และสมาชิกกิจการร่วมค้า</p>
         <div className="itlab-actions">
-          <button onClick={() => setView('catalogue')}>ค้นทะเบียน {catalogue?.metrics.projects ?? ''} โครงการ</button>
-          <button onClick={() => setView('projects')}>ดูแฟ้มหลักฐาน 8 โครงการ</button>
+          <button onClick={() => focusView('catalogue')}>ค้นทะเบียน {catalogue?.metrics.projects ?? ''} โครงการ</button>
+          <button onClick={() => focusView('projects')}>ดูแฟ้มหลักฐาน 8 โครงการ</button>
           <button onClick={onAsk}>ถามน้องเพนกวิน</button>
           <a href="/data/sso-it-procurement.json" download>ดาวน์โหลด JSON</a>
         </div>
@@ -260,7 +265,7 @@ function SsoItProcurementLab({ onAsk }: { onAsk: () => void }) {
     </div>
 
     {view === 'overview' && <div className="itlab-view">
-      {catalogue && <button className="itlab-catalogue-callout" onClick={() => setView('catalogue')}>
+      {catalogue && <button className="itlab-catalogue-callout" onClick={() => focusView('catalogue')}>
         <span><b>เริ่มจากภาพรวม</b><strong>{catalogue.metrics.projects} โครงการ IT และบริการข้อมูลดิจิทัล</strong><small>งบตั้งแต่ 10 ล้านบาท คัดจากตารางรัฐปี 2560 ถึง 2568 • มูลค่าสัญญาที่พบ {money(catalogue.metrics.contractPrice)} ล้านบาท</small></span>
         <em>ค้นและกรองรายชื่อ →</em>
       </button>}

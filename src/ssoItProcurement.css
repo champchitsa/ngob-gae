@@ -36,7 +36,7 @@
 .itlab-quick-select > button { height: 44px; border: 1px solid var(--it-black); background: var(--it-black); color: white; padding: 0 16px; font-weight: 800; cursor: pointer; }
 .itlab-quick-select > button:hover { background: var(--it-blue); }
 
-.itlab-tabs { display: grid; grid-template-columns: repeat(5, 1fr); border-bottom: 1px solid var(--it-black); background: white; }
+.itlab-tabs { display: grid; grid-template-columns: repeat(5, 1fr); border-bottom: 1px solid var(--it-black); background: white; scroll-margin-top: 70px; }
 .itlab-tabs button { min-height: 56px; padding: 12px; border: 0; border-right: 1px solid var(--it-black); background: transparent; color: var(--it-black); font-size: 13px; font-weight: 800; cursor: pointer; }
 .itlab-tabs button:last-child { border-right: 0; }
 .itlab-tabs button.active { background: var(--it-blue); color: white; }
@@ -242,6 +242,7 @@
 .itlab-sources a small { margin-top: auto; padding-top: 12px; color: var(--it-yellow); font: 500 9px 'IBM Plex Mono', monospace; }
 
 @media (max-width: 1040px) {
+  .itlab-catalogue-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .itlab-catalogue-table { overflow: visible; border: 0; background: transparent; }
   .itlab-catalogue-table table, .itlab-catalogue-table tbody { display: block; width: 100%; min-width: 0; }
   .itlab-catalogue-table thead { display: none; }
