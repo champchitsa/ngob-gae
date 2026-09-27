@@ -97,7 +97,7 @@ test('SSO IT register keeps original winner evidence separate from CSV labels', 
   const result = response()
   data({ method: 'GET', url: '/api/data?dataset=sso_it&download=1', headers: { host: 'ngob-gae.vercel.app' } }, result)
   assert.equal(result.statusCode, 200)
-  assert.equal(result.body.rows.length, 37)
+  assert.equal(result.body.rows.length, 51)
   const consortium = result.body.rows.find((row) => row.id === '64057333869')
   assert.equal(consortium.verifiedMode, 'consortium')
   assert.match(consortium.winnerInCsv, /แอ็ดวานซ์/)
@@ -107,6 +107,9 @@ test('SSO IT register keeps original winner evidence separate from CSV labels', 
   assert.equal(newDirect.verifiedMode, 'direct')
   assert.equal(newDirect.documentChecked, false)
   assert.match(newDirect.winnerDocumentUrl, /DocumentEGP/)
+  assert.ok(result.body.rows.some((row) => row.id === '65057511711' && row.category === 'ระบบ IT และข้อมูล'))
+  assert.ok(result.body.rows.some((row) => row.id === '68019346280' && row.winnerInCsv === null))
+  assert.ok(!result.body.rows.some((row) => row.id === '63117310689'))
 })
 
 test('SSO IT answer uses the expanded official register and distinguishes verification levels', async () => {

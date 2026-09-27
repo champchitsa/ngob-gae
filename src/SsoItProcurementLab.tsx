@@ -65,7 +65,7 @@ type SsoItData = {
 }
 
 type CatalogueProject = {
-  id: string; title: string; year: number; department: string; method: string
+  id: string; title: string; category: string; year: number; department: string; method: string
   budget: number; referencePrice: number | null; contractPrice: number
   winnerInCsv: string | null; verifiedWinner: string | null
   verifiedMode: 'direct' | 'consortium' | null; documentChecked: boolean
@@ -74,7 +74,7 @@ type CatalogueProject = {
 }
 type Catalogue = {
   meta: { selection: string; limits: string; accessedAt: string; sources: { year: number; url: string }[] }
-  metrics: { projects: number; contractPrice: number; aitLabelProjects: number; aitLabelContractPrice: number; aitWinnerDocumentProjects: number; aitWinnerDocumentContractPrice: number; aitDirectProjects: number; aitDirectContractPrice: number; aitConsortiumProjects: number; aitConsortiumContractPrice: number; documentCheckedProjects: number }
+  metrics: { projects: number; contractPrice: number; aitLabelProjects: number; aitLabelContractPrice: number; aitWinnerDocumentProjects: number; aitWinnerDocumentContractPrice: number; aitDirectProjects: number; aitDirectContractPrice: number; aitConsortiumProjects: number; aitConsortiumContractPrice: number; documentCheckedProjects: number; withinOnePercentOfReference: number }
   winners: { name: string; projects: number; contractPrice: number }[]
   projects: CatalogueProject[]
 }
@@ -160,6 +160,7 @@ function SsoItProcurementLab({ onAsk }: { onAsk: () => void }) {
   const [catalogueQuery, setCatalogueQuery] = useState('')
   const [catalogueYear, setCatalogueYear] = useState('all')
   const [catalogueWinner, setCatalogueWinner] = useState('all')
+  const [catalogueCategory, setCatalogueCategory] = useState('all')
 
   useEffect(() => {
     fetch('/data/sso-it-procurement.json')
@@ -203,8 +204,9 @@ function SsoItProcurementLab({ onAsk }: { onAsk: () => void }) {
       return terms.every((term) => haystack.includes(term))
         && (catalogueYear === 'all' || String(project.year) === catalogueYear)
         && (catalogueWinner === 'all' || project.winnerInCsv === catalogueWinner)
+        && (catalogueCategory === 'all' || project.category === catalogueCategory)
     })
-  }, [catalogue, catalogueQuery, catalogueYear, catalogueWinner])
+  }, [catalogue, catalogueQuery, catalogueYear, catalogueWinner, catalogueCategory])
 
   if (!data) return <section className="itlab itlab-loading" id="sso-it"><strong>กำลังเปิดแฟ้มจัดซื้อ IT ประกันสังคม</strong><span>กำลังเชื่อมโครงการกับหลักฐาน e-GP</span></section>
 
@@ -224,7 +226,7 @@ function SsoItProcurementLab({ onAsk }: { onAsk: () => void }) {
         <h2 id="sso-it-title">เจาะงบ IT ประกันสังคม</h2>
         <p>ค้นทะเบียนโครงการ IT จากข้อมูลจัดซื้อภาครัฐ แล้วเจาะแฟ้มหลักฐานผู้รับงาน ราคาที่เสนอ และสมาชิกกิจการร่วมค้า</p>
         <div className="itlab-actions">
-          <button onClick={() => setView('catalogue')}>ค้นทะเบียน 37 โครงการ</button>
+          <button onClick={() => setView('catalogue')}>ค้นทะเบียน {catalogue?.metrics.projects ?? ''} โครงการ</button>
           <button onClick={() => setView('projects')}>ดูแฟ้มหลักฐาน 8 โครงการ</button>
           <button onClick={onAsk}>ถามน้องเพนกวิน</button>
           <a href="/data/sso-it-procurement.json" download>ดาวน์โหลด JSON</a>
@@ -256,7 +258,7 @@ function SsoItProcurementLab({ onAsk }: { onAsk: () => void }) {
 
     {view === 'overview' && <div className="itlab-view">
       {catalogue && <button className="itlab-catalogue-callout" onClick={() => setView('catalogue')}>
-        <span><b>เริ่มจากภาพรวม</b><strong>{catalogue.metrics.projects} โครงการ IT ในตารางรัฐ</strong><small>งบตั้งแต่ 10 ล้านบาท คัดจากชื่อโครงการ ปี 2560 ถึง 2568 • มูลค่าสัญญาที่พบ {money(catalogue.metrics.contractPrice)} ล้านบาท</small></span>
+        <span><b>เริ่มจากภาพรวม</b><strong>{catalogue.metrics.projects} โครงการ IT และบริการข้อมูลดิจิทัล</strong><small>งบตั้งแต่ 10 ล้านบาท คัดจากตารางรัฐปี 2560 ถึง 2568 • มูลค่าสัญญาที่พบ {money(catalogue.metrics.contractPrice)} ล้านบาท</small></span>
         <em>ค้นและกรองรายชื่อ →</em>
       </button>}
       <div className="itlab-metrics">
@@ -294,12 +296,13 @@ function SsoItProcurementLab({ onAsk }: { onAsk: () => void }) {
           <div><span>AIT ยืนยันจากประกาศผู้ชนะ</span><strong>{catalogue.metrics.aitWinnerDocumentProjects}</strong><small>รายการ มูลค่าสัญญารวม {money(catalogue.metrics.aitWinnerDocumentContractPrice)} ล้านบาท</small></div>
           <div><span>ตรวจแฟ้มประมูลละเอียด</span><strong>{catalogue.metrics.documentCheckedProjects}</strong><small>รายการ เปิดราคาผู้เสนอและเอกสารที่เกี่ยวข้อง</small></div>
         </div>
-        <div className="itlab-catalogue-breakdown"><p><strong>จาก 11 ประกาศที่ยืนยัน</strong> AIT รับงานตรง {catalogue.metrics.aitDirectProjects} สัญญา รวม {money(catalogue.metrics.aitDirectContractPrice)} ล้านบาท และร่วมกิจการค้า {catalogue.metrics.aitConsortiumProjects} สัญญา มูลค่าสัญญารวม {money(catalogue.metrics.aitConsortiumContractPrice)} ล้านบาท ส่วนแบ่งของ AIT ในกิจการร่วมค้ายังไม่ทราบ</p><p>ตาราง CSV ระบุชื่อ AIT {catalogue.metrics.aitLabelProjects} รายการ รวม {money(catalogue.metrics.aitLabelContractPrice)} ล้านบาท มี 1 รายการที่ยังไม่พบประกาศผู้ชนะต้นฉบับในคลังสำเนาที่ตรวจ</p></div>
+        <div className="itlab-catalogue-breakdown"><p><strong>จาก 11 ประกาศที่ยืนยัน</strong> AIT รับงานตรง {catalogue.metrics.aitDirectProjects} สัญญา รวม {money(catalogue.metrics.aitDirectContractPrice)} ล้านบาท และเป็นสมาชิกกิจการร่วมค้า {catalogue.metrics.aitConsortiumProjects} สัญญา มูลค่าสัญญารวม {money(catalogue.metrics.aitConsortiumContractPrice)} ล้านบาท ส่วนแบ่งของ AIT ในกิจการร่วมค้ายังไม่ทราบ</p><p>ตาราง CSV ระบุชื่อ AIT {catalogue.metrics.aitLabelProjects} รายการ รวม {money(catalogue.metrics.aitLabelContractPrice)} ล้านบาท มี 1 รายการที่ยังไม่พบประกาศผู้ชนะต้นฉบับในคลังสำเนาที่ตรวจ</p><p>ราคาสัญญา {catalogue.metrics.withinOnePercentOfReference} จาก {catalogue.metrics.projects} โครงการ ต่ำกว่าราคากลางไม่ถึง 1% ตัวเลขนี้ใช้เลือกแฟ้มเพื่ออ่านวิธีจัดซื้อและจำนวนผู้เสนอราคาเพิ่ม ไม่ใช่ข้อสรุปว่ามีความผิด</p></div>
         <div className="itlab-catalogue-note"><strong>วิธีคัดรายการ</strong><p>{catalogue.meta.selection}</p><p>{catalogue.meta.limits}</p></div>
-        <div className="itlab-filters">
+        <div className="itlab-filters itlab-catalogue-filters">
           <label><span>ค้นชื่อโครงการ เลข e-GP หรือผู้ชนะ</span><input value={catalogueQuery} onChange={(event) => setCatalogueQuery(event.target.value)} placeholder="เช่น เครือข่าย 2567" /></label>
           <label><span>ชื่อผู้ชนะตาม CSV</span><select value={catalogueWinner} onChange={(event) => setCatalogueWinner(event.target.value)}><option value="all">ทุกราย</option>{catalogue.winners.map((winner) => <option key={winner.name} value={winner.name}>{winner.name} ({winner.projects})</option>)}</select></label>
           <label><span>ปีงบประมาณ</span><select value={catalogueYear} onChange={(event) => setCatalogueYear(event.target.value)}><option value="all">ทุกปี</option>{[...new Set(catalogue.projects.map((item) => item.year))].sort().map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+          <label><span>ประเภทงาน</span><select value={catalogueCategory} onChange={(event) => setCatalogueCategory(event.target.value)}><option value="all">ทุกประเภท</option>{[...new Set(catalogue.projects.map((item) => item.category))].map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
         </div>
         <p className="itlab-result-count" role="status">พบ {catalogueRows.length.toLocaleString('th-TH')} โครงการ • มูลค่าสัญญารวม {money(catalogueRows.reduce((sum, row) => sum + row.contractPrice, 0))} ล้านบาท</p>
         <div className="itlab-table-wrap itlab-catalogue-table"><table>
@@ -307,7 +310,7 @@ function SsoItProcurementLab({ onAsk }: { onAsk: () => void }) {
           <thead><tr><th>ปี / e-GP</th><th>โครงการ</th><th>วิธีจัดซื้อ</th><th>ราคากลาง</th><th>ราคาสัญญา</th><th>ต่ำกว่าราคากลาง</th><th>ผู้ชนะ</th><th>หลักฐาน</th></tr></thead>
           <tbody>{catalogueRows.map((project) => <tr key={project.id}>
             <td data-label="ปี / e-GP"><b>{project.year}</b><small>{project.id}</small></td>
-            <td data-label="โครงการ"><strong>{project.title}</strong><small>{project.department}</small></td>
+            <td data-label="โครงการ"><strong>{project.title}</strong><small>{project.category} • {project.department}</small></td>
             <td data-label="วิธีจัดซื้อ">{project.method}</td>
             <td data-label="ราคากลาง">{money(project.referencePrice)}</td>
             <td data-label="ราคาสัญญา"><b>{money(project.contractPrice)}</b></td>

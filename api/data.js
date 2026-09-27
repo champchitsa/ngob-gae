@@ -173,7 +173,7 @@ function selectDataset(name, source) {
     filterField: 'method',
     source: 'https://data.go.th/',
     processedAt: source.ssoEgpIt.meta.accessedAt,
-    columns: ['id', 'year', 'title', 'department', 'method', 'budget', 'referencePrice', 'contractPrice', 'winnerInCsv', 'verifiedWinner', 'verifiedMode', 'documentChecked', 'winnerDocumentUrl', 'sourceUrl', 'projectUrl'],
+    columns: ['id', 'year', 'title', 'category', 'department', 'method', 'budget', 'referencePrice', 'contractPrice', 'winnerInCsv', 'verifiedWinner', 'verifiedMode', 'documentChecked', 'winnerDocumentUrl', 'sourceUrl', 'projectUrl'],
   }
   return null
 }

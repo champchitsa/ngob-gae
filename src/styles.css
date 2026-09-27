@@ -49,9 +49,9 @@ main > section[id], #law-workbench { scroll-margin-top: 84px; }
 .mast-copy { padding: 58px 7vw 58px 6vw; display: flex; flex-direction: column; justify-content: center; }
 .kicker { display: flex; align-items: center; gap: 10px; font: 600 11px 'IBM Plex Mono', monospace; letter-spacing: .08em; margin-bottom: 28px; }
 .kicker span:last-child { border: 1px solid var(--ink); border-radius: 20px; padding: 4px 9px; background: white; }
-.mast-copy h1 { display: grid; justify-items: start; gap: .04em; font-size: clamp(54px, 6.4vw, 98px); letter-spacing: -.055em; line-height: 1.02; margin: 0; font-weight: 900; max-width: 900px; }
+.mast-copy h1 { display: grid; justify-items: start; gap: .09em; font-size: clamp(54px, 6.4vw, 98px); letter-spacing: -.055em; line-height: 1.16; margin: 0; font-weight: 900; max-width: 900px; }
 .mast-copy h1 span, .mast-copy h1 mark { display: block; width: fit-content; max-width: 100%; }
-.mast-copy h1 mark { background: var(--yellow); color: var(--ink); padding: .02em .12em .04em; border-bottom: 5px solid var(--orange); }
+.mast-copy h1 mark { background: var(--yellow); color: var(--ink); padding: .06em .12em .08em; border-bottom: 5px solid var(--orange); }
 .mast-copy > p { font-size: 18px; line-height: 1.7; max-width: 640px; margin: 32px 0; color: #3d3d36; }
 .hero-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 18px 24px; }
 .primary-action { background: var(--ink); color: white; text-decoration: none; padding: 15px 18px; font-weight: 700; display: inline-flex; align-items: center; gap: 42px; box-shadow: 5px 5px 0 var(--yellow); }
@@ -1052,7 +1052,7 @@ main > section[id], #law-workbench { scroll-margin-top: 84px; }
   .topnav { display: none; }
   .data-stamp { font-size: 8px; }
   .mast-copy { padding: 60px 22px; }
-  .mast-copy h1 { font-size: clamp(45px, 13.5vw, 66px); line-height: 1.03; }
+  .mast-copy h1 { font-size: clamp(45px, 13.5vw, 66px); line-height: 1.16; }
   .mast-copy > p { font-size: 15px; }
   .hero-actions { align-items: flex-start; flex-direction: column; }
   .hero-proof { gap: 7px 12px; }

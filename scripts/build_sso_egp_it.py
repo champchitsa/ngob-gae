@@ -19,9 +19,23 @@ from decimal import Decimal, InvalidOperation
 IT_TITLE = re.compile(
     r"คอมพิวเตอร์|เทคโนโลยีสารสนเทศ|สารสนเทศ|ซอฟต์แวร์|โปรแกรม|เครือข่าย|"
     r"ดิจิทัล|ศูนย์ข้อมูล|ระบบงาน|ไอที|เซิร์ฟเวอร์|อินเทอร์เน็ต|"
-    r"Intrusion Prevention|CCTV",
+    r"Intrusion Prevention|CCTV|บิ๊กดาต้า|Web Service|e-Self Service|"
+    r"OS/390|Queue|Contact Center",
     re.IGNORECASE,
 )
+
+# Names without the above specific terms, reviewed against the government CSV.
+# The 2568 online-service project was also checked against its e-GP tender,
+# which calls for prior software development work and software certification.
+REVIEWED_ADDITIONS = {
+    "65057511711": ("พัฒนาระบบการให้บริการทางการแพทย์", "ระบบ IT และข้อมูล"),
+    "65047023672": ("ระบบการจัดการข้อมูล", "ระบบ IT และข้อมูล"),
+    "68019346280": ("พัฒนาระบบบริการและบริหารสื่อออนไลน์", "ระบบ IT และข้อมูล"),
+    "67049335777": ("Market Risk Report System", "บริการข้อมูลดิจิทัล"),
+    "64057029698": ("รับ-ส่งข้อมูลการใช้บริการทางการแพทย์", "บริการข้อมูลดิจิทัล"),
+    "66049048696": ("รับ-ส่งข้อมูลการใช้บริการทางการแพทย์", "บริการข้อมูลดิจิทัล"),
+    "65027461938": ("รับ-ส่งข้อมูลการใช้บริการทางการแพทย์", "บริการข้อมูลดิจิทัล"),
+}
 
 # Original e-GP winner notices archived by ACT Ai. These three projects are
 # confirmed from winner notices but have not received a full bidder/TOR review.
@@ -61,13 +75,16 @@ def main() -> None:
         source_years.append({"year": year, "rows": meta["rows"], "resources": meta["resource_count"], "url": meta["dataset_url"]})
         for source in raw["rows"]:
             title = str(source.get("ชื่อโครงการ") or "").strip()
-            if not IT_TITLE.search(title) or re.search(r"ลิฟต์", title):
+            project_id = str(source.get("รหัสโครงการ") or "")
+            reviewed = REVIEWED_ADDITIONS.get(project_id)
+            if (not IT_TITLE.search(title) and not reviewed) or re.search(r"ลิฟต์", title):
                 continue
+            if reviewed and reviewed[0].casefold() not in title.casefold():
+                raise ValueError(f"Reviewed title changed: {project_id}")
             budget = amount(source.get("งบประมาณ(บาท)"))
             agreed = amount(source.get("ราคาตกลงซื้อ/จ้าง"))
             if not budget or budget < 10_000_000 or agreed is None:
                 continue
-            project_id = str(source.get("รหัสโครงการ") or "")
             if not re.fullmatch(r"\d{11}", project_id):
                 raise ValueError(f"Invalid project ID: {project_id}")
             if source.get("ชื่อหน่วยงาน") != "สำนักงานประกันสังคม":
@@ -92,6 +109,7 @@ def main() -> None:
             rows.append({
                 "id": project_id,
                 "title": title,
+                "category": reviewed[1] if reviewed else "บริการข้อมูลดิจิทัล" if "Contact Center" in title else "ระบบ IT และข้อมูล",
                 "year": fiscal_year,
                 "department": str(source.get("ชื่อหน่วยงานย่อย") or "").strip(),
                 "method": str(source.get("วิธีจัดซื้อฯ") or "").strip(),
@@ -115,6 +133,8 @@ def main() -> None:
         by_id[row["id"]] = row
     if not set(detailed).issubset(by_id):
         raise ValueError(f"Detailed projects absent from DGA table: {set(detailed) - set(by_id)}")
+    if not set(REVIEWED_ADDITIONS).issubset(by_id):
+        raise ValueError(f"Reviewed projects absent from DGA table: {set(REVIEWED_ADDITIONS) - set(by_id)}")
     rows.sort(key=lambda row: (-row["contractPrice"], row["id"]))
     winner_groups: dict[str, dict] = defaultdict(lambda: {"projects": 0, "contractPrice": 0})
     for row in rows:
@@ -137,7 +157,7 @@ def main() -> None:
             "agency": "สำนักงานประกันสังคม",
             "years": "2560 ถึง 2568",
             "minimumBudget": 10_000_000,
-            "selection": "ชื่อโครงการมีคำเกี่ยวกับคอมพิวเตอร์ สารสนเทศ เครือข่าย โปรแกรม ดิจิทัล Intrusion Prevention หรือ CCTV และงบประมาณตั้งแต่ 10 ล้านบาท โดยตัดโครงการลิฟต์ที่พบคำว่าศูนย์คอมพิวเตอร์ออก",
+            "selection": "คัดชื่อโครงการที่เกี่ยวกับคอมพิวเตอร์ สารสนเทศ เครือข่าย โปรแกรม ดิจิทัล Big Data และระบบที่ระบุชัด รวมทั้งชื่อกว้างที่ตรวจทานเพิ่ม เช่น ระบบบริการทางการแพทย์ และบริการรับส่งข้อมูล โดยใช้งบประมาณตั้งแต่ 10 ล้านบาท ตัดโครงการลิฟต์และงานประชาสัมพันธ์ทั่วไปออก",
             "limits": "เป็นรายการคัดจากชื่อในบัญชีข้อมูลรัฐ ไม่ใช่โครงการ IT ทั้งหมด และไม่ใช้สรุปส่วนแบ่งตลาดทั้งระบบ คอลัมน์ผู้ชนะปี 2568 ในไฟล์ต้นทางเหลื่อม จึงไม่แสดงชื่อผู้ชนะของปีนั้น ชื่อผู้ชนะใน CSV บางรายการยุบชื่อกิจการร่วมค้า โปรดเทียบเอกสารประกาศผู้ชนะ",
             "sources": source_years,
         },
@@ -154,6 +174,12 @@ def main() -> None:
             "aitConsortiumContractPrice": sum(row["contractPrice"] for row in consortium_verified),
             "documentCheckedProjects": sum(row["documentChecked"] for row in rows),
             "winnerGroups": len(winners),
+            "withinOnePercentOfReference": sum(
+                row["referencePrice"] is not None
+                and row["referencePrice"] > 0
+                and 0 <= row["referencePrice"] - row["contractPrice"] < row["referencePrice"] / 100
+                for row in rows
+            ),
         },
         "winners": winners,
         "projects": rows,
