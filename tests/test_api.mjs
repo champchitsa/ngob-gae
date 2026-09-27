@@ -69,6 +69,13 @@ test('chat answers a BMA budget question from located source rows', async () => 
     assert.match(result.body.answer, /ชีต .* แถว \d+/)
     assert.ok(result.body.sources.some((source) => source.url.includes('docs.google.com/spreadsheets/')))
     assert.ok(result.body.sources.some((source) => source.url === '/data/bma-budget-2570.json'))
+
+    const scanned = response()
+    await chat({ method: 'POST', headers: { host: 'ngob-gae.vercel.app', 'content-type': 'application/json' }, body: { question: 'งบสำนักงานเขตบางกอกน้อย 2570 เครื่องคอมพิวเตอร์ใน PDF มีอะไร' }, socket: { remoteAddress: 'test-bma-pdf' } }, scanned)
+    assert.equal(scanned.statusCode, 200)
+    assert.match(scanned.body.answer, /28,500/)
+    assert.match(scanned.body.answer, /หน้า 2/)
+    assert.ok(scanned.body.sources.some((source) => source.url.includes('drive.google.com/file/d/')))
   } finally {
     if (originalKey === undefined) delete process.env.PATHUMMA_API_KEY
     else process.env.PATHUMMA_API_KEY = originalKey
