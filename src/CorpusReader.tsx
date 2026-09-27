@@ -243,8 +243,9 @@ const structureText = (file: CorpusFile) => {
 
 const readableOcrText = (record: CorpusRecord, raw: string, file: CorpusFile) => {
   if (record.ocr_unresolved) return 'ข้อความหน้านี้ยังอ่านได้ไม่ชัด กรุณาเทียบกับเอกสารต้นฉบับก่อนนำไปใช้อ้างอิง'
-  if (record.method !== 'ocr') return raw
-  const normalized = raw.replace(/ํา/g, 'ำ')
+  if (record.type !== 'page') return raw
+  const normalized = raw.replace(/ํา/g, 'ำ').replace(/([ก-ฮ])[ \t]+ำ/g, '$1ำ')
+  if (record.method !== 'ocr') return normalized
   const budgetCover = file.category.includes('เอกสารประกอบการพิจารณา 70') || /^ร่าง(?:ข้อ|เทศ)บัญญัติงบ/.test(file.title)
   if (record.page === 1 && budgetCover) {
     return `หน้าปกเอกสาร\n${file.title.replace(/\.pdf$/i, '')}\n\nข้อความข้างต้นเรียบเรียงจากชื่อไฟล์ในคลังเอกสาร`
