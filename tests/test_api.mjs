@@ -109,6 +109,22 @@ test('corpus serves a verified partial response', async () => {
   }
 })
 
+test('corpus rejects a mismatched upstream range and malformed offsets', async () => {
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async () => new Response(new Uint8Array([1, 2, 3]), { status: 206, headers: { 'content-range': 'bytes 1-3/4', 'content-length': '3' } })
+  try {
+    const wrongRange = response()
+    await corpus({ method: 'GET', query: { asset: 'sample.jsonl.gz', offset: '0' } }, wrongRange)
+    assert.equal(wrongRange.statusCode, 502)
+
+    const malformedOffset = response()
+    await corpus({ method: 'GET', query: { asset: 'sample.jsonl.gz', offset: '0garbage' } }, malformedOffset)
+    assert.equal(malformedOffset.statusCode, 400)
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
+
 test('corpus release is versioned and rejects unexpected tags', async () => {
   const originalFetch = globalThis.fetch
   let upstreamUrl = ''

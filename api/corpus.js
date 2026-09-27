@@ -9,8 +9,9 @@ export default async function handler(request, response) {
 
   const asset = typeof request.query.asset === 'string' ? request.query.asset : ''
   const release = typeof request.query.release === 'string' ? request.query.release : 'corpus-v1'
-  const offset = Number.parseInt(typeof request.query.offset === 'string' ? request.query.offset : '0', 10)
-  if (!ASSET_PATTERN.test(asset) || !/^corpus-v[12]$/.test(release) || !Number.isSafeInteger(offset) || offset < 0) {
+  const rawOffset = typeof request.query.offset === 'string' ? request.query.offset : '0'
+  const offset = Number(rawOffset)
+  if (!ASSET_PATTERN.test(asset) || !/^corpus-v[12]$/.test(release) || !/^(0|[1-9]\d*)$/.test(rawOffset) || !Number.isSafeInteger(offset)) {
     return response.status(400).json({ error: 'พารามิเตอร์ไฟล์ไม่ถูกต้อง' })
   }
 
@@ -29,10 +30,18 @@ export default async function handler(request, response) {
       return response.status(502).json({ error: 'แหล่งไฟล์ไม่รองรับการอ่านเป็นช่วง' })
     }
 
-    const bytes = Buffer.from(await upstream.arrayBuffer())
-    if (bytes.length > CHUNK_BYTES) return response.status(502).json({ error: 'ช่วงข้อมูลมีขนาดเกินกำหนด' })
     const range = upstream.headers.get('content-range')
-    const total = range?.match(/\/(\d+)$/)?.[1] || upstream.headers.get('content-length') || String(bytes.length)
+    const parsedRange = range?.match(/^bytes (\d+)-(\d+)\/(\d+)$/)
+    if (upstream.status === 206 && (!parsedRange || Number(parsedRange[1]) !== offset || Number(parsedRange[2]) < offset || Number(parsedRange[2]) >= Number(parsedRange[3]) || Number(parsedRange[2]) > end)) {
+      await upstream.body?.cancel()
+      return response.status(502).json({ error: 'แหล่งไฟล์ส่งช่วงข้อมูลไม่ตรงกับที่ขอ' })
+    }
+
+    const bytes = Buffer.from(await upstream.arrayBuffer())
+    if (bytes.length > CHUNK_BYTES || (parsedRange && bytes.length !== Number(parsedRange[2]) - offset + 1)) {
+      return response.status(502).json({ error: 'ช่วงข้อมูลมีขนาดไม่ถูกต้อง' })
+    }
+    const total = parsedRange?.[3] || upstream.headers.get('content-length') || String(bytes.length)
 
     response.setHeader('Content-Type', 'application/octet-stream')
     response.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400')
