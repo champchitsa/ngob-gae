@@ -269,6 +269,7 @@ function SsoItProcurementLab({ onAsk }: { onAsk: () => void }) {
         <span><b>เปิดทะเบียนโครงการ</b><strong>{catalogue.metrics.projects} โครงการ IT และบริการข้อมูลดิจิทัล</strong><small>งบตั้งแต่ 10 ล้านบาท คัดจากตารางรัฐปี 2560 ถึง 2568 • มูลค่าสัญญาที่พบ {money(catalogue.metrics.contractPrice)} ล้านบาท</small></span>
         <em>ค้นและกรองรายชื่อ →</em>
       </button>}
+      <p className="itlab-overview-scope">ตัวเลขและกราฟด้านล่างมาจากแฟ้มประมูลที่อ่านละเอียด 8 โครงการ ส่วนยอด 11 สัญญาด้านบนมาจากประกาศผู้ชนะในทะเบียนโครงการ</p>
       <div className="itlab-metrics">
         <article><span>AIT รับงานตรง</span><strong>{money(data.metrics.directContract)}</strong><b>ล้านบาท</b><small>{data.metrics.directProjects} โครงการ</small></article>
         <article><span>สัญญากิจการร่วมค้า</span><strong>{money(data.metrics.consortiumContract)}</strong><b>ล้านบาท</b><small>{data.metrics.consortiumProjects} โครงการ มูลค่านี้ไม่ใช่รายได้ AIT ทั้งหมด</small></article>

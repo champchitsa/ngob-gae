@@ -49,6 +49,7 @@
 .itlab-catalogue-callout small { font-size: 11px; line-height: 1.45; }
 .itlab-catalogue-callout em { flex: 0 0 auto; font-size: 12px; font-weight: 800; font-style: normal; }
 .itlab-catalogue-callout:hover { background: #ffe92f; }
+.itlab-overview-scope { margin: 0 0 16px; padding: 12px 16px; border-left: 3px solid var(--it-black); background: #f0eee6; color: #38362e; font-size: 13px; line-height: 1.55; }
 .itlab-catalogue-summary { margin: 20px 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--it-black); background: white; }
 .itlab-catalogue-summary > div { min-width: 0; min-height: 135px; padding: 18px; display: flex; flex-direction: column; gap: 5px; border-right: 1px solid var(--it-black); }
 .itlab-catalogue-summary > div:last-child { border-right: 0; }
