@@ -235,7 +235,17 @@ def poor_thai_ocr(text: str) -> bool:
     return 12 <= thai < 200 and latin > max(20, thai * 0.28)
 
 
-def ocr_image(image_path: pathlib.Path, tesseract: pathlib.Path, tessdata: pathlib.Path) -> str:
+def osd_pillow_rotation(output: str) -> int | None:
+    """Convert Tesseract's clockwise rotation to Pillow's counterclockwise angle."""
+    rotate = re.search(r"^Rotate:\s*(\d+)", output, re.MULTILINE)
+    confidence = re.search(r"^Orientation confidence:\s*([\d.]+)", output, re.MULTILINE)
+    if not rotate or not confidence or float(confidence.group(1)) < 5:
+        return None
+    angle = (360 - int(rotate.group(1))) % 360
+    return angle if angle in {90, 180, 270} else None
+
+
+def ocr_image(image_path: pathlib.Path, tesseract: pathlib.Path, tessdata: pathlib.Path, *, recover_orientation: bool = False) -> str:
     descriptor, prepared_name = tempfile.mkstemp(suffix=".png", dir=tessdata.parent)
     os.close(descriptor)
     prepared = pathlib.Path(prepared_name)
@@ -259,6 +269,33 @@ def ocr_image(image_path: pathlib.Path, tesseract: pathlib.Path, tessdata: pathl
                 raise RuntimeError(result.stderr.strip() or f"tesseract exited {result.returncode}")
             return clean_text(result.stdout)
 
+        def oriented_image(angle: int) -> pathlib.Path:
+            rotated = prepared.with_name(f"{prepared.stem}-{angle}.png")
+            with Image.open(prepared) as image:
+                image.rotate(angle, expand=True).save(rotated, format="PNG")
+            return rotated
+
+        def detected_rotation() -> int | None:
+            if not (tessdata / "osd.traineddata").exists():
+                return None
+            result = subprocess.run(
+                [str(tesseract), str(prepared), "stdout", "--tessdata-dir", str(tessdata), "--psm", "0"],
+                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
+            )
+            return osd_pillow_rotation(result.stdout) if result.returncode == 0 else None
+
+        if recover_orientation:
+            with contextlib.suppress(Exception):
+                angle = detected_rotation()
+                if angle:
+                    rotated = oriented_image(angle)
+                    try:
+                        candidate = recognize(rotated, 6)
+                        if ocr_quality_score(candidate) >= 60:
+                            return candidate
+                    finally:
+                        rotated.unlink(missing_ok=True)
+
         best = recognize(prepared, 6)
         if poor_thai_ocr(best):
             with contextlib.suppress(Exception):
@@ -266,18 +303,24 @@ def ocr_image(image_path: pathlib.Path, tesseract: pathlib.Path, tessdata: pathl
                 if ocr_quality_score(alternate) > ocr_quality_score(best):
                     best = alternate
             if poor_thai_ocr(best) or ocr_quality_score(best) < 60:
-                with Image.open(prepared) as image:
-                    for angle in (90, 270):
-                        rotated = prepared.with_name(f"{prepared.stem}-{angle}.png")
-                        try:
-                            image.rotate(angle, expand=True).save(rotated, format="PNG")
-                            alternate = recognize(rotated, 6)
-                            if ocr_quality_score(alternate) > ocr_quality_score(best):
-                                best = alternate
-                        except Exception:
-                            pass
-                        finally:
-                            rotated.unlink(missing_ok=True)
+                detected = None
+                with contextlib.suppress(Exception):
+                    detected = detected_rotation()
+                angles = [detected] if detected else []
+                angles.extend(angle for angle in (90, 270) if angle not in angles)
+                for angle in angles:
+                    rotated = prepared.with_name(f"{prepared.stem}-{angle}.png")
+                    try:
+                        rotated = oriented_image(angle)
+                        alternate = recognize(rotated, 6)
+                        if ocr_quality_score(alternate) > ocr_quality_score(best):
+                            best = alternate
+                        if detected == angle and ocr_quality_score(best) >= 100:
+                            break
+                    except Exception:
+                        pass
+                    finally:
+                        rotated.unlink(missing_ok=True)
         return best
     finally:
         prepared.unlink(missing_ok=True)

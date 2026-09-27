@@ -7,6 +7,7 @@ Thai readability score improves; unchanged pages keep their existing text.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import gzip
 import json
 import pathlib
@@ -70,7 +71,7 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
                         image = render_pdf_pages(source, page, page, folder, tools["pdftoppm"]).get(page)
                     if image is None:
                         raise RuntimeError("page image unavailable")
-                    candidate = ocr_image(image, tools["tesseract"], tools["tessdata"])
+                    candidate = ocr_image(image, tools["tesseract"], tools["tessdata"], recover_orientation=True)
                 original = str(record.get("text") or "")
                 if candidate and ocr_quality_score(candidate) >= ocr_quality_score(original) + 10:
                     record.update({"text": candidate, "line_count": len(candidate.splitlines()), "method": "ocr", "ocr_repaired": True})
@@ -116,6 +117,7 @@ def main() -> None:
     parser.add_argument("--category", help="process only inventory categories containing this text")
     parser.add_argument("--id", action="append", dest="ids")
     parser.add_argument("--limit", type=int)
+    parser.add_argument("--workers", type=int, default=3)
     parser.add_argument("--machine-dir", type=pathlib.Path, default=pathlib.Path(".workdata/drive-machine"))
     parser.add_argument("--temp-dir", type=pathlib.Path, default=pathlib.Path.home() / ".cache/ngob-gae-ocr-repair")
     parser.add_argument("--report", type=pathlib.Path)
@@ -137,22 +139,24 @@ def main() -> None:
     }
     results = []
     started = time.time()
-    for index, item in enumerate(items, start=1):
-        asset = args.corpus_dir / "records" / f'{item["id"]}.jsonl.gz'
-        if not asset.exists():
-            continue
-        try:
-            result = repair_one(item, asset, args, tools)
-        except Exception as error:
-            result = {"id": item["id"], "title": item["title"], "error": f"{type(error).__name__}: {error}"}
-        results.append(result)
-        if result.get("targets") or result.get("error"):
-            print(f'[{index}/{len(items)}] {item["title"]}: {result.get("repaired", 0)}/{result.get("targets", 0)} repaired', flush=True)
-        if args.report:
-            args.report.parent.mkdir(parents=True, exist_ok=True)
-            temporary = args.report.with_suffix(args.report.suffix + ".part")
-            temporary.write_text(json.dumps({"elapsed_seconds": round(time.time() - started, 1), "files_checked": len(results), "results": results}, ensure_ascii=False, indent=2), encoding="utf-8")
-            temporary.replace(args.report)
+    work = [(item, args.corpus_dir / "records" / f'{item["id"]}.jsonl.gz') for item in items]
+    work = [(item, asset) for item, asset in work if asset.exists()]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
+        futures = {pool.submit(repair_one, item, asset, args, tools): item for item, asset in work}
+        for index, future in enumerate(concurrent.futures.as_completed(futures), start=1):
+            item = futures[future]
+            try:
+                result = future.result()
+            except Exception as error:
+                result = {"id": item["id"], "title": item["title"], "error": f"{type(error).__name__}: {error}"}
+            results.append(result)
+            if result.get("targets") or result.get("error"):
+                print(f'[{index}/{len(work)}] {item["title"]}: {result.get("repaired", 0)}/{result.get("targets", 0)} repaired', flush=True)
+            if args.report:
+                args.report.parent.mkdir(parents=True, exist_ok=True)
+                temporary = args.report.with_suffix(args.report.suffix + ".part")
+                temporary.write_text(json.dumps({"elapsed_seconds": round(time.time() - started, 1), "files_checked": len(results), "results": results}, ensure_ascii=False, indent=2), encoding="utf-8")
+                temporary.replace(args.report)
     print(json.dumps({"files_checked": len(results), "pages_repaired": sum(result.get("repaired", 0) for result in results), "errors": sum(bool(result.get("error")) for result in results)}, ensure_ascii=False), flush=True)
 
 

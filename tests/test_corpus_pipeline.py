@@ -26,7 +26,8 @@ sys.path.insert(0, str(SCRIPTS))
 
 from corpus_pipeline import atomic_write_json, collect_record_assets, sha256_file  # noqa: E402
 from analyze_drive_corpus import credible_amounts  # noqa: E402
-from extract_drive_corpus import FileStats, contiguous_page_batches, extract_docx, extract_pptx, ocr_quality_score, poor_thai_ocr  # noqa: E402
+from extract_drive_corpus import FileStats, contiguous_page_batches, extract_docx, extract_pptx, ocr_quality_score, osd_pillow_rotation, poor_thai_ocr  # noqa: E402
+from repair_ocr_pages import needs_repair  # noqa: E402
 
 
 def test_pdf_ocr_fallback_never_renders_unrequested_pages() -> None:
@@ -39,6 +40,18 @@ def test_ocr_quality_detects_rotated_thai_page_and_prefers_readable_text() -> No
     assert poor_thai_ocr(rotated)
     assert not poor_thai_ocr(readable)
     assert ocr_quality_score(readable) > ocr_quality_score(rotated)
+
+
+def test_ocr_repair_only_rechecks_suspect_pages() -> None:
+    noisy = {"type": "page", "page": 12, "method": "ocr", "text": "ร ว 5 Ee aor BEE ก รุงเทพ ช ซ ภา ae 1 2 gg fee are bey con bee ale"}
+    assert needs_repair(noisy)
+    assert not needs_repair({**noisy, "ocr_repaired": True})
+    assert not needs_repair({**noisy, "method": "embedded"})
+
+
+def test_osd_rotation_requires_confidence_and_uses_pillow_direction() -> None:
+    assert osd_pillow_rotation("Rotate: 90\nOrientation confidence: 21.13\n") == 270
+    assert osd_pillow_rotation("Rotate: 270\nOrientation confidence: 0.61\n") is None
 
 
 def test_ocr_phone_number_is_not_promoted_as_budget_amount() -> None:
