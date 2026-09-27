@@ -189,7 +189,7 @@ def download_file(item: dict, target: pathlib.Path, retries: int = 3) -> None:
         {"id": item["id"], "export": "download", "confirm": "t"}
     )
     last_error: Exception | None = None
-    ranged = expected >= 80 * 1024 * 1024
+    ranged = expected >= 10 * 1024 * 1024
     range_size = 1024 * 1024
     for attempt in range(1, retries + 1):
         if not ranged:

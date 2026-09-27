@@ -139,7 +139,7 @@ python scripts/extract_drive_corpus.py public/data/drive-inventory.json .workdat
 python scripts/repair_ocr_pages.py public/data/drive-inventory.json .workdata/drive-corpus-pdf --workers 4 --report .workdata/ocr-repair-report.json
 ```
 
-หลังปรับวิธี OCR สามารถลองหน้าที่เคยระบุว่าอ่านไม่ชัดอีกครั้งด้วย `--retry-unresolved` ไฟล์ Drive ขนาดตั้งแต่ 80 MB ดาวน์โหลดเป็นช่วงพร้อมตรวจ `Content-Range` และกลับมาทำต่อจากช่วงที่สำเร็จได้
+หลังปรับวิธี OCR สามารถลองหน้าที่เคยระบุว่าอ่านไม่ชัดอีกครั้งด้วย `--retry-unresolved` ไฟล์ Drive ขนาดตั้งแต่ 10 MB ดาวน์โหลดเป็นช่วงพร้อมตรวจ `Content-Range` และกลับมาทำต่อจากช่วงที่สำเร็จได้
 
 หน้าที่ลอง OCR ซ้ำแล้วยังอ่านไม่ชัดจะเก็บไว้ให้เปิดเทียบต้นฉบับ แต่ไม่นำตัวเลขไปสร้างสัญญาณอัตโนมัติ หลังซ่อม ให้ตรวจ corpus ก่อนสร้างดัชนี ตัว validator จะหยุดด้วย exit code 1 เมื่อไฟล์ขาด เสีย มีข้อมูลซ้ำที่ขัดกัน หรือมี page/image warning ที่ยังไม่ได้ทบทวน:
 
