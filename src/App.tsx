@@ -585,12 +585,12 @@ function App() {
           {panel === 'law' && <>
             <span className="panel-kicker">LEGAL LENS</span><h2>ตัวบทสำหรับเดินจากงบไปถึงความรับผิดชอบ</h2>
             <p className="panel-intro">รวมตัวบทของมาตราที่อ้างไว้บนเว็บแบบครบถ้วนตามฉบับประกาศใช้จริง ส่วน “ใช้ตรวจเรื่อง” เป็นคำอธิบายของระบบและแยกออกจากตัวบทอย่างชัดเจน</p>
-            <div className="law-verification"><strong>ตรวจแหล่งแล้ว 20 กันยายน 2569</strong><p>ทุกลิงก์ด้านล่างชี้ไปยังไฟล์ประกาศในราชกิจจานุเบกษา ไม่ใช้ร่างกฎหมาย บทความ หรือเอกสารความเห็นแทนตัวบท</p></div>
+            <div className="law-verification"><strong>ตรวจแหล่งแล้ว 27 กันยายน 2569</strong><p>ลิงก์ชี้ไปยังประกาศจริงในราชกิจจานุเบกษา ส่วน พ.ร.บ. ข้อมูลข่าวสารของราชการ ใช้สำเนาตัวบทจากศูนย์ข้อมูลข่าวสารของราชการ</p></div>
             <div className="law-card-list">{lawCards.map((law, index) => <details className="law-provision" key={law.id} open={index === 0}>
               <summary><span>{String(index + 1).padStart(2, '0')}</span><div><small>{law.code}</small><strong>{law.title}</strong><p>{law.publication}</p></div><b>อ่านตัวบท</b></summary>
               <div className="law-analysis"><small>ใช้ตรวจเรื่อง</small><p>{law.analysis}</p><strong>เอกสารที่เชื่อมต่อ</strong><p>{law.documents.join(' • ')}</p></div>
               <div className="law-exact"><div><span>ตัวบทตามประกาศ</span><small>แสดงครบทั้งมาตราที่อ้าง โดยไม่เรียบเรียงใหม่</small></div><pre>{law.exactText}</pre></div>
-              <a className="law-source-link" href={law.sourceUrl} target="_blank" rel="noreferrer">เปิดฉบับประกาศในราชกิจจานุเบกษา ↗</a>
+              <a className="law-source-link" href={law.sourceUrl} target="_blank" rel="noreferrer">{law.id === 'official-information-9' ? 'เปิดสำเนาตัวบทจากศูนย์ข้อมูลข่าวสาร ↗' : 'เปิดฉบับประกาศในราชกิจจานุเบกษา ↗'}</a>
             </details>)}</div>
           </>}
           {panel === 'sources' && <>

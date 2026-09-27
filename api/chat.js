@@ -562,12 +562,17 @@ export default async function handler(request, response) {
     const answer = buildSignalAnswer(matchedSignal, selectedItems)
     return response.status(200).json({ answer, sources: visibleSourcesFor(answer, sources), model: process.env.PATHUMMA_MODEL ?? 'pathumma' })
   }
+  if (/(?:ยอด|วงเงิน)หลังโอน/.test(question) && /(?:ต่าง|เปลี่ยน|ทำไม|เหตุ)/.test(question) && !asksAboutFocus) {
+    const answer = 'ยอดตั้งต้นตาม พ.ร.บ. กับยอดหลังโอนเป็นข้อมูลคนละช่วงเวลา ความต่างบอกได้ว่ากรอบวงเงินของรายการเปลี่ยน แต่ยังบอกเหตุผลของการเปลี่ยนจากตัวเลขเพียงอย่างเดียวไม่ได้\n\nให้ตรวจคำอนุมัติหรือคำสั่งโอน รายการต้นทางและปลายทาง แผนงานก่อนและหลังปรับ และผลดำเนินงานหรือสัญญาที่เกี่ยวข้อง แล้วจึงอธิบายว่ารายการนั้นเปลี่ยนเพราะอะไร ข้อมูลที่ใช้เทียบอยู่ในชุด PBO ปี 2568'
+    return response.status(200).json({ answer, sources: [{ label: 'ข้อมูล PBO ปี 2568', detail: 'วงเงินตาม พ.ร.บ. และวงเงินหลังโอนระดับรายการ', url: SOURCE_URL }], model: 'ngob-gae-index' })
+  }
   const asksForHistory = /ย้อนหลัง|แนวโน้ม|เทียบปี|เปรียบเทียบปี|อนุกรมเวลา|ตั้งแต่ปี|ปี\s*(?:25|20)\d{2}/.test(question)
   if (asksForHistory) {
     const answer = buildHistoryAnswer(relevantHistory)
     return response.status(200).json({ answer, sources: visibleSourcesFor(answer, sources), model: process.env.PATHUMMA_MODEL ?? 'pathumma' })
   }
-  const asksForFiles = /มี.{0,8}(ไฟล์|เอกสาร)|(ไฟล์|เอกสาร).{0,24}(อะไร|ใด|ไหน|เกี่ยว|ค้น|หา|เปิด)|ค้น.{0,16}(ไฟล์|เอกสาร|หลักฐาน)/.test(question)
+  const asksForFiles = /(?:ค้น|หา|เปิด|ดู|แสดง).{0,16}(?:ไฟล์|เอกสาร|หลักฐาน)|(?:ไฟล์|เอกสาร).{0,16}(?:อยู่ไหน|ที่ไหน|ชื่ออะไร|เกี่ยวกับอะไร)/.test(question)
+    && !/(?:ควร|ต้องขอ).{0,16}(?:เอกสาร|หลักฐาน)|(?:เอกสาร|หลักฐาน).{0,16}(?:ควร|ต้องขอ)/.test(question)
   if (asksForFiles && !asksAboutFocus) {
     const answer = buildFileAnswer(relevantFiles)
     return response.status(200).json({ answer, sources: visibleSourcesFor(answer, sources), model: process.env.PATHUMMA_MODEL ?? 'pathumma' })

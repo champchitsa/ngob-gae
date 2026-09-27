@@ -163,11 +163,11 @@ python -m unittest discover -s tests -p "test_*.py"
 
 ## ตัวบทที่ใช้ในแฟ้ม
 
-- [พ.ร.บ. การจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560 มาตรา 8](https://www.ratchakitcha.soc.go.th/DATA/PDF/2560/A/024/13.PDF)
-- [พ.ร.บ. วินัยการเงินการคลังของรัฐ พ.ศ. 2561 มาตรา 6](https://www.ratchakitcha.soc.go.th/DATA/PDF/2561/A/027/1.PDF)
-- [พ.ร.บ. วิธีการงบประมาณ พ.ศ. 2561 มาตรา 35 มาตรา 36 และมาตรา 46](https://www.ratchakitcha.soc.go.th/DATA/PDF/2561/A/092/1.PDF)
-- [พ.ร.บ. ข้อมูลข่าวสารของราชการ พ.ศ. 2540 มาตรา 9](https://www.ratchakitcha.soc.go.th/DATA/PDF/2540/A/046/1.PDF)
-- [รัฐธรรมนูญแห่งราชอาณาจักรไทย พ.ศ. 2560 มาตรา 144](https://www.ratchakitcha.soc.go.th/DATA/PDF/2560/A/040/1.PDF)
+- [พ.ร.บ. การจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560 มาตรา 8](https://ratchakitcha.soc.go.th/documents/2100153.pdf)
+- [พ.ร.บ. วินัยการเงินการคลังของรัฐ พ.ศ. 2561 มาตรา 6](https://ratchakitcha.soc.go.th/documents/2137995.pdf)
+- [พ.ร.บ. วิธีการงบประมาณ พ.ศ. 2561 มาตรา 35 มาตรา 36 และมาตรา 46](https://ratchakitcha.soc.go.th/documents/2149304.pdf)
+- [พ.ร.บ. ข้อมูลข่าวสารของราชการ พ.ศ. 2540 มาตรา 9](https://infocenter.oic.go.th/FILEWEB/CABINFOCENTER22/DRAWER090/GENERAL/DATA0000/00000238.PDF)
+- [รัฐธรรมนูญแห่งราชอาณาจักรไทย พ.ศ. 2560 มาตรา 144](https://ratchakitcha.soc.go.th/documents/2103519.pdf)
 
 ไฟล์ `public/data/legal-provisions.json` เก็บตัวบทของมาตราที่อ้างครบถ้วน พร้อมเล่ม ตอน วันที่ประกาศ และลิงก์ราชกิจจานุเบกษา หน้าเว็บและน้องเพนกวินอ่านข้อมูลชุดนี้ร่วมกัน โดยแยกข้อความกฎหมายออกจากแนวทางใช้ตรวจงบทุกครั้ง
 

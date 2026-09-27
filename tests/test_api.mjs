@@ -26,6 +26,38 @@ test('chat rejects cross-site and non-JSON requests before using the API key', a
   assert.equal(badType.statusCode, 415)
 })
 
+test('chat discards a model answer with a citation absent from retrieved sources', async () => {
+  const originalFetch = globalThis.fetch
+  const originalKey = process.env.PATHUMMA_API_KEY
+  process.env.PATHUMMA_API_KEY = 'test-key'
+  globalThis.fetch = async () => new Response(JSON.stringify({ choices: [{ message: { content: '[รายการ 999] พบรายการที่ไม่มีในข้อมูล' } }] }), { status: 200, headers: { 'content-type': 'application/json' } })
+  try {
+    const result = response()
+    await chat({ method: 'POST', headers: { host: 'ngob-gae.vercel.app', origin: 'https://ngob-gae.vercel.app', 'content-type': 'application/json' }, body: { question: 'ช่วยอธิบายวิธีพิจารณาข้อมูลนี้' }, socket: { remoteAddress: 'test-citation' } }, result)
+    assert.equal(result.statusCode, 200)
+    assert.doesNotMatch(result.body.answer, /\[รายการ 999\]/)
+  } finally {
+    globalThis.fetch = originalFetch
+    if (originalKey === undefined) delete process.env.PATHUMMA_API_KEY
+    else process.env.PATHUMMA_API_KEY = originalKey
+  }
+})
+
+test('chat explains a changed budget amount instead of listing unrelated files', async () => {
+  const originalKey = process.env.PATHUMMA_API_KEY
+  process.env.PATHUMMA_API_KEY = 'test-key'
+  try {
+    const result = response()
+    await chat({ method: 'POST', headers: { host: 'ngob-gae.vercel.app', 'content-type': 'application/json' }, body: { question: 'ทำไมยอดหลังโอนต่างจากยอดตั้งต้น และควรตรวจเอกสารอะไร' }, socket: { remoteAddress: 'test-budget-movement' } }, result)
+    assert.equal(result.statusCode, 200)
+    assert.match(result.body.answer, /คำสั่งโอน/)
+    assert.doesNotMatch(result.body.answer, /2562\.xlsx/)
+  } finally {
+    if (originalKey === undefined) delete process.env.PATHUMMA_API_KEY
+    else process.env.PATHUMMA_API_KEY = originalKey
+  }
+})
+
 test('corpus refuses an upstream that ignores a ranged request', async () => {
   const originalFetch = globalThis.fetch
   globalThis.fetch = async () => new Response(new Uint8Array(10), { status: 200, headers: { 'content-length': '10' } })
