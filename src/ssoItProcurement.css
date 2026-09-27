@@ -52,18 +52,18 @@
 .itlab-catalogue-summary { margin: 20px 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--it-black); background: white; }
 .itlab-catalogue-summary > div { min-width: 0; min-height: 135px; padding: 18px; display: flex; flex-direction: column; gap: 5px; border-right: 1px solid var(--it-black); }
 .itlab-catalogue-summary > div:last-child { border-right: 0; }
-.itlab-catalogue-summary span { font-size: 11px; font-weight: 800; }
+.itlab-catalogue-summary span { font-size: 12px; font-weight: 800; }
 .itlab-catalogue-summary strong { font: 800 clamp(25px, 2.7vw, 38px)/1.15 'IBM Plex Mono', monospace; overflow-wrap: anywhere; }
-.itlab-catalogue-summary small { margin-top: auto; color: #5c5a53; font-size: 10px; line-height: 1.5; }
+.itlab-catalogue-summary small { margin-top: auto; color: #5c5a53; font-size: 12px; line-height: 1.5; }
 .itlab-catalogue-breakdown { margin: -1px 0 18px; padding: 14px 18px; border: 1px solid var(--it-black); background: #fff; }
-.itlab-catalogue-breakdown p { margin: 3px 0; font-size: 11px; line-height: 1.6; }
+.itlab-catalogue-breakdown p { margin: 4px 0; font-size: 13px; line-height: 1.65; }
 .itlab-catalogue-note { margin: 0 0 18px; padding: 17px 19px; border-left: 4px solid var(--it-blue); background: white; }
 .itlab-catalogue-note strong { font-size: 12px; }
-.itlab-catalogue-note p { max-width: 1100px; margin: 5px 0 0; color: #494740; font-size: 11px; line-height: 1.6; }
+.itlab-catalogue-note p { max-width: 1100px; margin: 5px 0 0; color: #494740; font-size: 12px; line-height: 1.6; }
 .itlab-catalogue-note summary { cursor: pointer; font-size: 12px; font-weight: 800; }
 .itlab-catalogue-note summary:focus-visible, .itlab-focus button:focus-visible, .itlab-more:focus-visible { outline: 3px solid var(--it-blue); outline-offset: 2px; }
 .itlab-focus { margin: 0 0 16px; display: flex; flex-wrap: wrap; gap: 8px; }
-.itlab-focus button { min-height: 42px; padding: 8px 12px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--it-black); background: #fff; color: var(--it-black); font-size: 12px; font-weight: 800; cursor: pointer; }
+.itlab-focus button { min-height: 44px; padding: 8px 12px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--it-black); background: #fff; color: var(--it-black); font-size: 13px; font-weight: 800; cursor: pointer; }
 .itlab-focus button[aria-pressed="true"] { background: var(--it-black); color: #fff; }
 .itlab-focus b { min-width: 24px; padding: 3px 5px; background: var(--it-yellow); color: var(--it-black); text-align: center; font-size: 11px; }
 .itlab-more { width: 100%; margin-top: 12px; min-height: 48px; border: 1px solid var(--it-black); background: #fff; color: var(--it-black); font-size: 13px; font-weight: 800; cursor: pointer; }
@@ -119,11 +119,11 @@
 .itlab-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--it-black); background: white; }
 .itlab-table-wrap table { width: 100%; min-width: 1160px; border-collapse: collapse; }
 .itlab-table-wrap caption { padding: 12px 14px; text-align: left; font-size: 11px; font-weight: 800; border-bottom: 1px solid var(--it-black); }
-.itlab-table-wrap th { padding: 11px 12px; background: var(--it-black); color: white; text-align: left; font-size: 10px; white-space: nowrap; }
-.itlab-table-wrap td { padding: 12px; border-right: 1px solid #d6d2c8; border-bottom: 1px solid #d6d2c8; vertical-align: top; font-size: 11px; line-height: 1.45; }
+.itlab-table-wrap th { padding: 11px 12px; background: var(--it-black); color: white; text-align: left; font-size: 11px; white-space: nowrap; }
+.itlab-table-wrap td { padding: 12px; border-right: 1px solid #d6d2c8; border-bottom: 1px solid #d6d2c8; vertical-align: top; font-size: 12px; line-height: 1.5; }
 .itlab-table-wrap tr:last-child td { border-bottom: 0; }
 .itlab-table-wrap td:first-child { white-space: nowrap; }
-.itlab-table-wrap td small { display: block; margin-top: 4px; color: #66645d; font: 500 9px 'IBM Plex Mono', monospace; }
+.itlab-table-wrap td small { display: block; margin-top: 5px; color: #57554f; font-size: 10px; line-height: 1.45; }
 .itlab-table-wrap td button { border: 0; background: transparent; padding: 0; color: var(--it-blue); text-align: left; font-weight: 800; cursor: pointer; }
 .itlab-table-wrap td a { color: var(--it-blue); font-weight: 800; }
 .itlab-members { margin-top: 5px; }
@@ -242,6 +242,15 @@
 .itlab-sources a small { margin-top: auto; padding-top: 12px; color: var(--it-yellow); font: 500 9px 'IBM Plex Mono', monospace; }
 
 @media (max-width: 1040px) {
+  .itlab-catalogue-table { overflow: visible; border: 0; background: transparent; }
+  .itlab-catalogue-table table, .itlab-catalogue-table tbody { display: block; width: 100%; min-width: 0; }
+  .itlab-catalogue-table thead { display: none; }
+  .itlab-catalogue-table caption { display: block; border: 1px solid var(--it-black); background: white; }
+  .itlab-catalogue-table tr { margin-top: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--it-black); background: white; }
+  .itlab-catalogue-table td { display: block; min-width: 0; padding: 11px 14px; border-right: 0; overflow-wrap: anywhere; }
+  .itlab-catalogue-table td:nth-child(2), .itlab-catalogue-table td:nth-child(7), .itlab-catalogue-table td:nth-child(8) { grid-column: 1 / -1; }
+  .itlab-catalogue-table td::before { content: attr(data-label); display: block; margin-bottom: 3px; color: #555149; font-size: 11px; font-weight: 800; }
+  .itlab-catalogue-table td:last-child { border-bottom: 0; }
   .itlab-hero { grid-template-columns: 1fr 310px; }
   .itlab-metrics { grid-template-columns: repeat(2, 1fr); }
   .itlab-metrics article:nth-child(2) { border-right: 0; }
