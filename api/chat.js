@@ -4,6 +4,7 @@ import { join } from 'node:path'
 const SOURCE_URL = 'https://drive.google.com/file/d/1f-lfPEsutobU6iB8W4LY1bThfhvYheHJ/view'
 const requestLog = new Map()
 let knowledgeCache
+let bmaCache
 const stopWords = new Set(['งบ', 'รายการ', 'ราย', 'การ', 'งาน', 'โครงการ', 'ใด', 'ไหน', 'อะไร', 'อย่างไร', 'เกี่ยวกับ', 'ควร', 'เปิด', 'ก่อน', 'พร้อม', 'บอก', 'ด้วย', 'เหตุผล', 'หลักฐาน', 'เอกสาร', 'ไฟล์', 'สำนักงาน', 'ขอ', 'และ', 'หรือ', 'ของ', 'ที่', 'มี', 'เป็น', 'จาก', 'ให้', 'ช่วย', 'ใช้', 'เรื่อง', 'สรุป', 'กรุณา', 'ตรวจสอบ', 'ข้อมูล', 'คำถาม', 'มาก', 'ที่สุด', 'วัน', 'วันไหน', 'ประเด็น', 'บ้าง'])
 
 const siteFacts = [
@@ -60,6 +61,11 @@ function loadKnowledge() {
     ssoEgpIt: JSON.parse(readFileSync(join(process.cwd(), 'public', 'data', 'sso-egp-it.json'), 'utf8')),
   }
   return knowledgeCache
+}
+
+function loadBmaBudget() {
+  if (!bmaCache) bmaCache = JSON.parse(readFileSync(join(process.cwd(), 'public', 'data', 'bma-budget-2570.json'), 'utf8'))
+  return bmaCache
 }
 
 function termsFor(text) {
@@ -166,6 +172,17 @@ function subsectionText(exactText, requestedSubsection) {
 function retrieve(question, focusId) {
   const { big: data, cases, inventory, history, corpus, corpusAnalysis, legal, committee, structure, sso, ssoIt, ssoEgpIt } = loadKnowledge()
   const terms = termsFor(question)
+  const asksBma = /(?:กรุงเทพมหานคร|กรุงเทพฯ|กทม|สำนักงานเขต|เขตบางกอกน้อย|ปี\s*2570)/.test(question)
+    && /(?:งบ|รายจ่าย|จัดซื้อ|จัดจ้าง|รายการ|โครงการ|ครุภัณฑ์|ราคา|วงเงิน|บาท)/.test(question)
+  const bma = asksBma ? loadBmaBudget() : null
+  const namedBmaAgency = asksBma ? bma.agencies.find(({ name }) => question.includes(name) || (name.startsWith('สำนักงานเขต') && question.includes(name.slice('สำนักงาน'.length))))?.name : undefined
+  const bmaTerms = terms.filter((term) => !/^(?:2570|กรุงเทพมหานคร|กรุงเทพฯ|กทม|สำนักงานเขต|งบประมาณ|งบ|บาท|ราคา|วงเงิน)$/.test(term) && !namedBmaAgency?.includes(term))
+  const bmaRows = asksBma ? bma.rows
+    .filter((row) => row.kind === 'detail' && (!namedBmaAgency || row.agency === namedBmaAgency))
+    .map((row) => ({ row, score: bmaTerms.reduce((score, term) => score + (row.item.includes(term) ? 1 : 0), 0) }))
+    .filter((entry) => !bmaTerms.length || entry.score > 0)
+    .sort((a, b) => b.score - a.score || b.row.amount - a.row.amount)
+    .slice(0, 3).map(({ row }) => row) : []
   const topicPattern = topicPatternFor(question)
   const matchedSignal = signalFor(question, data.flags)
   const asksAboutLaw = /มาตรา\s*[\d๐-๙]+|กฎหมาย|รัฐธรรมนูญ|พ\.ร\.บ\.\s*(การจัดซื้อ|วินัย|วิธีการงบประมาณ|ข้อมูลข่าวสาร)/.test(question)
@@ -314,6 +331,7 @@ function retrieve(question, focusId) {
   const context = `ข้อมูลภาพรวม:\n${relevantFacts.length ? relevantFacts.map((fact, index) => `[ข้อมูล ${index + 1}] ${fact.text}`).join('\n') : 'ไม่พบตัวเลขภาพรวมที่ตรงคำค้นโดยตรง'}\n\nแฟ้มจัดซื้อ IT ประกันสังคม:\n${ssoItText || 'คำถามนี้ไม่ตรงกับแฟ้มจัดซื้อ IT ประกันสังคม'}\n\nแฟ้มเจาะงบประกันสังคม:\n${ssoText || 'คำถามนี้ไม่ตรงกับแฟ้มประกันสังคมเฉพาะเรื่อง'}\n\nโครงสร้างรัฐเชื่อมงบประมาณ:\n${structureText || 'ไม่พบหน่วยงานที่ตรงคำค้นโดยตรง'}\n\nอนุกรมเวลา PBO:\n${historyText}\n\nวาระและสรุปหลังประชุมของคณะกรรมาธิการ:\n${committeeText || 'ไม่พบวาระที่ตรงคำค้นโดยตรง'}\n\nแฟ้มวิเคราะห์ที่ค้นคืนจากเว็บ:\n${caseText || 'ไม่พบแฟ้มเฉพาะที่ตรงคำค้น'}\n\nรายการที่ค้นคืนจาก PBO 2568:\n${itemText || 'ไม่พบรายการ PBO ที่ตรงคำค้นโดยตรง'}\n\nหลักฐานในคลังที่ค้นคืน:\n${fileText || 'ไม่พบชื่อไฟล์ที่ตรงคำค้นโดยตรง'}\n\nสัญญาณจากข้อความและ OCR:\n${evidenceText || 'ไม่พบสัญญาณที่ตรงคำค้นโดยตรง'}\n\nกฎหมายที่เกี่ยวข้อง:\n${relevantLaws.map((law) => `${law.code}\nตัวบทตามประกาศ:\n${law.exactText}\n\nแนวทางใช้ตรวจงบของระบบ:\n${law.analysis}\nเอกสารที่เชื่อมต่อ: ${law.documents.join(' | ')}\nประกาศ: ${law.publication}\nที่มา: ${law.sourceUrl}`).join('\n\n')}${focusText}`
 
   const sources = [
+    ...bmaRows.map((row, index) => ({ ref: `[กทม ${index + 1}]`, label: row.item, detail: `${row.agency} | ชีต ${row.sheet} แถว ${row.row} | ${row.amount.toLocaleString('th-TH')} บาท`, url: row.source_url })),
     ...selectedCases.map(({ item }, index) => ({ ref: `[แฟ้ม ${index + 1}]`, label: item.title, detail: `${item.agency} | ${item.sourceLabel}`, url: item.sourceUrl })),
     ...selected.map(({ item }, index) => ({ ref: `[รายการ ${index + 1}]`, label: item.item, detail: `${item.agency} | ${item.adjusted.toLocaleString('th-TH')} ล้านบาท`, url: SOURCE_URL })),
     ...relevantFiles.map((file, index) => ({ ref: `[ไฟล์ ${index + 1}]`, label: file.title, detail: `${file.category} | ${file.path || 'โฟลเดอร์หลัก'} | ${formatBytes(file.size)}`, url: file.url })),
@@ -335,7 +353,7 @@ function retrieve(question, focusId) {
     ] : []),
     ...relevantLaws.filter((law) => law.score > 0).map((law) => ({ ref: law.shortCode, label: law.code, detail: law.publication, url: law.sourceUrl })),
   ].filter((source, index, all) => all.findIndex((candidate) => candidate.label === source.label && candidate.url === source.url) === index)
-  return { context, sources, selectedCases: selectedCases.map(({ item }) => item), selectedItems: selected.map(({ item }) => item), relevantFacts, relevantLaws, relevantFiles, relevantHistory, relevantEvidence, relevantMeetings, relevantStructure, matchedSignal, asksSsoIt, ssoIt, ssoEgpIt, asksSso, sso }
+  return { context, sources, selectedCases: selectedCases.map(({ item }) => item), selectedItems: selected.map(({ item }) => item), relevantFacts, relevantLaws, relevantFiles, relevantHistory, relevantEvidence, relevantMeetings, relevantStructure, matchedSignal, asksSsoIt, ssoIt, ssoEgpIt, asksSso, sso, asksBma, bmaRows, bma }
 }
 
 function rateLimited(request) {
@@ -489,6 +507,13 @@ function buildSsoItAnswer(question, ssoIt, ssoEgpIt) {
   return `AIT และกิจการร่วมค้าในทะเบียนจัดซื้อ IT ประกันสังคม [ทะเบียน IT 1]\n\nจาก ${ssoEgpIt.metrics.projects} โครงการที่คัดด้วยชื่อและงบตั้งแต่ 10 ล้านบาท มี ${ssoEgpIt.metrics.aitWinnerDocumentProjects} โครงการที่ประกาศผู้ชนะต้นฉบับยืนยันว่า AIT รับงานตรงหรือเป็นสมาชิกกิจการร่วมค้า มูลค่าสัญญารวม ${(ssoEgpIt.metrics.aitWinnerDocumentContractPrice / 1_000_000).toLocaleString('th-TH')} ล้านบาท\nAIT รับงานตรง ${ssoEgpIt.metrics.aitDirectProjects} สัญญา ${(ssoEgpIt.metrics.aitDirectContractPrice / 1_000_000).toLocaleString('th-TH')} ล้านบาท และอยู่ในกิจการร่วมค้า ${ssoEgpIt.metrics.aitConsortiumProjects} สัญญา มูลค่าสัญญารวม ${(ssoEgpIt.metrics.aitConsortiumContractPrice / 1_000_000).toLocaleString('th-TH')} ล้านบาท ยอดกิจการร่วมค้าไม่ใช่รายได้ของ AIT ทั้งหมด\n\nในจำนวนนี้มี ${ssoIt.metrics.linkedProjects} โครงการที่ทำแฟ้มผู้เสนอราคาและหลักฐานละเอียดแล้ว [จัดซื้อ IT 1] อีก 3 โครงการตรวจประกาศผู้ชนะแล้วแต่ยังไม่ได้ทำแฟ้มละเอียด ตาราง CSV มีชื่อ AIT อีก 1 โครงการที่ยังไม่พบประกาศผู้ชนะต้นฉบับในคลังสำเนาที่ตรวจ\n\nค้นเลข e-GP หรือชื่อโครงการในทะเบียนบนเว็บเพื่อดูราคาและเปิดหลักฐานรายรายการ`
 }
 
+function buildBmaBudgetAnswer(bma, rows) {
+  const overview = `ร่างงบประมาณกรุงเทพมหานครปี 2570 มีตารางต้นทาง ${bma.meta.source_files.toLocaleString('th-TH')} ไฟล์ ระบบอ่านได้ ${bma.meta.rows.toLocaleString('th-TH')} แถวที่มีจำนวนเงิน โดย ${bma.meta.detail_rows.toLocaleString('th-TH')} แถวถูกจัดเป็นรายการย่อย ตารางมีทั้งรายการย่อยและยอดรวมย่อย จึงไม่ควรบวกทุกแถวเป็นยอดรวม`
+  if (!rows.length) return `${overview}\n\nยังไม่พบรายการย่อยที่ตรงคำถามในตารางชุดนี้ ลองค้นชื่อรายการหรือหน่วยงานบนหน้า "งบกรุงเทพฯ 2570" และตรวจ PDF ประกอบ`
+  const details = rows.map((row, index) => `${index + 1}. ${row.item} [กทม ${index + 1}]\nหน่วยงาน: ${row.agency}\nจำนวนเงินในแถว: ${row.amount.toLocaleString('th-TH')} บาท\nตำแหน่ง: ชีต ${row.sheet} แถว ${row.row}`).join('\n\n')
+  return `${overview}\n\nรายการที่ตรงคำถาม\n${details}\n\nชื่อรายการหรือจำนวนเงินที่คล้ายกันยังไม่ยืนยันว่าเป็นโครงการเดียวกัน ให้เทียบรหัสงบ ปีที่ตั้งงบ รายละเอียดงาน และสัญญาก่อนสรุป`
+}
+
 function buildSsoAnswer(question, sso) {
   const normalized = question.toLocaleLowerCase('th')
   let selected = sso.findings
@@ -557,7 +582,7 @@ export default async function handler(request, response) {
   const apiKey = process.env.PATHUMMA_API_KEY
   if (!apiKey) return response.status(503).json({ error: 'ระบบถามตอบยังรอการเชื่อมต่อ Pathumma API' })
 
-  const { context, sources, selectedCases, selectedItems, relevantFacts, relevantLaws, relevantFiles, relevantHistory, relevantMeetings, relevantStructure, matchedSignal, asksSsoIt, ssoIt, ssoEgpIt, asksSso, sso } = retrieve(question, String(request.body?.focusId ?? ''))
+  const { context, sources, selectedCases, selectedItems, relevantFacts, relevantLaws, relevantFiles, relevantHistory, relevantMeetings, relevantStructure, matchedSignal, asksSsoIt, ssoIt, ssoEgpIt, asksSso, sso, asksBma, bmaRows, bma } = retrieve(question, String(request.body?.focusId ?? ''))
   const history = Array.isArray(request.body?.history) ? request.body.history.slice(-6).map((message) => ({ role: message.role === 'assistant' ? 'assistant' : 'user', content: String(message.content ?? '').slice(0, 2500) })) : []
   const asksAboutFocus = /(รายการนี้|โครงการนี้|หน้านี้|ที่กำลังเปิด|แฟ้มนี้)/.test(question)
   const asksLegalQuestion = /มาตรา\s*[\d๐-๙]+|กฎหมาย|รัฐธรรมนูญ|พ\.ร\.บ\.\s*(การจัดซื้อ|วินัย|วิธีการงบประมาณ|ข้อมูลข่าวสาร)/.test(question)
@@ -580,6 +605,12 @@ export default async function handler(request, response) {
   if (asksSso) {
     const answer = buildSsoAnswer(question, sso)
     return response.status(200).json({ answer, sources: visibleSourcesFor(answer, sources), model: process.env.PATHUMMA_MODEL ?? 'pathumma' })
+  }
+  if (asksBma) {
+    const answer = buildBmaBudgetAnswer(bma, bmaRows)
+    const budgetSources = bmaRows.map((row) => ({ label: row.item, detail: `${row.agency} | ชีต ${row.sheet} แถว ${row.row} | ${row.amount.toLocaleString('th-TH')} บาท`, url: row.source_url }))
+    budgetSources.push({ label: 'ตารางงบกรุงเทพมหานครปี 2570', detail: `${bma.meta.source_files} ไฟล์`, url: '/data/bma-budget-2570.json' })
+    return response.status(200).json({ answer, sources: budgetSources, model: 'ngob-gae-index' })
   }
   if (matchedSignal) {
     const answer = buildSignalAnswer(matchedSignal, selectedItems)

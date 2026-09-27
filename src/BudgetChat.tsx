@@ -16,6 +16,7 @@ type BudgetChatProps = {
 
 const suggestions = [
   'AIT เกี่ยวข้องกับงาน IT ประกันสังคมกี่โครงการ',
+  'งบกรุงเทพมหานคร 2570 โครงการอุโมงค์ระบายน้ำมีรายการอะไร',
   'กลุ่มงานก่อสร้างมีภาพรวมและจุดที่ควรถามต่ออย่างไร',
   'อธิบายรายการที่มีวงเงินเกิดใหม่หลัง พ.ร.บ.',
   'หากชื่อรายการกว้าง ควรขอเอกสารอะไรบ้าง',
@@ -106,7 +107,7 @@ function BudgetChat({ activeItem, items, open, onOpen, onClose, onSelectItem }: 
           <button onClick={onClose} aria-label="ปิดผู้ช่วยถามตอบ">×</button>
         </header>
         <div className="chat-focus">
-          <label htmlFor="chat-budget-search">ค้นและเลือกรายการงบ ({items.length.toLocaleString('th-TH')} รายการ)</label>
+          <label htmlFor="chat-budget-search">เลือกรายการ PBO 2568 เมื่อต้องการถามเฉพาะรายการ ({items.length.toLocaleString('th-TH')} รายการ)</label>
           <input id="chat-budget-search" value={itemQuery} onChange={(event) => setItemQuery(event.target.value)} placeholder="พิมพ์ชื่อรายการ หน่วยงาน หรือโครงการ" />
           <select id="chat-budget-item" aria-label="รายการงบที่เลือก" value={activeItem.id} onChange={(event) => selectItem(event.target.value)}>
             {!activeItemIsListed && <optgroup label="รายการที่เลือกอยู่"><option value={activeItem.id}>{activeItem.score} คะแนน | {activeItem.item} | {activeItem.agency}</option></optgroup>}
@@ -131,7 +132,7 @@ function BudgetChat({ activeItem, items, open, onOpen, onClose, onSelectItem }: 
           <textarea id="budget-question" ref={inputRef} value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={handleKey} placeholder="เช่น งบสำนักงานประกันสังคมมีจุดใดที่ควรกระทบยอด" rows={3} maxLength={1800} />
           <div><small>Enter เพื่อส่งคำถาม และ Shift + Enter เพื่อขึ้นบรรทัดใหม่</small><button disabled={!question.trim() || loading} type="submit">{loading ? 'กำลังตอบ' : 'ส่งคำถาม'} <span>↗</span></button></div>
         </form>
-        <footer className="chat-foot"><span>เทคโนโลยีภาษา Pathumma โดย NECTEC</span><span>ประมวลผลคลังเมื่อ 20 ก.ย. 2569</span></footer>
+        <footer className="chat-foot"><span>เทคโนโลยีภาษา Pathumma โดย NECTEC</span><span>ข้อมูลปรับปรุง กันยายน 2569</span></footer>
       </aside>
     </div>}
   </>

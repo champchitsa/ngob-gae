@@ -58,6 +58,23 @@ test('chat explains a changed budget amount instead of listing unrelated files',
   }
 })
 
+test('chat answers a BMA budget question from located source rows', async () => {
+  const originalKey = process.env.PATHUMMA_API_KEY
+  process.env.PATHUMMA_API_KEY = 'test-key'
+  try {
+    const result = response()
+    await chat({ method: 'POST', headers: { host: 'ngob-gae.vercel.app', 'content-type': 'application/json' }, body: { question: 'งบกรุงเทพมหานคร 2570 โครงการอุโมงค์ระบายน้ำมีรายการอะไร' }, socket: { remoteAddress: 'test-bma-budget' } }, result)
+    assert.equal(result.statusCode, 200)
+    assert.match(result.body.answer, /อุโมงค์ระบายน้ำ/)
+    assert.match(result.body.answer, /ชีต .* แถว \d+/)
+    assert.ok(result.body.sources.some((source) => source.url.includes('docs.google.com/spreadsheets/')))
+    assert.ok(result.body.sources.some((source) => source.url === '/data/bma-budget-2570.json'))
+  } finally {
+    if (originalKey === undefined) delete process.env.PATHUMMA_API_KEY
+    else process.env.PATHUMMA_API_KEY = originalKey
+  }
+})
+
 test('corpus refuses an upstream that ignores a ranged request', async () => {
   const originalFetch = globalThis.fetch
   globalThis.fetch = async () => new Response(new Uint8Array(10), { status: 200, headers: { 'content-length': '10' } })
