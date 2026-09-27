@@ -53,6 +53,14 @@ def test_ocr_quality_catches_heavily_garbled_scans_without_flagging_bilingual_te
     assert not poor_thai_ocr(bilingual)
 
 
+def test_ocr_quality_catches_latin_gibberish_from_broken_pdf_fonts() -> None:
+    garbled = "gudsianisaaGu szr ud do sswi aimisl nuua sa uu bava aa Gbd " * 15
+    english = "The procurement documents provide the project budget and contract details for the public agency. " * 15
+    assert poor_thai_ocr(garbled)
+    assert pdf_text_needs_ocr(garbled)
+    assert not poor_thai_ocr(english)
+
+
 def test_ocr_repair_only_rechecks_suspect_pages() -> None:
     noisy = {"type": "page", "page": 12, "method": "ocr", "text": "ร ว 5 Ee aor BEE ก รุงเทพ ช ซ ภา ae 1 2 gg fee are bey con bee ale"}
     assert needs_repair(noisy)
@@ -60,7 +68,7 @@ def test_ocr_repair_only_rechecks_suspect_pages() -> None:
     assert not needs_repair({**noisy, "ocr_unresolved": True})
     assert needs_repair({**noisy, "ocr_unresolved": True}, retry_unresolved=True)
     assert needs_repair({**noisy, "ocr_repaired": True, "ocr_unresolved": True}, retry_unresolved=True)
-    assert not needs_repair({**noisy, "method": "embedded"})
+    assert needs_repair({**noisy, "method": "embedded"})
 
 
 def test_budget_cover_catches_thai_looking_gibberish() -> None:

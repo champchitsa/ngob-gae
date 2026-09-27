@@ -259,7 +259,12 @@ def poor_thai_ocr(text: str) -> bool:
     latin = sum(len(token) for token in latin_tokens)
     short_latin = sum(len(token) for token in latin_tokens if len(token) <= 2)
     if thai < 12:
-        return latin > 80 and short_latin > latin * 0.4
+        if latin > 80 and short_latin > latin * 0.4:
+            return True
+        if latin > 200 and len(latin_tokens) >= 40 and ocr_quality_score(text) < -50:
+            english_words = {"the", "and", "of", "to", "for", "in", "with", "on", "by", "a", "is", "this", "from", "that", "as", "or", "are", "be", "at", "an"}
+            return sum(token.lower() in english_words for token in latin_tokens) / len(latin_tokens) < 0.12
+        return False
     if thai < 200:
         return latin > max(20, thai * 0.28)
     return latin > max(150, thai) and short_latin > latin * 0.4
@@ -283,7 +288,7 @@ def broken_embedded_thai_text(text: str) -> bool:
 
 
 def pdf_text_needs_ocr(text: str) -> bool:
-    return not text_is_sufficient(text) or broken_embedded_thai_text(text)
+    return not text_is_sufficient(text) or broken_embedded_thai_text(text) or poor_thai_ocr(text)
 
 
 def osd_pillow_rotation(output: str) -> int | None:

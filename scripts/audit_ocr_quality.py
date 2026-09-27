@@ -22,6 +22,8 @@ def suspect_reason(record: dict, *, cover: bool) -> str | None:
         return "unreadable budget cover"
     if method == "embedded" and broken_embedded_thai_text(text):
         return "broken PDF font text"
+    if method == "embedded" and poor_thai_ocr(text):
+        return "garbled embedded text"
     if method == "ocr" and poor_thai_ocr(text):
         return "low Thai readability"
     if method == "ocr" and cover and ocr_quality_score(text) < 100:

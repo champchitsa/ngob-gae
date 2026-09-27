@@ -41,7 +41,7 @@ def needs_repair(record: dict, *, cover: bool = False, retry_unresolved: bool = 
     if record.get("ocr_unresolved") and not retry_unresolved:
         return False
     if record.get("method") == "embedded":
-        return broken_embedded_thai_text(text) or (cover and weak_budget_cover(text))
+        return broken_embedded_thai_text(text) or poor_thai_ocr(text) or (cover and weak_budget_cover(text))
     return record.get("method") == "ocr_error" or poor_thai_ocr(text) or (cover and (ocr_quality_score(text) < 100 or weak_budget_cover(text)))
 
 
