@@ -118,6 +118,12 @@ const previewRecords = (file: CorpusFile, query: string) => {
   return matches.length ? matches : file.preview.slice(0, PAGE_SIZE)
 }
 
+const categoryAliases: Record<string, string> = {
+  'OPEN SSO': 'สำนักงานประกันสังคม ประกันสังคม สปส',
+  'PBO': 'สำนักงบประมาณของรัฐสภา งบประมาณประเทศ',
+  'กมธ.ติดตามงบ': 'กรรมาธิการ ติดตามการบริหารงบประมาณ',
+}
+
 const corpusAssetName = (file: CorpusFile) => {
   if (!file.corpus_url) return null
   const asset = file.corpus_url.split('/').pop()
@@ -365,14 +371,16 @@ export default function CorpusReader() {
 
   const files = useMemo(() => {
     if (!index) return []
-    const needle = query.trim().toLocaleLowerCase('th')
+    const terms = query.trim().toLocaleLowerCase('th').split(/\s+/).filter(Boolean)
     return index.files.filter((file) => {
       if (category !== 'all' && file.category !== category) return false
       if (kind !== 'all' && fileKind(file) !== kind) return false
-      if (!needle) return true
+      if (!terms.length) return true
       const preview = file.preview.map((item) => item.text || '').join(' ')
       const analysisContext = (analysisContextByFile.get(file.id) ?? []).join(' ')
-      return `${file.title} ${file.path} ${file.category} ${preview} ${analysisContext}`.toLocaleLowerCase('th').includes(needle)
+      const alias = Object.entries(categoryAliases).find(([label]) => file.category.startsWith(label))?.[1] ?? ''
+      const searchable = `${file.title} ${file.path} ${file.category} ${alias} ${preview} ${analysisContext}`.toLocaleLowerCase('th')
+      return terms.every((term) => searchable.includes(term))
     })
   }, [index, query, category, kind, analysisContextByFile])
 
@@ -437,6 +445,12 @@ export default function CorpusReader() {
         </div>
       </div>
 
+      <div className="corpus-controls">
+        <label className="corpus-search"><span>ค้นคลัง</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ชื่อไฟล์ หน่วยงาน จังหวัด โครงการ หรือตัวเลข" /></label>
+        <label><span>ชนิดข้อมูล</span><select value={kind} onChange={(event) => setKind(event.target.value)}><option value="all">ทุกชนิด</option><option>PDF</option><option>ตาราง</option><option>เอกสาร</option><option>สไลด์</option><option>ภาพ</option><option>ไฟล์</option></select></label>
+        <label><span>หมวดหลัก</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="all">ทุกหมวด</option>{index?.categories.map((item) => <option key={item.category} value={item.category}>{item.category} ({formatCount(item.files)})</option>)}</select></label>
+      </div>
+
       {meta && <div className="corpus-metrics" role="group" aria-label="ผลการอ่านเอกสารทั้งคลัง">
         <div><strong>{formatCount(meta.units)}</strong><span>หน้า แถว และส่วนเนื้อหา</span></div>
         <div><strong>{formatCount(meta.lines)}</strong><span>บรรทัดที่จัดทำดัชนี</span></div>
@@ -476,12 +490,6 @@ export default function CorpusReader() {
         </div>
         <p className="corpus-analysis-note">{analysis.meta.interpretation}</p>
       </section></details>}
-
-      <div className="corpus-controls">
-        <label className="corpus-search"><span>ค้นคลัง</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ชื่อไฟล์ หน่วยงาน จังหวัด โครงการ หรือตัวเลข" /></label>
-        <label><span>ชนิดข้อมูล</span><select value={kind} onChange={(event) => setKind(event.target.value)}><option value="all">ทุกชนิด</option><option>PDF</option><option>ตาราง</option><option>เอกสาร</option><option>สไลด์</option><option>ภาพ</option><option>ไฟล์</option></select></label>
-        <label><span>หมวดหลัก</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="all">ทุกหมวด</option>{index?.categories.map((item) => <option key={item.category} value={item.category}>{item.category} ({formatCount(item.files)})</option>)}</select></label>
-      </div>
 
       <div className="corpus-result-line"><strong>{formatCount(files.length)} ไฟล์</strong><span>ค้นจากชื่อ เส้นทาง ตัวอย่างข้อความ และบริบทตัวเลข</span></div>
       <div className="corpus-file-grid">
