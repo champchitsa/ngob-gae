@@ -64,6 +64,8 @@ type CorpusIndex = {
     paragraphs: number
     table_rows: number
     images: number
+    ocr_repaired_pages?: number
+    ocr_unresolved_pages?: number
   }
   categories: { category: string; files: number; complete: number }[]
   files: CorpusFile[]
@@ -485,6 +487,8 @@ export default function CorpusReader() {
         <div><strong>{formatCount(meta.lines)}</strong><span>บรรทัดที่จัดทำดัชนี</span></div>
         <div><strong>{formatCount(meta.cells)}</strong><span>เซลล์ในตาราง</span></div>
         <div><strong>{formatCount(meta.ocr_units)}</strong><span>หน้าหรือภาพที่ OCR</span></div>
+        {meta.ocr_repaired_pages !== undefined && <div><strong>{formatCount(meta.ocr_repaired_pages)}</strong><span>หน้าที่ตรวจ OCR ซ้ำ</span></div>}
+        {meta.ocr_unresolved_pages !== undefined && <div><strong>{formatCount(meta.ocr_unresolved_pages)}</strong><span>หน้าที่ควรเทียบต้นฉบับ</span></div>}
       </div></details>}
 
       {analysis && <details className="corpus-review-toggle"><summary><span>คิวตรวจจากข้อความและ OCR</span><strong>{formatCount(analysis.meta.analyzed_files)} แฟ้มที่พบประเด็น</strong><small>เปิดดูเหตุผลและตำแหน่งต้นทาง</small></summary><section className="corpus-analysis-panel" aria-labelledby="corpus-analysis-title">

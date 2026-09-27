@@ -136,6 +136,8 @@ def main() -> None:
         structure = compact_structure(summary.get("structure", {}))
         for key in ("pages", "sheet_count", "slides", "paragraphs", "table_rows", "images"):
             totals[key] += int(structure.get(key) or 0)
+        totals["ocr_repaired_pages"] += int(structure.get("ocr_repaired_count") or 0)
+        totals["ocr_unresolved_pages"] += int(structure.get("ocr_unresolved_count") or 0)
         keyword_hits = summary.get("keyword_hits", {})
         for theme, hits in keyword_hits.items():
             if hits:
