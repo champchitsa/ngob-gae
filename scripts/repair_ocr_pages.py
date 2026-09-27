@@ -116,7 +116,8 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
                             if quality(alternate) > quality(candidate):
                                 candidate = alternate
                 original = str(record.get("text") or "")
-                if candidate and quality(candidate) >= quality(original) + 10:
+                candidate_readable = not poor_thai_ocr(candidate) and not (is_cover and weak_budget_cover(candidate))
+                if candidate and (candidate_readable or not enhancement_only) and quality(candidate) >= quality(original) + 10:
                     record.update({"text": candidate, "line_count": len(candidate.splitlines()), "method": "ocr", "ocr_repaired": True})
                     repaired_pages.append(page)
                     if poor_thai_ocr(candidate) or (is_cover and weak_budget_cover(candidate)):
