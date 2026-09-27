@@ -141,9 +141,10 @@ python scripts/repair_ocr_pages.py public/data/drive-inventory.json .workdata/dr
 
 หลังปรับวิธี OCR สามารถลองหน้าที่เคยระบุว่าอ่านไม่ชัดอีกครั้งด้วย `--retry-unresolved` ไฟล์ Drive ขนาดตั้งแต่ 10 MB ดาวน์โหลดเป็นช่วงพร้อมตรวจ `Content-Range` และกลับมาทำต่อจากช่วงที่สำเร็จได้
 
-หน้าที่ลอง OCR ซ้ำแล้วยังอ่านไม่ชัดจะเก็บไว้ให้เปิดเทียบต้นฉบับ แต่ไม่นำตัวเลขไปสร้างสัญญาณอัตโนมัติ หลังซ่อม ให้ตรวจ corpus ก่อนสร้างดัชนี ตัว validator จะหยุดด้วย exit code 1 เมื่อไฟล์ขาด เสีย มีข้อมูลซ้ำที่ขัดกัน หรือมี page/image warning ที่ยังไม่ได้ทบทวน:
+หน้าที่ลอง OCR ซ้ำแล้วยังอ่านไม่ชัดจะเก็บไว้ให้เปิดเทียบต้นฉบับ แต่ไม่นำตัวเลขไปสร้างสัญญาณอัตโนมัติ หลังซ่อม ให้ตรวจคุณภาพทุกหน้าและโครงสร้าง corpus ก่อนสร้างดัชนี ตัวตรวจ OCR จะหยุดเมื่อยังมีหน้าอ่านผิดที่ไม่ได้ทำเครื่องหมายให้เทียบต้นฉบับ ส่วน validator จะหยุดเมื่อไฟล์ขาด เสีย มีข้อมูลซ้ำที่ขัดกัน หรือมี page/image warning ที่ยังไม่ได้ทบทวน:
 
 ```bash
+python scripts/audit_ocr_quality.py public/data/drive-inventory.json .workdata/ocr-quality-report.json .workdata/drive-corpus .workdata/drive-corpus-pdf
 python scripts/validate_corpus.py public/data/drive-inventory.json .workdata/corpus-validation.json .workdata/drive-corpus .workdata/drive-corpus-pdf
 ```
 

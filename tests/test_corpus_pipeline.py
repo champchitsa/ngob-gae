@@ -28,6 +28,7 @@ from corpus_pipeline import atomic_write_json, collect_record_assets, sha256_fil
 from analyze_drive_corpus import credible_amounts  # noqa: E402
 from extract_drive_corpus import FileStats, broken_embedded_thai_text, contiguous_page_batches, extract_docx, extract_pptx, ocr_quality_score, osd_pillow_rotation, pdf_text_needs_ocr, poor_thai_ocr  # noqa: E402
 from repair_ocr_pages import needs_repair  # noqa: E402
+from audit_ocr_quality import suspect_reason  # noqa: E402
 
 
 def test_pdf_ocr_fallback_never_renders_unrequested_pages() -> None:
@@ -68,6 +69,8 @@ def test_broken_pdf_font_text_is_reocrd_from_the_rendered_page() -> None:
     assert needs_repair({"type": "page", "page": 14, "method": "embedded", "text": broken})
     assert not broken_embedded_thai_text("สำนักงานประกันสังคม งบประมาณ 39,691.7986 บาท")
     assert not pdf_text_needs_ocr("สำนักงานประกันสังคม งบประมาณ 39,691.7986 บาท ซึ่งเป็นเอกสารที่มีข้อความภาษาไทยอ่านได้ครบถ้วน")
+    assert suspect_reason({"method": "embedded", "text": broken}, cover=False) == "broken PDF font text"
+    assert suspect_reason({"method": "ocr_error", "text": ""}, cover=False) == "OCR failed"
 
 
 def test_osd_rotation_requires_confidence_and_uses_pillow_direction() -> None:
