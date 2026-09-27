@@ -1415,3 +1415,8 @@ main > section[id], #law-workbench { scroll-margin-top: 84px; }
   .case-file { padding: 0; }
   .panel-backdrop { display: none; }
 }
+.load-error { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 16px; padding: clamp(24px, 7vw, 80px); background: #f2efe6; color: #171714; }
+.load-error > span { font: 700 14px 'IBM Plex Mono', monospace; }
+.load-error h1 { margin: 0; font-size: clamp(32px, 6vw, 64px); line-height: 1.1; }
+.load-error p { margin: 0; font-size: 17px; line-height: 1.6; }
+.load-error button { min-height: 48px; padding: 10px 24px; border: 1px solid #171714; background: #f7de00; color: #171714; font: inherit; font-weight: 700; cursor: pointer; }
