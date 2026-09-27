@@ -46,7 +46,7 @@ function BudgetChat({ activeItem, items, open, onOpen, onClose, onSelectItem }: 
     const needle = itemQuery.trim().toLocaleLowerCase('th')
     return items
       .filter((item) => !needle || `${item.item} ${item.agency} ${item.ministry} ${item.project}`.toLocaleLowerCase('th').includes(needle))
-      .slice(0, 200)
+      .slice(0, 40)
   }, [itemQuery, items])
   const activeItemIsListed = matchingItems.some((item) => item.id === activeItem.id)
 
@@ -111,11 +111,11 @@ function BudgetChat({ activeItem, items, open, onOpen, onClose, onSelectItem }: 
           <input id="chat-budget-search" value={itemQuery} onChange={(event) => setItemQuery(event.target.value)} placeholder="พิมพ์ชื่อรายการ หน่วยงาน หรือโครงการ" />
           <select id="chat-budget-item" aria-label="รายการงบที่เลือก" value={activeItem.id} onChange={(event) => selectItem(event.target.value)}>
             {!activeItemIsListed && <optgroup label="รายการที่เลือกอยู่"><option value={activeItem.id}>{activeItem.score} คะแนน | {activeItem.item} | {activeItem.agency}</option></optgroup>}
-            <optgroup label={itemQuery ? `ผลค้นหา ${matchingItems.length.toLocaleString('th-TH')} รายการ` : 'รายการคะแนนสูงสุด 200 รายการ'}>
+            <optgroup label={itemQuery ? `ผลค้นหาที่แสดง ${matchingItems.length.toLocaleString('th-TH')} รายการ` : 'รายการคะแนนสูงสุด 40 รายการ'}>
               {matchingItems.map((item) => <option value={item.id} key={item.id}>{item.score} คะแนน | {item.item} | {item.agency}</option>)}
             </optgroup>
           </select>
-          <small>{itemQuery ? `พบและแสดงไม่เกิน 200 รายการ | ` : ''}{activeItem.agency} | หลังโอน {activeItem.adjusted.toLocaleString('th-TH')} ล้านบาท | คะแนน {activeItem.score}/100</small>
+          <small>{itemQuery ? `แสดงไม่เกิน 40 รายการ | ` : ''}{activeItem.agency} | หลังโอน {activeItem.adjusted.toLocaleString('th-TH')} ล้านบาท | คะแนน {activeItem.score}/100</small>
         </div>
         <div className="chat-messages" aria-live="polite">
           {messages.map((message, index) => <article className={`chat-message ${message.role}`} key={`${message.role}-${index}`}>
