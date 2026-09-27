@@ -64,13 +64,34 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
     repaired_pages: list[int] = []
     unresolved_pages: list[int] = []
     unresolved: list[dict] = []
+    def persist_progress() -> None:
+        if not repaired_pages and not unresolved_pages:
+            return
+        stats = FileStats()
+        for entry in records:
+            if entry.get("type") == "page":
+                stats.add(str(entry.get("text") or ""), str(entry.get("method") or "embedded"))
+        summary = next(entry for entry in records if entry.get("type") == "summary")
+        summary.update(stats.as_dict())
+        structure = summary["structure"]
+        structure["ocr_repaired_pages"] = sorted(set(structure.get("ocr_repaired_pages", [])) | set(repaired_pages))
+        structure["ocr_unresolved_pages"] = sorted((set(structure.get("ocr_unresolved_pages", [])) - set(repaired_pages)) | set(unresolved_pages))
+        structure["page_errors"] = [error for error in structure.get("page_errors", []) if error.get("page") not in repaired_pages]
+        writer = JsonlWriter(asset)
+        try:
+            for entry in records:
+                writer.write(entry)
+            writer.commit()
+        except Exception:
+            writer.abort()
+            raise
     try:
         if owns_source:
             download_file(item, source)
         reader = PdfReader(str(source), strict=False)
         if reader.is_encrypted:
             reader.decrypt("")
-        for record in targets:
+        for index, record in enumerate(targets, start=1):
             page = int(record["page"])
             is_cover = cover and page == 1
             def quality(text: str) -> float:
@@ -110,28 +131,10 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
                 record["ocr_unresolved"] = True
                 unresolved_pages.append(page)
                 unresolved.append({"page": page, "reason": f"{type(error).__name__}: {error}"})
+            if index % 20 == 0:
+                persist_progress()
 
-        if repaired_pages or unresolved_pages:
-            stats = FileStats()
-            for record in records:
-                if record.get("type") == "page":
-                    stats.add(str(record.get("text") or ""), str(record.get("method") or "embedded"))
-            summary = next(record for record in records if record.get("type") == "summary")
-            summary.update(stats.as_dict())
-            summary["structure"]["ocr_repaired_pages"] = sorted(set(summary["structure"].get("ocr_repaired_pages", [])) | set(repaired_pages))
-            summary["structure"]["ocr_unresolved_pages"] = sorted((set(summary["structure"].get("ocr_unresolved_pages", [])) - set(repaired_pages)) | set(unresolved_pages))
-            summary["structure"]["page_errors"] = [
-                error for error in summary["structure"].get("page_errors", [])
-                if error.get("page") not in repaired_pages
-            ]
-            writer = JsonlWriter(asset)
-            try:
-                for record in records:
-                    writer.write(record)
-                writer.commit()
-            except Exception:
-                writer.abort()
-                raise
+        persist_progress()
         return {"id": item["id"], "title": item["title"], "targets": len(targets), "repaired": len(repaired_pages), "pages": repaired_pages, "unresolved_pages": len(unresolved_pages), "unresolved": unresolved}
     finally:
         if owns_source:
