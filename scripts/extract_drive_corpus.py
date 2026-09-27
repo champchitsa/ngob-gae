@@ -249,6 +249,7 @@ def ocr_image(image_path: pathlib.Path, tesseract: pathlib.Path, tessdata: pathl
     descriptor, prepared_name = tempfile.mkstemp(suffix=".png", dir=tessdata.parent)
     os.close(descriptor)
     prepared = pathlib.Path(prepared_name)
+    tesseract_env = {**os.environ, "OMP_THREAD_LIMIT": "1"}
     try:
         with Image.open(image_path) as image:
             image = ImageOps.exif_transpose(image)
@@ -264,7 +265,7 @@ def ocr_image(image_path: pathlib.Path, tesseract: pathlib.Path, tessdata: pathl
                 str(tesseract), str(source), "stdout", "--tessdata-dir", str(tessdata),
                 "-l", "tha+eng", "--psm", str(psm), "-c", "preserve_interword_spaces=1",
             ]
-            result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
+            result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180, env=tesseract_env)
             if result.returncode:
                 raise RuntimeError(result.stderr.strip() or f"tesseract exited {result.returncode}")
             return clean_text(result.stdout)
@@ -280,7 +281,7 @@ def ocr_image(image_path: pathlib.Path, tesseract: pathlib.Path, tessdata: pathl
                 return None
             result = subprocess.run(
                 [str(tesseract), str(prepared), "stdout", "--tessdata-dir", str(tessdata), "--psm", "0"],
-                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
+                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60, env=tesseract_env,
             )
             return osd_pillow_rotation(result.stdout) if result.returncode == 0 else None
 
