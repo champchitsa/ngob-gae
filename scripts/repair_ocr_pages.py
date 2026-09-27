@@ -32,7 +32,11 @@ from extract_drive_corpus import (
 
 
 def needs_repair(record: dict, *, cover: bool = False, retry_unresolved: bool = False) -> bool:
-    if record.get("type") != "page" or record.get("ocr_repaired") or (record.get("ocr_unresolved") and not retry_unresolved) or record.get("method") not in {"ocr", "ocr_error", "embedded"}:
+    if record.get("type") != "page" or record.get("method") not in {"ocr", "ocr_error", "embedded"}:
+        return False
+    if record.get("ocr_repaired") and not (retry_unresolved and record.get("ocr_unresolved")):
+        return False
+    if record.get("ocr_unresolved") and not retry_unresolved:
         return False
     text = str(record.get("text") or "")
     if record.get("method") == "embedded":
@@ -87,8 +91,13 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
                 original = str(record.get("text") or "")
                 if candidate and ocr_quality_score(candidate) >= ocr_quality_score(original) + 10:
                     record.update({"text": candidate, "line_count": len(candidate.splitlines()), "method": "ocr", "ocr_repaired": True})
-                    record.pop("ocr_unresolved", None)
                     repaired_pages.append(page)
+                    if poor_thai_ocr(candidate):
+                        record["ocr_unresolved"] = True
+                        unresolved_pages.append(page)
+                        unresolved.append({"page": page, "reason": "readability remains low after OCR"})
+                    else:
+                        record.pop("ocr_unresolved", None)
                 else:
                     record["ocr_unresolved"] = True
                     unresolved_pages.append(page)
