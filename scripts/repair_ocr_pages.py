@@ -150,6 +150,7 @@ def main() -> None:
     parser.add_argument("corpus_dir", type=pathlib.Path)
     parser.add_argument("--category", help="process only inventory categories containing this text")
     parser.add_argument("--id", action="append", dest="ids")
+    parser.add_argument("--exclude-id", action="append", dest="excluded_ids", help="skip files already being repaired in another process")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--workers", type=int, default=3)
     parser.add_argument("--retry-unresolved", action="store_true", help="recheck pages previously marked hard to read")
@@ -165,6 +166,8 @@ def main() -> None:
         items = [item for item in items if args.category in item.get("category", "")]
     if args.ids:
         items = [item for item in items if item["id"] in set(args.ids)]
+    if args.excluded_ids:
+        items = [item for item in items if item["id"] not in set(args.excluded_ids)]
     if args.limit:
         items = items[:args.limit]
     tessdata = args.tessdata_dir
