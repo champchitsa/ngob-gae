@@ -26,7 +26,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 from corpus_pipeline import atomic_write_json, collect_record_assets, sha256_file  # noqa: E402
 from analyze_drive_corpus import credible_amounts  # noqa: E402
-from extract_drive_corpus import FileStats, broken_embedded_thai_text, contiguous_page_batches, extract_docx, extract_pptx, ocr_quality_score, osd_pillow_rotation, pdf_text_needs_ocr, poor_thai_ocr  # noqa: E402
+from extract_drive_corpus import FileStats, broken_embedded_thai_text, contiguous_page_batches, extract_docx, extract_pptx, ocr_quality_score, osd_pillow_rotation, pdf_text_needs_ocr, poor_thai_ocr, weak_budget_cover  # noqa: E402
 from repair_ocr_pages import needs_repair  # noqa: E402
 from audit_ocr_quality import suspect_reason  # noqa: E402
 
@@ -60,6 +60,15 @@ def test_ocr_repair_only_rechecks_suspect_pages() -> None:
     assert needs_repair({**noisy, "ocr_unresolved": True}, retry_unresolved=True)
     assert needs_repair({**noisy, "ocr_repaired": True, "ocr_unresolved": True}, retry_unresolved=True)
     assert not needs_repair({**noisy, "method": "embedded"})
+
+
+def test_budget_cover_catches_thai_looking_gibberish() -> None:
+    noise = "คยแลเรพบ สามเยนหมอ แบลเพลบบุวห เทนรหมยทดธดพดนท"
+    readable = "เอกสารประกอบการพิจารณา ร่างข้อบัญญัติงบประมาณรายจ่ายประจำปี พ.ศ. 2570"
+    assert weak_budget_cover(noise)
+    assert not weak_budget_cover(readable)
+    assert needs_repair({"type": "page", "page": 1, "method": "ocr", "text": noise}, cover=True)
+    assert suspect_reason({"method": "ocr", "text": noise}, cover=True) == "unreadable budget cover"
 
 
 def test_broken_pdf_font_text_is_reocrd_from_the_rendered_page() -> None:

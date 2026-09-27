@@ -10,7 +10,7 @@ import sys
 from collections import Counter
 
 from corpus_pipeline import atomic_write_json, collect_record_assets
-from extract_drive_corpus import broken_embedded_thai_text, ocr_quality_score, poor_thai_ocr
+from extract_drive_corpus import broken_embedded_thai_text, ocr_quality_score, poor_thai_ocr, weak_budget_cover
 
 
 def suspect_reason(record: dict, *, cover: bool) -> str | None:
@@ -18,6 +18,8 @@ def suspect_reason(record: dict, *, cover: bool) -> str | None:
     text = str(record.get("text") or "")
     if method == "ocr_error":
         return "OCR failed"
+    if cover and weak_budget_cover(text):
+        return "unreadable budget cover"
     if method == "embedded" and broken_embedded_thai_text(text):
         return "broken PDF font text"
     if method == "ocr" and poor_thai_ocr(text):

@@ -265,6 +265,16 @@ def poor_thai_ocr(text: str) -> bool:
     return latin > max(150, thai) and short_latin > latin * 0.4
 
 
+def weak_budget_cover(text: str) -> bool:
+    """Catch Thai-looking cover noise that a character-count score would miss."""
+    compact = re.sub(r"\s+", "", text)
+    thai = len(re.findall(r"[ก-๙]", compact))
+    if thai < 25:
+        return True
+    anchors = ("งบประมาณ", "ข้อบัญญัติ", "เทศบัญญัติ", "เอกสารประกอบ", "การพิจารณา")
+    return not any(anchor in compact for anchor in anchors)
+
+
 def broken_embedded_thai_text(text: str) -> bool:
     """Detect Thai PDF font bytes decoded as Latin-1 instead of Thai glyphs."""
     broken = sum(1 for char in text if 0x80 <= ord(char) <= 0x9F or char in "¦µ¤ÂÃÎ°®¢¨¥")

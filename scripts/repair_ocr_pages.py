@@ -28,6 +28,7 @@ from extract_drive_corpus import (
     broken_embedded_thai_text,
     poor_thai_ocr,
     render_pdf_pages,
+    weak_budget_cover,
 )
 
 
@@ -40,8 +41,8 @@ def needs_repair(record: dict, *, cover: bool = False, retry_unresolved: bool = 
         return False
     text = str(record.get("text") or "")
     if record.get("method") == "embedded":
-        return broken_embedded_thai_text(text)
-    return record.get("method") == "ocr_error" or poor_thai_ocr(text) or (cover and ocr_quality_score(text) < 100)
+        return broken_embedded_thai_text(text) or (cover and weak_budget_cover(text))
+    return record.get("method") == "ocr_error" or poor_thai_ocr(text) or (cover and (ocr_quality_score(text) < 100 or weak_budget_cover(text)))
 
 
 def read_records(path: pathlib.Path) -> list[dict]:
@@ -71,6 +72,9 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
             reader.decrypt("")
         for record in targets:
             page = int(record["page"])
+            is_cover = cover and page == 1
+            def quality(text: str) -> float:
+                return ocr_quality_score(text) + (500 if is_cover and not weak_budget_cover(text) else 0)
             try:
                 with tempfile.TemporaryDirectory(dir=args.temp_dir) as directory:
                     folder = pathlib.Path(directory)
@@ -82,17 +86,17 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
                         raise RuntimeError("page image unavailable")
                     candidate = ocr_image(image, tools["tesseract"], tools["tessdata"], recover_orientation=True, primary_psm=11 if record.get("method") == "embedded" else 6)
                     original = str(record.get("text") or "")
-                    if used_embedded_image and (poor_thai_ocr(candidate) or ocr_quality_score(candidate) < ocr_quality_score(original) + 10):
+                    if used_embedded_image and (poor_thai_ocr(candidate) or quality(candidate) < quality(original) + 10):
                         rendered = render_pdf_pages(source, page, page, folder, tools["pdftoppm"]).get(page)
                         if rendered:
                             alternate = ocr_image(rendered, tools["tesseract"], tools["tessdata"], recover_orientation=True)
-                            if ocr_quality_score(alternate) > ocr_quality_score(candidate):
+                            if quality(alternate) > quality(candidate):
                                 candidate = alternate
                 original = str(record.get("text") or "")
-                if candidate and ocr_quality_score(candidate) >= ocr_quality_score(original) + 10:
+                if candidate and quality(candidate) >= quality(original) + 10:
                     record.update({"text": candidate, "line_count": len(candidate.splitlines()), "method": "ocr", "ocr_repaired": True})
                     repaired_pages.append(page)
-                    if poor_thai_ocr(candidate):
+                    if poor_thai_ocr(candidate) or (is_cover and weak_budget_cover(candidate)):
                         record["ocr_unresolved"] = True
                         unresolved_pages.append(page)
                         unresolved.append({"page": page, "reason": "readability remains low after OCR"})
