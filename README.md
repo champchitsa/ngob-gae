@@ -135,6 +135,8 @@ python scripts/extract_drive_corpus.py public/data/drive-inventory.json .workdat
 
 เครื่องที่รันต้องมี Tesseract พร้อมภาษา `tha` และ `eng` และมี Poppler คำสั่ง `pdftoppm` ใน PATH ถ้ามี `osd.traineddata` ของ Tesseract ระบบจะใช้ตรวจทิศของหน้าสแกนที่ OCR อ่านไม่ชัด ระบบตรวจข้อความ PDF ที่เสียจากรหัสฟอนต์และอ่านข้อความกระจัดกระจายที่ออกมาเป็นอักขระผิด โหมดอ่านข้อความกระจายใช้กับหน้าที่ต้องซ่อมเพื่อลดอักขระจากภาพและรักษาข้อความในตาราง สามารถซ่อมเฉพาะหน้าที่มีปัญหาได้โดยไม่ต้องแปลงทั้งเล่มซ้ำ:
 
+หากตรวจตัวอย่างแล้วพบว่าเอกสารสแกนหลายหน้าหมุนทิศเดียวกัน ให้ใช้ `--preferred-rotation 90`, `180` หรือ `270` กับคำสั่งซ่อม OCR ระบบจะลองทิศนั้นก่อน แล้วกลับไปตรวจทิศอัตโนมัติเมื่อผลยังอ่านไม่ชัด ไม่ควรตั้งค่าจากชื่อไฟล์โดยไม่ดูภาพตัวอย่าง
+
 ```bash
 python scripts/repair_ocr_pages.py public/data/drive-inventory.json .workdata/drive-corpus-pdf --workers 4 --report .workdata/ocr-repair-report.json
 ```
