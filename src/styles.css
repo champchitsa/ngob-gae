@@ -14,7 +14,7 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--paper); }
+body { margin: 0; min-width: 0; min-height: 100vh; background: var(--paper); }
 button, input, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button { color: inherit; }
@@ -994,6 +994,9 @@ main > section[id], #law-workbench { scroll-margin-top: 84px; }
 @media (max-width: 1100px) {
   .chat-launcher { display: none; }
   .topnav { display: none; }
+  .area-subnav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; overflow: visible; padding: 0; background: var(--ink); }
+  .area-subnav a, .area-subnav a:first-child { display: flex; min-width: 0; min-height: 46px; align-items: center; justify-content: center; padding: 10px 7px; border: 0; background: #eee9dd; text-align: center; font-size: 13px; }
+  .area-subnav a[aria-current="page"] { background: var(--yellow); }
   .topbar { grid-template-columns: 1fr auto auto; gap: 7px; }
   .data-stamp { display: none; }
   .mobile-section-nav, .mobile-chat-button { display: block; }
