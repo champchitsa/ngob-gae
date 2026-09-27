@@ -147,6 +147,12 @@ python scripts/repair_ocr_pages.py public/data/drive-inventory.json .workdata/dr
 
 หน้าที่ลอง OCR ซ้ำแล้วยังอ่านไม่ชัดจะเก็บไว้ให้เปิดเทียบต้นฉบับ แต่ไม่นำตัวเลขไปสร้างสัญญาณอัตโนมัติ หลังซ่อม ให้ตรวจคุณภาพทุกหน้าและโครงสร้าง corpus ก่อนสร้างดัชนี ตัวตรวจ OCR จะหยุดเมื่อยังมีหน้าอ่านผิดที่ไม่ได้ทำเครื่องหมายให้เทียบต้นฉบับ ส่วน validator จะหยุดเมื่อไฟล์ขาด เสีย มีข้อมูลซ้ำที่ขัดกัน หรือมี page/image warning ที่ยังไม่ได้ทบทวน:
 
+เล่มงบระดับประเทศที่อยู่ซ้ำในโฟลเดอร์เชียงใหม่และสมุทรปราการสามารถใช้ผล OCR ร่วมกันได้เฉพาะเมื่อดาวน์โหลด PDF ต้นทางทั้งสองฉบับแล้ว SHA-256 ตรงกัน สคริปต์ `scripts/reuse_verified_duplicate_pdf_ocr.py` ตรวจและคัดลอกข้อความโดยคงรหัสไฟล์กับลิงก์อ้างอิงของแต่ละโฟลเดอร์ไว้ ต้องหยุดกระบวนการซ่อมไฟล์เป้าหมายก่อนใช้ `--apply` เพื่อไม่ให้เขียนชนกัน
+
+```bash
+python scripts/reuse_verified_duplicate_pdf_ocr.py public/data/drive-inventory.json .workdata/drive-corpus-pdf --download-dir path/to/source-cache --report path/to/duplicate-verification.json --apply
+```
+
 ```bash
 python scripts/audit_ocr_quality.py public/data/drive-inventory.json .workdata/ocr-quality-report.json .workdata/drive-corpus .workdata/drive-corpus-pdf
 python scripts/validate_corpus.py public/data/drive-inventory.json .workdata/corpus-validation.json .workdata/drive-corpus .workdata/drive-corpus-pdf

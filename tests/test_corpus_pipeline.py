@@ -30,6 +30,7 @@ from extract_drive_corpus import FileStats, broken_embedded_thai_text, contiguou
 from repair_ocr_pages import needs_repair  # noqa: E402
 from audit_ocr_quality import suspect_reason  # noqa: E402
 from validate_corpus import validate_asset  # noqa: E402
+from reuse_verified_duplicate_pdf_ocr import budget_pairs, copy_identical_pages  # noqa: E402
 
 
 def test_pdf_ocr_fallback_never_renders_unrequested_pages() -> None:
@@ -162,6 +163,30 @@ class CaptureWriter:
 
 
 class CorpusPipelineTests(unittest.TestCase):
+    def test_reused_pdf_ocr_keeps_target_identity_and_valid_summary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            source = root / "source.jsonl.gz"
+            target = root / "target.jsonl.gz"
+            write_asset(source, "source", text="งบประมาณรายจ่าย 10,000 บาท")
+            write_asset(target, "target", text="ข้อความเดิมอ่านผิด")
+            pages = copy_identical_pages(source, target, "source", "a" * 64)
+            self.assertEqual(pages, 1)
+            self.assertTrue(validate_asset("target", target)["valid"])
+            with gzip.open(target, "rt", encoding="utf-8") as handle:
+                records = [json.loads(line) for line in handle]
+            self.assertEqual(records[0]["id"], "target")
+            self.assertEqual(records[1]["text"], "งบประมาณรายจ่าย 10,000 บาท")
+            self.assertEqual(records[-1]["structure"]["ocr_reused_from_file_id"], "source")
+
+    def test_duplicate_pdf_pairing_requires_matching_title_and_size(self):
+        items = [
+            {"id": "source", "title": "งบ.pdf", "size": 100, "type": "application/pdf", "category": "เชียงใหม่"},
+            {"id": "target", "title": "งบ.pdf", "size": 100, "type": "application/pdf", "category": "สมุทรปราการ"},
+            {"id": "other", "title": "งบ.pdf", "size": 101, "type": "application/pdf", "category": "สมุทรปราการ"},
+        ]
+        self.assertEqual([(source["id"], target["id"]) for source, target in budget_pairs(items, "เชียงใหม่", "สมุทรปราการ")], [("source", "target")])
+
     def test_validator_treats_successful_render_fallback_as_recovered(self):
         with tempfile.TemporaryDirectory() as directory:
             asset = pathlib.Path(directory) / "alpha.jsonl.gz"
