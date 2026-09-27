@@ -192,6 +192,8 @@ def download_file(item: dict, target: pathlib.Path, retries: int = 3) -> None:
     ranged = expected >= 10 * 1024 * 1024
     range_size = 1024 * 1024
     for attempt in range(1, retries + 1):
+        if target.exists() and (not expected or target.stat().st_size == expected):
+            return
         if not ranged:
             temp.unlink(missing_ok=True)
         try:
