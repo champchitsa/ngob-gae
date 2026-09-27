@@ -118,7 +118,7 @@ const previewRecords = (file: CorpusFile, query: string) => {
   const matches = file.preview.filter((record) =>
     `${record.text || ''} ${(record.cells || []).join(' ')}`.toLocaleLowerCase('th').includes(needle),
   )
-  return matches.length ? matches : file.preview.slice(0, PAGE_SIZE)
+  return matches
 }
 
 const categoryAliases: Record<string, string> = {
@@ -248,11 +248,21 @@ const readableOcrText = (record: CorpusRecord, raw: string, file: CorpusFile) =>
   return normalized
 }
 
+const readableTableText = (record: CorpusRecord, raw: string, file: CorpusFile) => {
+  if (record.type !== 'row' || file.category !== 'PBO') return raw
+  return raw.replace(/(?<![\d.])-?\d+\.\d+(?![\d.])/g, (value) => {
+    const amount = Number(value)
+    return Number.isFinite(amount)
+      ? new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 }).format(amount)
+      : value
+  })
+}
+
 function RecordBody({ record, query, file }: { record: CorpusRecord; query: string; file: CorpusFile }) {
   const [expanded, setExpanded] = useState(false)
   const [showRaw, setShowRaw] = useState(false)
   const raw = record.text || (record.cells || []).join(' | ') || 'ไม่มีข้อความในตำแหน่งนี้'
-  const readable = readableOcrText(record, raw, file)
+  const readable = readableTableText(record, readableOcrText(record, raw, file), file)
   const text = showRaw ? raw : readable
   const limit = 1800
   const needle = query.trim().toLocaleLowerCase('th')
@@ -538,7 +548,7 @@ export default function CorpusReader() {
           {appliedInsideQuery && <button type="button" onClick={() => { setInsideQuery(''); void loadPage(selected, 0, '') }}>ล้างคำค้น</button>}
         </form>
         <div className="reader-status" aria-live="polite">
-          {loading ? <span>{appliedInsideQuery ? 'กำลังค้นทั้งไฟล์' : 'กำลังเปิดฉบับเต็ม'}{scanned ? ` อ่านแล้ว ${formatCount(scanned)} ตำแหน่ง` : ''} ขณะนี้อ่านข้อความตัวอย่างได้แล้ว</span> : appliedInsideQuery ? <span>พบ {formatCount(matched)} ตำแหน่งสำหรับ “{appliedInsideQuery}” {readerSource === 'preview' ? 'ในข้อความตัวอย่าง' : ''}</span> : records.length ? <span>{readerSource === 'full' ? `แสดงลำดับ ${formatCount(page * PAGE_SIZE + 1)} ถึง ${formatCount(page * PAGE_SIZE + records.length)}` : `แสดงข้อความตัวอย่าง ${formatCount(records.length)} ตำแหน่ง`}</span> : <span>ยังไม่มีเนื้อหาที่แสดง</span>}
+          {loading ? <span>{appliedInsideQuery ? 'กำลังค้นทั้งไฟล์' : 'กำลังเปิดฉบับเต็ม'}{scanned ? ` อ่านแล้ว ${formatCount(scanned)} ตำแหน่ง` : ''}{records.length ? ' ขณะนี้อ่านข้อความตัวอย่างได้แล้ว' : ''}</span> : appliedInsideQuery ? <span>พบ {formatCount(matched)} ตำแหน่งสำหรับ “{appliedInsideQuery}” {readerSource === 'preview' ? 'ในข้อความตัวอย่าง' : ''}</span> : records.length ? <span>{readerSource === 'full' ? `แสดงลำดับ ${formatCount(page * PAGE_SIZE + 1)} ถึง ${formatCount(page * PAGE_SIZE + records.length)}` : `แสดงข้อความตัวอย่าง ${formatCount(records.length)} ตำแหน่ง`}</span> : <span>ยังไม่มีเนื้อหาที่แสดง</span>}
           <a href={selected.url} target="_blank" rel="noreferrer">เทียบกับต้นฉบับ</a>
         </div>
         {error && <div className="reader-error"><span>{error}</span><button type="button" onClick={() => void loadPage(selected, page, appliedInsideQuery)}>ลองโหลดฉบับเต็มอีกครั้ง</button></div>}
