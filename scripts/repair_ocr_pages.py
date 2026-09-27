@@ -32,17 +32,18 @@ from extract_drive_corpus import (
 )
 
 
-def needs_repair(record: dict, *, cover: bool = False, retry_unresolved: bool = False) -> bool:
+def needs_repair(record: dict, *, cover: bool = False, retry_unresolved: bool = False, revisit_below: float | None = None) -> bool:
     if record.get("type") != "page" or record.get("method") not in {"ocr", "ocr_error", "embedded"}:
         return False
     text = str(record.get("text") or "")
-    if record.get("ocr_repaired") and not ((retry_unresolved and record.get("ocr_unresolved")) or poor_thai_ocr(text) or (cover and weak_budget_cover(text))):
+    revisit = revisit_below is not None and record.get("ocr_repaired") and ocr_quality_score(text) < revisit_below
+    if record.get("ocr_repaired") and not ((retry_unresolved and record.get("ocr_unresolved")) or poor_thai_ocr(text) or (cover and weak_budget_cover(text)) or revisit):
         return False
     if record.get("ocr_unresolved") and not retry_unresolved:
         return False
     if record.get("method") == "embedded":
         return broken_embedded_thai_text(text) or poor_thai_ocr(text) or (cover and weak_budget_cover(text))
-    return record.get("method") == "ocr_error" or poor_thai_ocr(text) or (cover and (ocr_quality_score(text) < 100 or weak_budget_cover(text)))
+    return record.get("method") == "ocr_error" or poor_thai_ocr(text) or revisit or (cover and (ocr_quality_score(text) < 100 or weak_budget_cover(text)))
 
 
 def read_records(path: pathlib.Path) -> list[dict]:
@@ -53,7 +54,7 @@ def read_records(path: pathlib.Path) -> list[dict]:
 def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools: dict) -> dict:
     records = read_records(asset)
     cover = item.get("category", "").startswith("เอกสารประกอบการพิจารณา 70")
-    targets = [record for record in records if needs_repair(record, cover=cover and record.get("page") == 1, retry_unresolved=args.retry_unresolved)]
+    targets = [record for record in records if needs_repair(record, cover=cover and record.get("page") == 1, retry_unresolved=args.retry_unresolved, revisit_below=args.revisit_repaired_below)]
     if not targets:
         return {"id": item["id"], "title": item["title"], "targets": 0, "repaired": 0}
 
@@ -94,6 +95,7 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
         for index, record in enumerate(targets, start=1):
             page = int(record["page"])
             is_cover = cover and page == 1
+            enhancement_only = record.get("ocr_repaired") and not record.get("ocr_unresolved") and not needs_repair(record, cover=is_cover)
             def quality(text: str) -> float:
                 return ocr_quality_score(text) + (500 if is_cover and not weak_budget_cover(text) else 0)
             try:
@@ -124,13 +126,15 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
                     else:
                         record.pop("ocr_unresolved", None)
                 else:
+                    if not enhancement_only:
+                        record["ocr_unresolved"] = True
+                        unresolved_pages.append(page)
+                        unresolved.append({"page": page, "reason": "no readability improvement"})
+            except Exception as error:
+                if not enhancement_only:
                     record["ocr_unresolved"] = True
                     unresolved_pages.append(page)
-                    unresolved.append({"page": page, "reason": "no readability improvement"})
-            except Exception as error:
-                record["ocr_unresolved"] = True
-                unresolved_pages.append(page)
-                unresolved.append({"page": page, "reason": f"{type(error).__name__}: {error}"})
+                    unresolved.append({"page": page, "reason": f"{type(error).__name__}: {error}"})
             if index % 20 == 0:
                 persist_progress()
 
@@ -154,6 +158,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int)
     parser.add_argument("--workers", type=int, default=3)
     parser.add_argument("--retry-unresolved", action="store_true", help="recheck pages previously marked hard to read")
+    parser.add_argument("--revisit-repaired-below", type=float, help="try improved OCR for repaired pages with lower text score without degrading the existing result")
     parser.add_argument("--machine-dir", type=pathlib.Path, default=pathlib.Path(".workdata/drive-machine"))
     parser.add_argument("--tessdata-dir", type=pathlib.Path, default=pathlib.Path.home() / ".cache/ngob-gae-tessdata")
     parser.add_argument("--temp-dir", type=pathlib.Path, default=pathlib.Path.home() / ".cache/ngob-gae-ocr-repair")

@@ -66,6 +66,9 @@ def test_ocr_repair_only_rechecks_suspect_pages() -> None:
     assert needs_repair(noisy)
     assert needs_repair({**noisy, "ocr_repaired": True})
     assert not needs_repair({**noisy, "text": "สำนักงานประกันสังคม งบประมาณรายจ่ายประจำปี 2570", "ocr_repaired": True})
+    clean_repaired = {**noisy, "text": "สำนักงานประกันสังคม งบประมาณรายจ่ายประจำปี 2570", "ocr_repaired": True}
+    assert needs_repair(clean_repaired, revisit_below=1000)
+    assert not needs_repair(clean_repaired, revisit_below=-1000)
     assert not needs_repair({**noisy, "ocr_unresolved": True})
     assert needs_repair({**noisy, "ocr_unresolved": True}, retry_unresolved=True)
     assert needs_repair({**noisy, "ocr_repaired": True, "ocr_unresolved": True}, retry_unresolved=True)
