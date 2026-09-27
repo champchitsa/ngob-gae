@@ -130,10 +130,16 @@ python scripts/fetch_committee_meetings.py public/data/committee-meetings.json
 ```bash
 python -m pip install -r requirements-corpus.txt
 python scripts/extract_drive_corpus.py public/data/drive-inventory.json .workdata/drive-corpus --workers 4
-python scripts/extract_drive_corpus.py public/data/drive-inventory.json .workdata/drive-corpus-pdf --only pdf --workers 12
+python scripts/extract_drive_corpus.py public/data/drive-inventory.json .workdata/drive-corpus-pdf --only pdf --workers 4 --manifest-path path/to/local-drive-pdf-manifest.json
 ```
 
-เครื่องที่รันต้องมี Tesseract พร้อมภาษา `tha` และ `eng` และมี Poppler คำสั่ง `pdftoppm` ใน PATH หลัง asset ครบ ให้ตรวจ corpus ก่อนสร้างดัชนี ตัว validator จะหยุดด้วย exit code 1 เมื่อไฟล์ขาด เสีย มีข้อมูลซ้ำที่ขัดกัน หรือมี page/image warning ที่ยังไม่ได้ทบทวน:
+เครื่องที่รันต้องมี Tesseract พร้อมภาษา `tha` และ `eng` และมี Poppler คำสั่ง `pdftoppm` ใน PATH ถ้ามี `osd.traineddata` ของ Tesseract ระบบจะใช้ตรวจทิศของหน้าสแกนที่ OCR อ่านไม่ชัด สามารถซ่อมเฉพาะหน้าที่มีปัญหาได้โดยไม่ต้องแปลงทั้งเล่มซ้ำ:
+
+```bash
+python scripts/repair_ocr_pages.py public/data/drive-inventory.json .workdata/drive-corpus-pdf --workers 4 --report .workdata/ocr-repair-report.json
+```
+
+หน้าที่ลอง OCR ซ้ำแล้วยังอ่านไม่ชัดจะเก็บไว้ให้เปิดเทียบต้นฉบับ แต่ไม่นำตัวเลขไปสร้างสัญญาณอัตโนมัติ หลังซ่อม ให้ตรวจ corpus ก่อนสร้างดัชนี ตัว validator จะหยุดด้วย exit code 1 เมื่อไฟล์ขาด เสีย มีข้อมูลซ้ำที่ขัดกัน หรือมี page/image warning ที่ยังไม่ได้ทบทวน:
 
 ```bash
 python scripts/validate_corpus.py public/data/drive-inventory.json .workdata/corpus-validation.json .workdata/drive-corpus .workdata/drive-corpus-pdf
@@ -142,7 +148,7 @@ python scripts/validate_corpus.py public/data/drive-inventory.json .workdata/cor
 ถ้าตรวจต้นฉบับของ warning แล้วและยอมรับผลได้ ให้สร้างไฟล์ทบทวนแยกต่างหาก แต่ละรายการต้องมี `id`, `warning_fingerprint`, `reason`, `reviewed_by` และ `reviewed_at` จากรายงาน validation แล้วรันด้วย `--reviewed-warnings path/to/reviewed-warnings.json` ลายนิ้วมือต้องตรงทุกตัวจึงจะผ่าน เมื่อ validation ผ่านแล้วจึงสร้างดัชนีและผลวิเคราะห์:
 
 ```bash
-python scripts/build_corpus_index.py public/data/drive-inventory.json public/data/corpus-index.json .workdata/drive-corpus .workdata/drive-corpus-pdf
+python scripts/build_corpus_index.py public/data/drive-inventory.json public/data/corpus-index.json .workdata/drive-corpus .workdata/drive-corpus-pdf --release-base https://github.com/champchitsa/ngob-gae/releases/download/corpus-v2
 python scripts/analyze_drive_corpus.py public/data/drive-inventory.json public/data/corpus-analysis.json .workdata/drive-corpus .workdata/drive-corpus-pdf
 ```
 
@@ -151,8 +157,8 @@ python scripts/analyze_drive_corpus.py public/data/drive-inventory.json public/d
 ตรวจ draft release โดยไม่อัปโหลดก่อน แล้วจึงอัปโหลดเป็นชุดเมื่อรายงาน validation ยืนยัน asset เดิมครบ 694 รายการ:
 
 ```bash
-python scripts/sync_corpus_release.py public/data/drive-inventory.json .workdata/corpus-validation.json .workdata/drive-corpus .workdata/drive-corpus-pdf --repo champchitsa/ngob-gae --tag corpus-v1 --report .workdata/corpus-release-verification.json
-python scripts/sync_corpus_release.py public/data/drive-inventory.json .workdata/corpus-validation.json .workdata/drive-corpus .workdata/drive-corpus-pdf --repo champchitsa/ngob-gae --tag corpus-v1 --upload --batch-size 25 --report .workdata/corpus-release-verification.json
+python scripts/sync_corpus_release.py public/data/drive-inventory.json .workdata/corpus-validation.json .workdata/drive-corpus .workdata/drive-corpus-pdf --repo champchitsa/ngob-gae --tag corpus-v2 --report .workdata/corpus-release-verification.json
+python scripts/sync_corpus_release.py public/data/drive-inventory.json .workdata/corpus-validation.json .workdata/drive-corpus .workdata/drive-corpus-pdf --repo champchitsa/ngob-gae --tag corpus-v2 --upload --batch-size 25 --report .workdata/corpus-release-verification.json
 ```
 
 สคริปต์ release ไม่เผยแพร่ release และปฏิเสธ release ที่ไม่ใช่ draft ผลตรวจถือว่าผ่านเมื่อชื่อไม่ซ้ำครบ 694 รายการ ไม่มีชื่อเกินหรือขาด สถานะทุกชิ้นเป็น `uploaded` และขนาดกับ SHA-256 จาก GitHub ตรงกับไฟล์ที่ผ่าน validation ห้าม deploy ดัชนีที่มี `corpus_url` จน release เผยแพร่และทดสอบดาวน์โหลดแบบไม่ใช้ GitHub token แล้ว เพราะปุ่มอ่านในเว็บของผู้ใช้ทั่วไปต้องเข้าถึง asset ได้จริง
@@ -160,7 +166,8 @@ python scripts/sync_corpus_release.py public/data/drive-inventory.json .workdata
 รัน regression tests ของ pipeline โดยใช้ข้อมูลจำลองใน temporary directory และไม่แตะ corpus จริง:
 
 ```bash
-python -m unittest discover -s tests -p "test_*.py"
+python -m pytest tests -q
+node --test tests/test_api.mjs
 ```
 
 ## ตัวบทที่ใช้ในแฟ้ม
