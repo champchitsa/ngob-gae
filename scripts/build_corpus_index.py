@@ -54,6 +54,8 @@ def preview_records(path: pathlib.Path, limit: int = 4) -> list[dict]:
             record = json.loads(line)
             if record.get("type") in {"file", "summary"}:
                 continue
+            if record.get("ocr_unresolved"):
+                continue
             text = " ".join(str(record.get("text", "")).split())
             if not text:
                 continue
