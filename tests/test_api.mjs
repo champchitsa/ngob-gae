@@ -109,6 +109,26 @@ test('corpus serves a verified partial response', async () => {
   }
 })
 
+test('corpus release is versioned and rejects unexpected tags', async () => {
+  const originalFetch = globalThis.fetch
+  let upstreamUrl = ''
+  globalThis.fetch = async (url) => {
+    upstreamUrl = String(url)
+    return new Response(new Uint8Array([1]), { status: 206, headers: { 'content-range': 'bytes 0-0/1', 'content-length': '1' } })
+  }
+  try {
+    const result = response()
+    await corpus({ method: 'GET', query: { asset: 'sample.jsonl.gz', release: 'corpus-v2', offset: '0' } }, result)
+    assert.equal(result.statusCode, 200)
+    assert.match(upstreamUrl, /\/releases\/download\/corpus-v2\/sample\.jsonl\.gz$/)
+    const invalid = response()
+    await corpus({ method: 'GET', query: { asset: 'sample.jsonl.gz', release: '../other', offset: '0' } }, invalid)
+    assert.equal(invalid.statusCode, 400)
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
+
 test('data export contains every filtered row, not only the first page', () => {
   const result = response()
   data({ method: 'GET', url: '/api/data?dataset=anomalies&download=1', headers: { host: 'ngob-gae.vercel.app' } }, result)

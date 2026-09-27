@@ -8,13 +8,14 @@ export default async function handler(request, response) {
   }
 
   const asset = typeof request.query.asset === 'string' ? request.query.asset : ''
+  const release = typeof request.query.release === 'string' ? request.query.release : 'corpus-v1'
   const offset = Number.parseInt(typeof request.query.offset === 'string' ? request.query.offset : '0', 10)
-  if (!ASSET_PATTERN.test(asset) || !Number.isSafeInteger(offset) || offset < 0) {
+  if (!ASSET_PATTERN.test(asset) || !/^corpus-v[12]$/.test(release) || !Number.isSafeInteger(offset) || offset < 0) {
     return response.status(400).json({ error: 'พารามิเตอร์ไฟล์ไม่ถูกต้อง' })
   }
 
   const end = offset + CHUNK_BYTES - 1
-  const upstreamUrl = `https://github.com/champchitsa/ngob-gae/releases/download/corpus-v1/${asset}`
+  const upstreamUrl = `https://github.com/champchitsa/ngob-gae/releases/download/${release}/${asset}`
 
   try {
     const upstream = await fetch(upstreamUrl, { headers: { Range: `bytes=${offset}-${end}` }, signal: AbortSignal.timeout(50000) })

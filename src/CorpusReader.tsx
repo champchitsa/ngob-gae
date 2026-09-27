@@ -134,6 +134,7 @@ const corpusAssetName = (file: CorpusFile) => {
 const corpusByteStream = (file: CorpusFile, signal: AbortSignal) => {
   const asset = corpusAssetName(file)
   if (!asset) throw new Error('ไฟล์นี้ยังไม่มีฉบับอ่านบนเว็บ')
+  const release = file.corpus_url?.match(/\/releases\/download\/(corpus-v[12])\//)?.[1] || 'corpus-v1'
   let offset = 0
   let total: number | null = null
   let finished = false
@@ -149,7 +150,7 @@ const corpusByteStream = (file: CorpusFile, signal: AbortSignal) => {
         let response: Response | undefined
         for (let attempt = 0; attempt < 3; attempt += 1) {
           try {
-            response = await fetch(`/api/corpus?asset=${encodeURIComponent(asset)}&offset=${offset}`, { signal })
+            response = await fetch(`/api/corpus?asset=${encodeURIComponent(asset)}&release=${release}&offset=${offset}`, { signal })
           } catch (reason) {
             if (signal.aborted || attempt === 2) throw reason
           }
