@@ -76,7 +76,7 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
                         image = render_pdf_pages(source, page, page, folder, tools["pdftoppm"]).get(page)
                     if image is None:
                         raise RuntimeError("page image unavailable")
-                    candidate = ocr_image(image, tools["tesseract"], tools["tessdata"], recover_orientation=True)
+                    candidate = ocr_image(image, tools["tesseract"], tools["tessdata"], recover_orientation=True, primary_psm=11 if record.get("method") == "embedded" else 6)
                     original = str(record.get("text") or "")
                     if used_embedded_image and (poor_thai_ocr(candidate) or ocr_quality_score(candidate) < ocr_quality_score(original) + 10):
                         rendered = render_pdf_pages(source, page, page, folder, tools["pdftoppm"]).get(page)
