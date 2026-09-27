@@ -197,12 +197,6 @@ const corpusByteStream = (file: CorpusFile, signal: AbortSignal) => {
   })
 }
 
-const formatBytes = (value: number) => {
-  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)} GB`
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)} MB`
-  return `${Math.max(1, Math.round(value / 1000))} KB`
-}
-
 const formatCount = (value: number) => new Intl.NumberFormat('th-TH').format(value || 0)
 const formatSourceDate = (value: string) => value.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2/$1')
 const formatBaht = (value: number) => {
@@ -446,7 +440,7 @@ export default function CorpusReader() {
       const alias = Object.entries(categoryAliases).find(([label]) => file.category.startsWith(label))?.[1] ?? ''
       const searchable = `${file.title} ${file.path} ${file.category} ${alias} ${preview} ${analysisContext} ${themeContext}`.toLocaleLowerCase('th')
       return terms.every((term) => searchable.includes(term))
-    })
+    }).sort((a, b) => Number(b.status === 'complete') - Number(a.status === 'complete'))
   }, [index, query, category, kind, analysis, analysisContextByFile])
 
   useEffect(() => setLimit(24), [query, category, kind])
@@ -497,8 +491,9 @@ export default function CorpusReader() {
   const activeSignals = analysis?.signals[signalKind] ?? []
   const selectedInsight = selected ? analysis?.file_insights?.[selected.id] : null
   const selectedQuestions = reviewQuestions(selectedInsight ?? undefined)
-  const topThemes = [...(analysis?.themes ?? [])].sort((a, b) => b.units - a.units).slice(0, 5)
-  const themeScale = Math.max(1, ...topThemes.map((item) => item.units))
+  const browseThemeIds = ['ict', 'procurement', 'construction', 'training', 'sso']
+  const topThemes = browseThemeIds.map((id) => analysis?.themes.find((item) => item.id === id)).filter((item): item is NonNullable<typeof item> => Boolean(item))
+  const themeScale = Math.max(1, ...topThemes.map((item) => item.files))
 
   return (
     <div className="corpus-reader">
@@ -523,7 +518,7 @@ export default function CorpusReader() {
 
       {analysis && <section className="corpus-overview" aria-label="ภาพรวมคลังหลักฐาน">
         <div className="corpus-overview-intro"><span className="panel-kicker">ภาพรวมจากไฟล์ที่ประมวลผล</span><strong>{formatCount(analysis.meta.analyzed_files)} ไฟล์</strong><p>เลือกหัวข้อในกราฟเพื่อดูแฟ้มที่เกี่ยวข้อง แล้วค้นชื่อหน่วยงานหรือโครงการต่อได้</p></div>
-        <div className="corpus-overview-bars"><strong>หัวข้อที่กล่าวถึงบ่อย</strong>{topThemes.map((item) => <button key={item.id} type="button" aria-label={`${item.label} พบ ${formatCount(item.units)} ตำแหน่งใน ${formatCount(item.files)} ไฟล์ กดเพื่อค้นต่อ`} onClick={() => { setQuery(item.label); setCategory('all'); setKind('all') }}><span>{item.label}</span><i><b style={{ width: `${Math.max(3, item.units / themeScale * 100)}%` }} /></i><em>{formatCount(item.units)} จุด</em></button>)}</div>
+        <div className="corpus-overview-bars"><strong>เลือกหัวข้อเพื่อตรวจต่อ</strong>{topThemes.map((item) => <button key={item.id} type="button" aria-label={`${item.label} พบใน ${formatCount(item.files)} ไฟล์ กดเพื่อค้นต่อ`} onClick={() => { setQuery(item.label); setCategory('all'); setKind('all') }}><span>{item.label}</span><i><b style={{ width: `${Math.max(3, item.files / themeScale * 100)}%` }} /></i><em>{formatCount(item.files)} ไฟล์</em></button>)}</div>
       </section>}
 
       {meta && <details className="corpus-metrics-details"><summary>ดูรายละเอียดการจัดทำดัชนี</summary><div className="corpus-metrics" role="group" aria-label="ผลการอ่านเอกสารทั้งคลัง">
@@ -573,8 +568,8 @@ export default function CorpusReader() {
           <div className="corpus-file-top"><span>{fileKind(file)}</span><i className={`corpus-status ${file.status}`}>{file.status === 'complete' ? 'จัดทำดัชนีแล้ว' : file.status === 'error' ? 'ตรวจซ้ำ' : 'กำลังจัดทำดัชนี'}</i></div>
           <h4>{file.title}</h4>
           <p>{file.category}</p>
-          <div className="corpus-file-facts"><span>{formatBytes(file.size)}</span><span>{structureText(file)}</span>{file.lines > 0 && <span>{formatCount(file.lines)} บรรทัด</span>}</div>
-          {file.category === 'PBO' ? <div className="corpus-money-preview muted"><span>ตารางงบรายปี</span><strong>ดูกราฟและค้นข้อมูลรายแถวได้</strong></div> : analysis?.file_insights?.[file.id]?.amounts?.length ? <div className="corpus-money-preview"><span>{analysis.file_insights[file.id].amounts[0].extraction === 'ocr' ? 'ตัวเลขที่อ่านจากภาพ' : 'จำนวนเงินที่พบในตาราง'}</span><strong>{formatBaht(analysis.file_insights[file.id].amounts[0].value)}</strong><small>{analysis.file_insights[file.id].amounts[0].locator_label}{analysis.file_insights[file.id].amounts[0].extraction === 'ocr' ? ' · เทียบต้นฉบับก่อนใช้' : ''}</small></div> : <div className="corpus-money-preview muted"><span>เนื้อหาในไฟล์</span><strong>{file.status === 'complete' ? 'เปิดอ่านและค้นในเว็บได้' : 'กำลังจัดทำดัชนี'}</strong></div>}
+          <div className="corpus-file-facts"><span>{structureText(file)}</span></div>
+          {file.category === 'PBO' ? <div className="corpus-money-preview muted"><span>ตารางงบรายปี</span><strong>ดูกราฟและค้นข้อมูลรายแถวได้</strong></div> : analysis?.file_insights?.[file.id]?.amounts?.length ? <div className="corpus-money-preview"><span>{analysis.file_insights[file.id].amounts[0].extraction === 'ocr' ? 'ตัวเลขที่อ่านจากภาพ' : 'จำนวนเงินที่พบในเอกสาร'}</span><strong>{formatBaht(analysis.file_insights[file.id].amounts[0].value)}</strong><small>{analysis.file_insights[file.id].amounts[0].locator_label}{analysis.file_insights[file.id].amounts[0].extraction === 'ocr' ? ' · เทียบต้นฉบับก่อนใช้' : ''}</small></div> : <div className="corpus-money-preview muted"><span>เนื้อหาในไฟล์</span><strong>{file.status === 'complete' ? 'เปิดอ่านและค้นในเว็บได้' : 'กำลังจัดทำดัชนี'}</strong></div>}
           <div className="corpus-file-actions">
             <button disabled={file.status !== 'complete' || !file.corpus_url} onClick={() => openFile(file)}>{file.status === 'complete' ? 'อ่านในเว็บ' : 'อยู่ระหว่างประมวลผล'}</button>
             <a href={file.url} target="_blank" rel="noreferrer">ตรวจต้นฉบับ</a>
