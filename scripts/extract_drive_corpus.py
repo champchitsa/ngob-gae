@@ -190,7 +190,7 @@ def download_file(item: dict, target: pathlib.Path, retries: int = 3) -> None:
     )
     last_error: Exception | None = None
     ranged = expected >= 80 * 1024 * 1024
-    range_size = 8 * 1024 * 1024
+    range_size = 1024 * 1024
     for attempt in range(1, retries + 1):
         if not ranged:
             temp.unlink(missing_ok=True)
@@ -203,7 +203,7 @@ def download_file(item: dict, target: pathlib.Path, retries: int = 3) -> None:
                     for start in range(completed, expected, range_size):
                         end = min(expected - 1, start + range_size - 1)
                         request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "Range": f"bytes={start}-{end}"})
-                        with urllib.request.urlopen(request, timeout=90) as response:
+                        with urllib.request.urlopen(request, timeout=30) as response:
                             content_range = response.headers.get("Content-Range", "")
                             if response.status != 206 or not content_range.startswith(f"bytes {start}-{end}/{expected}"):
                                 raise IOError(f"unexpected byte range: {content_range or response.status}")

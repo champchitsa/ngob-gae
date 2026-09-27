@@ -56,6 +56,7 @@ def test_ocr_repair_only_rechecks_suspect_pages() -> None:
     assert needs_repair(noisy)
     assert not needs_repair({**noisy, "ocr_repaired": True})
     assert not needs_repair({**noisy, "ocr_unresolved": True})
+    assert needs_repair({**noisy, "ocr_unresolved": True}, retry_unresolved=True)
     assert not needs_repair({**noisy, "method": "embedded"})
 
 

@@ -31,8 +31,8 @@ from extract_drive_corpus import (
 )
 
 
-def needs_repair(record: dict, *, cover: bool = False) -> bool:
-    if record.get("type") != "page" or record.get("ocr_repaired") or record.get("ocr_unresolved") or record.get("method") not in {"ocr", "ocr_error", "embedded"}:
+def needs_repair(record: dict, *, cover: bool = False, retry_unresolved: bool = False) -> bool:
+    if record.get("type") != "page" or record.get("ocr_repaired") or (record.get("ocr_unresolved") and not retry_unresolved) or record.get("method") not in {"ocr", "ocr_error", "embedded"}:
         return False
     text = str(record.get("text") or "")
     if record.get("method") == "embedded":
@@ -48,7 +48,7 @@ def read_records(path: pathlib.Path) -> list[dict]:
 def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools: dict) -> dict:
     records = read_records(asset)
     cover = item.get("category", "").startswith(("ร่างข้อบัญญัติ 70", "เอกสารประกอบการพิจารณา 70"))
-    targets = [record for record in records if needs_repair(record, cover=cover and record.get("page") == 1)]
+    targets = [record for record in records if needs_repair(record, cover=cover and record.get("page") == 1, retry_unresolved=args.retry_unresolved)]
     if not targets:
         return {"id": item["id"], "title": item["title"], "targets": 0, "repaired": 0}
 
@@ -71,14 +71,23 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
                 with tempfile.TemporaryDirectory(dir=args.temp_dir) as directory:
                     folder = pathlib.Path(directory)
                     image = None if record.get("method") == "embedded" else extract_largest_page_image(reader.pages[page - 1], folder)
+                    used_embedded_image = image is not None
                     if image is None:
                         image = render_pdf_pages(source, page, page, folder, tools["pdftoppm"]).get(page)
                     if image is None:
                         raise RuntimeError("page image unavailable")
                     candidate = ocr_image(image, tools["tesseract"], tools["tessdata"], recover_orientation=True)
+                    original = str(record.get("text") or "")
+                    if used_embedded_image and (poor_thai_ocr(candidate) or ocr_quality_score(candidate) < ocr_quality_score(original) + 10):
+                        rendered = render_pdf_pages(source, page, page, folder, tools["pdftoppm"]).get(page)
+                        if rendered:
+                            alternate = ocr_image(rendered, tools["tesseract"], tools["tessdata"], recover_orientation=True)
+                            if ocr_quality_score(alternate) > ocr_quality_score(candidate):
+                                candidate = alternate
                 original = str(record.get("text") or "")
                 if candidate and ocr_quality_score(candidate) >= ocr_quality_score(original) + 10:
                     record.update({"text": candidate, "line_count": len(candidate.splitlines()), "method": "ocr", "ocr_repaired": True})
+                    record.pop("ocr_unresolved", None)
                     repaired_pages.append(page)
                 else:
                     record["ocr_unresolved"] = True
@@ -95,7 +104,7 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
             summary = next(record for record in records if record.get("type") == "summary")
             summary.update(stats.as_dict())
             summary["structure"]["ocr_repaired_pages"] = sorted(set(summary["structure"].get("ocr_repaired_pages", [])) | set(repaired_pages))
-            summary["structure"]["ocr_unresolved_pages"] = sorted(set(summary["structure"].get("ocr_unresolved_pages", [])) | set(unresolved_pages))
+            summary["structure"]["ocr_unresolved_pages"] = sorted((set(summary["structure"].get("ocr_unresolved_pages", [])) - set(repaired_pages)) | set(unresolved_pages))
             summary["structure"]["page_errors"] = [
                 error for error in summary["structure"].get("page_errors", [])
                 if error.get("page") not in repaired_pages
@@ -125,6 +134,7 @@ def main() -> None:
     parser.add_argument("--id", action="append", dest="ids")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--workers", type=int, default=3)
+    parser.add_argument("--retry-unresolved", action="store_true", help="recheck pages previously marked hard to read")
     parser.add_argument("--machine-dir", type=pathlib.Path, default=pathlib.Path(".workdata/drive-machine"))
     parser.add_argument("--temp-dir", type=pathlib.Path, default=pathlib.Path.home() / ".cache/ngob-gae-ocr-repair")
     parser.add_argument("--report", type=pathlib.Path)
