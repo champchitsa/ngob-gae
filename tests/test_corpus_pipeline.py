@@ -64,7 +64,8 @@ def test_ocr_quality_catches_latin_gibberish_from_broken_pdf_fonts() -> None:
 def test_ocr_repair_only_rechecks_suspect_pages() -> None:
     noisy = {"type": "page", "page": 12, "method": "ocr", "text": "ร ว 5 Ee aor BEE ก รุงเทพ ช ซ ภา ae 1 2 gg fee are bey con bee ale"}
     assert needs_repair(noisy)
-    assert not needs_repair({**noisy, "ocr_repaired": True})
+    assert needs_repair({**noisy, "ocr_repaired": True})
+    assert not needs_repair({**noisy, "text": "สำนักงานประกันสังคม งบประมาณรายจ่ายประจำปี 2570", "ocr_repaired": True})
     assert not needs_repair({**noisy, "ocr_unresolved": True})
     assert needs_repair({**noisy, "ocr_unresolved": True}, retry_unresolved=True)
     assert needs_repair({**noisy, "ocr_repaired": True, "ocr_unresolved": True}, retry_unresolved=True)
