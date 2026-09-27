@@ -620,14 +620,14 @@ main > section[id], #law-workbench { scroll-margin-top: 84px; }
 .committee-modal-footer a { padding: 9px 11px; border: 1px solid var(--ink); color: var(--ink); font-size: 10px; font-weight: 800; text-decoration: none; white-space: nowrap; }
 .committee-modal-footer a:last-child { background: var(--yellow); }
 
-.archive { padding: 100px 4vw 110px; border-top: 1px solid var(--ink); background: #e9e5da; }
+.archive { padding: 42px 4vw 80px; border-top: 1px solid var(--ink); background: #e9e5da; }
 .corpus-stats { max-width: 1600px; margin: 0 auto 16px; display: grid; grid-template-columns: repeat(6, 1fr); border: 1px solid var(--ink); background: white; }
-.corpus-stats > div { min-width: 0; padding: 18px; border-right: 1px solid var(--ink); }
+.corpus-stats > div { min-width: 0; padding: 12px 16px; border-right: 1px solid var(--ink); }
 .corpus-stats > div:last-child { border-right: 0; }
 .corpus-stats strong { display: block; font: 600 clamp(19px, 2vw, 30px) 'IBM Plex Mono', monospace; letter-spacing: -.05em; }
 .corpus-stats span { display: block; margin-top: 7px; font-size: 11px; color: #62625b; }
 .corpus-reader { max-width: 1600px; margin: 18px auto 0; border: 1px solid var(--ink); background: white; }
-.corpus-reader-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 30px; align-items: end; padding: 28px; background: var(--ink); color: white; }
+.corpus-reader-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 30px; align-items: end; padding: 20px 24px; background: var(--ink); color: white; }
 .corpus-reader-head h3 { margin: 8px 0 6px; font-size: clamp(27px, 3vw, 46px); line-height: 1.1; letter-spacing: -.035em; }
 .corpus-reader-head p { max-width: 760px; margin: 0; color: #c7c7c0; line-height: 1.6; }
 .corpus-coverage { min-width: 180px; padding-left: 26px; border-left: 1px solid #555; text-align: right; }
@@ -635,11 +635,18 @@ main > section[id], #law-workbench { scroll-margin-top: 84px; }
 .corpus-coverage strong small { color: #aaa; font-size: 14px; }
 .corpus-coverage span { color: #c7c7c0; font-size: 11px; }
 .corpus-metrics { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--ink); background: var(--yellow); }
-.corpus-metrics > div { min-width: 0; padding: 16px 20px; border-right: 1px solid var(--ink); }
+.corpus-metrics > div { min-width: 0; padding: 11px 16px; border-right: 1px solid var(--ink); }
 .corpus-metrics > div:last-child { border-right: 0; }
 .corpus-metrics strong, .corpus-metrics span { display: block; }
 .corpus-metrics strong { font: 600 clamp(19px, 2.5vw, 34px) 'IBM Plex Mono', monospace; }
 .corpus-metrics span { margin-top: 4px; font-size: 10px; }
+.corpus-review-toggle > summary { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; padding: 17px 24px; background: #ebe7dc; border-bottom: 1px solid var(--ink); cursor: pointer; list-style: none; }
+.corpus-review-toggle > summary::-webkit-details-marker { display: none; }
+.corpus-review-toggle > summary span { font-size: 14px; font-weight: 800; }
+.corpus-review-toggle > summary strong { font: 700 11px 'IBM Plex Mono', monospace; color: var(--orange-ink); }
+.corpus-review-toggle > summary small { margin-left: auto; font-size: 11px; }
+.corpus-review-toggle > summary::before { content: '+'; display: grid; place-items: center; width: 25px; height: 25px; border: 1px solid var(--ink); font-size: 19px; line-height: 1; }
+.corpus-review-toggle[open] > summary::before { content: '−'; }
 .corpus-analysis-panel { border-bottom: 1px solid var(--ink); background: #f0ede4; }
 .corpus-analysis-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 28px; align-items: end; padding: 25px 20px 20px; }
 .corpus-analysis-head h4 { max-width: 850px; margin: 7px 0 0; font-size: clamp(22px, 2.7vw, 38px); line-height: 1.15; letter-spacing: -.035em; }
@@ -726,6 +733,7 @@ main > section[id], #law-workbench { scroll-margin-top: 84px; }
 .record-list header { display: flex; justify-content: space-between; gap: 12px; padding: 8px 11px; border-bottom: 1px solid var(--ink); background: var(--yellow); font: 600 9px 'IBM Plex Mono', monospace; }
 .record-list header span { color: var(--orange-ink); }
 .record-list pre { margin: 0; padding: 15px; font: 400 13px/1.75 'Noto Sans Thai', sans-serif; white-space: pre-wrap; overflow-wrap: anywhere; }
+.record-body button { display: block; margin: 0 15px 13px; padding: 7px 10px; border: 1px solid var(--ink); background: #f4f0e4; color: var(--ink); font-size: 11px; font-weight: 800; cursor: pointer; }
 .reader-pager { position: sticky; bottom: 0; display: flex; justify-content: center; align-items: center; gap: 14px; padding: 10px; border-top: 1px solid var(--ink); background: var(--ink); color: white; }
 .reader-pager button { border: 1px solid white; background: transparent; color: white; padding: 8px 15px; cursor: pointer; }
 .reader-pager button:disabled { opacity: .35; cursor: default; }
@@ -1200,7 +1208,7 @@ main > section[id], #law-workbench { scroll-margin-top: 84px; }
   .committee-modal-footer { align-items: stretch; flex-direction: column; padding: 12px 14px; }
   .committee-modal-footer div { display: grid; grid-template-columns: 1fr 1fr; }
   .committee-modal-footer a { text-align: center; white-space: normal; }
-  .archive { padding: 75px 14px; }
+  .archive { padding: 30px 14px 60px; }
   .corpus-stats { grid-template-columns: 1fr 1fr; }
   .corpus-stats > div { border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); }
   .corpus-stats > div:nth-child(2n) { border-right: 0; }

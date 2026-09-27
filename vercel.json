@@ -6,6 +6,9 @@
     },
     "api/data.js": {
       "includeFiles": "public/data/**"
+    },
+    "api/corpus.js": {
+      "maxDuration": 60
     }
   },
   "headers": [

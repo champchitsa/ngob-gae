@@ -139,8 +139,18 @@ const corpusByteStream = (file: CorpusFile, signal: AbortSignal) => {
         return
       }
       try {
-        const response = await fetch(`/api/corpus?asset=${encodeURIComponent(asset)}&offset=${offset}`, { signal })
-        if (!response.ok) throw new Error(`ดาวน์โหลดข้อมูลไม่สำเร็จ (${response.status})`)
+        let response: Response | undefined
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          try {
+            response = await fetch(`/api/corpus?asset=${encodeURIComponent(asset)}&offset=${offset}`, { signal })
+          } catch (reason) {
+            if (signal.aborted || attempt === 2) throw reason
+          }
+          if (response && (response.ok || ![429, 502, 503, 504].includes(response.status) || attempt === 2)) break
+          await new Promise((resolve) => window.setTimeout(resolve, 400 * (attempt + 1)))
+          if (signal.aborted) throw new DOMException('ยกเลิกการอ่าน', 'AbortError')
+        }
+        if (!response?.ok) throw new Error(`ดาวน์โหลดข้อมูลไม่สำเร็จ (${response?.status || 'ไม่ทราบสถานะ'})`)
         const bytes = new Uint8Array(await response.arrayBuffer())
         total = Number(response.headers.get('X-Corpus-Total')) || bytes.length
         if (!bytes.length) {
@@ -215,6 +225,17 @@ const structureText = (file: CorpusFile) => {
   if (Number(structure.table_rows)) parts.push(`${formatCount(Number(structure.table_rows))} แถวในตาราง`)
   if (Number(structure.images)) parts.push(`${formatCount(Number(structure.images))} ภาพ`)
   return parts.join(' / ') || `${formatCount(file.units)} หน่วยข้อมูล`
+}
+
+function RecordBody({ record, query }: { record: CorpusRecord; query: string }) {
+  const [expanded, setExpanded] = useState(false)
+  const text = record.text || (record.cells || []).join(' | ') || 'ไม่มีข้อความในตำแหน่งนี้'
+  const limit = 1800
+  const needle = query.trim().toLocaleLowerCase('th')
+  const match = needle ? text.toLocaleLowerCase('th').indexOf(needle) : -1
+  const start = !expanded && text.length > limit && match > limit ? Math.max(0, match - 300) : 0
+  const visible = expanded ? text : text.slice(start, start + limit)
+  return <div className="record-body"><pre>{start > 0 ? '…' : ''}{visible}{!expanded && start + limit < text.length ? '…' : ''}</pre>{text.length > limit && <button type="button" onClick={() => setExpanded((value) => !value)}>{expanded ? 'ย่อข้อความ' : `แสดงข้อความครบ ${formatCount(text.length)} ตัวอักษร`}</button>}</div>
 }
 
 async function scanCorpus(
@@ -423,7 +444,7 @@ export default function CorpusReader() {
         <div><strong>{formatCount(meta.ocr_units)}</strong><span>หน้าหรือภาพที่ OCR</span></div>
       </div>}
 
-      {analysis && <section className="corpus-analysis-panel" aria-labelledby="corpus-analysis-title">
+      {analysis && <details className="corpus-review-toggle"><summary><span>คิวตรวจจากข้อความและ OCR</span><strong>{formatCount(analysis.meta.analyzed_files)} แฟ้มที่พบประเด็น</strong><small>เปิดดูเหตุผลและตำแหน่งต้นทาง</small></summary><section className="corpus-analysis-panel" aria-labelledby="corpus-analysis-title">
         <header className="corpus-analysis-head">
           <div><span className="panel-kicker">EVIDENCE MAP / REVIEW QUEUE</span><h4 id="corpus-analysis-title">วิเคราะห์ข้อความที่จัดทำดัชนี แล้วจัดลำดับหลักฐานที่ควรตรวจสอบต่อ</h4></div>
           <div className="corpus-analysis-totals"><span><b>{formatCount(analysis.meta.analyzed_files)}</b> แฟ้ม</span><span><b>{formatCount(analysis.meta.analyzed_units)}</b> หน้าและแถว</span><span><b>{formatCount(analysis.meta.money_mentions)}</b> จุดที่กล่าวถึงเงิน</span></div>
@@ -454,7 +475,7 @@ export default function CorpusReader() {
           })}
         </div>
         <p className="corpus-analysis-note">{analysis.meta.interpretation}</p>
-      </section>}
+      </section></details>}
 
       <div className="corpus-controls">
         <label className="corpus-search"><span>ค้นคลัง</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ชื่อไฟล์ หน่วยงาน จังหวัด โครงการ หรือตัวเลข" /></label>
@@ -491,14 +512,14 @@ export default function CorpusReader() {
           {appliedInsideQuery && <button type="button" onClick={() => { setInsideQuery(''); void loadPage(selected, 0, '') }}>ล้างคำค้น</button>}
         </form>
         <div className="reader-status" aria-live="polite">
-          {loading ? <span>กำลังเปิดฉบับเต็ม ขณะนี้อ่านข้อความตัวอย่างได้แล้ว</span> : appliedInsideQuery ? <span>พบ {formatCount(matched)} ตำแหน่งสำหรับ “{appliedInsideQuery}” {readerSource === 'preview' ? 'ในข้อความตัวอย่าง' : ''}</span> : records.length ? <span>{readerSource === 'full' ? `แสดงลำดับ ${formatCount(page * PAGE_SIZE + 1)} ถึง ${formatCount(page * PAGE_SIZE + records.length)}` : `แสดงข้อความตัวอย่าง ${formatCount(records.length)} ตำแหน่ง`}</span> : <span>ยังไม่มีเนื้อหาที่แสดง</span>}
+          {loading ? <span>{appliedInsideQuery ? 'กำลังค้นทั้งไฟล์' : 'กำลังเปิดฉบับเต็ม'}{scanned ? ` อ่านแล้ว ${formatCount(scanned)} ตำแหน่ง` : ''} ขณะนี้อ่านข้อความตัวอย่างได้แล้ว</span> : appliedInsideQuery ? <span>พบ {formatCount(matched)} ตำแหน่งสำหรับ “{appliedInsideQuery}” {readerSource === 'preview' ? 'ในข้อความตัวอย่าง' : ''}</span> : records.length ? <span>{readerSource === 'full' ? `แสดงลำดับ ${formatCount(page * PAGE_SIZE + 1)} ถึง ${formatCount(page * PAGE_SIZE + records.length)}` : `แสดงข้อความตัวอย่าง ${formatCount(records.length)} ตำแหน่ง`}</span> : <span>ยังไม่มีเนื้อหาที่แสดง</span>}
           <a href={selected.url} target="_blank" rel="noreferrer">เทียบกับต้นฉบับ</a>
         </div>
         {error && <div className="reader-error"><span>{error}</span><button type="button" onClick={() => void loadPage(selected, page, appliedInsideQuery)}>ลองโหลดฉบับเต็มอีกครั้ง</button></div>}
         <div className="record-list">
           {records.map((record, index) => <article key={`${page}-${index}-${locator(record)}`}>
             <header><strong>{locator(record)}</strong>{record.method === 'ocr' && <span>อ่านข้อความด้วย OCR</span>}</header>
-            <pre>{record.text || (record.cells || []).join(' | ') || 'ไม่มีข้อความในตำแหน่งนี้'}</pre>
+            <RecordBody record={record} query={appliedInsideQuery} />
           </article>)}
         </div>
         {!loading && records.length === 0 && <div className="corpus-empty">ไม่พบข้อความที่ตรงกับคำค้นในไฟล์นี้</div>}

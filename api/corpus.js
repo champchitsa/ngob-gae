@@ -17,7 +17,7 @@ export default async function handler(request, response) {
   const upstreamUrl = `https://github.com/champchitsa/ngob-gae/releases/download/corpus-v1/${asset}`
 
   try {
-    const upstream = await fetch(upstreamUrl, { headers: { Range: `bytes=${offset}-${end}` }, signal: AbortSignal.timeout(20000) })
+    const upstream = await fetch(upstreamUrl, { headers: { Range: `bytes=${offset}-${end}` }, signal: AbortSignal.timeout(50000) })
     if (upstream.status !== 206 && !upstream.ok) {
       return response.status(upstream.status).json({ error: 'ยังเปิดข้อมูลช่วงนี้ไม่ได้' })
     }
@@ -38,7 +38,8 @@ export default async function handler(request, response) {
     response.setHeader('X-Corpus-Total', total)
     response.setHeader('X-Corpus-Offset', String(offset))
     return response.status(200).send(bytes)
-  } catch {
+  } catch (error) {
+    console.error('Corpus upstream request failed', { asset, offset, error: error instanceof Error ? error.message : String(error) })
     return response.status(502).json({ error: 'เชื่อมต่อคลังเอกสารไม่สำเร็จ' })
   }
 }
