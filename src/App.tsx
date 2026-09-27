@@ -11,6 +11,7 @@ const CommitteeTracker = lazy(() => import('./CommitteeTracker'))
 const GovernmentMap = lazy(() => import('./GovernmentMap'))
 const SsoBudgetLab = lazy(() => import('./SsoBudgetLab'))
 const SsoItProcurementLab = lazy(() => import('./SsoItProcurementLab'))
+const BmaBudgetExplorer = lazy(() => import('./BmaBudgetExplorer'))
 
 type PboYear = { year: number; rows: number; act: number; adjusted: number; paid: number; paid_rate: number | null }
 type PboHistory = { years: number; row_count: number; series: PboYear[] }
@@ -21,7 +22,7 @@ const areaForHash = (hash: string): WorkArea => {
   if (['#budget-dashboard', '#state-map'].includes(hash)) return 'overview'
   if (['#signals', '#workspace', '#law-workbench'].includes(hash)) return 'investigate'
   if (['#sso-it', '#sso-lab'].includes(hash)) return 'sso'
-  if (['#archive', '#data-api', '#method'].includes(hash)) return 'evidence'
+  if (['#archive', '#bma-budget', '#data-api', '#method'].includes(hash)) return 'evidence'
   if (hash === '#committee') return 'committee'
   return 'home'
 }
@@ -183,13 +184,14 @@ function App() {
           <a href="#committee" aria-current={workArea === 'committee' ? 'page' : undefined}>ติดตาม กมธ.</a>
           <button className="nav-chat" onClick={() => setChatOpen(true)}>ถามน้องเพนกวิน</button>
         </nav>
-        <div className="data-stamp"><i /> ข้อมูลล่าสุด 27.09.69</div>
-        <select className="mobile-section-nav" value={workArea === 'home' ? 'top' : workArea === 'overview' ? 'budget-dashboard' : workArea === 'investigate' ? 'signals' : workArea === 'sso' ? 'sso-it' : workArea === 'evidence' ? 'archive' : 'committee'} aria-label="ไปยังส่วนต่างๆ ของเว็บ" onChange={(event) => openArea(`#${event.currentTarget.value}`)}>
+        <div className="data-stamp"><i /> อัปเดต กันยายน 2569</div>
+        <select className="mobile-section-nav" value={workArea === 'home' ? 'top' : workArea === 'overview' ? 'budget-dashboard' : workArea === 'investigate' ? 'signals' : workArea === 'sso' ? 'sso-it' : workArea === 'evidence' ? activeHash === '#bma-budget' ? 'bma-budget' : 'archive' : 'committee'} aria-label="ไปยังส่วนต่างๆ ของเว็บ" onChange={(event) => openArea(`#${event.currentTarget.value}`)}>
           <option value="top">เริ่มต้น</option>
           <option value="budget-dashboard">ภาพรวมงบ</option>
           <option value="signals">ตรวจรายการ</option>
           <option value="sso-it">ประกันสังคม</option>
           <option value="archive">ค้นหลักฐาน</option>
+          <option value="bma-budget">งบกรุงเทพฯ</option>
           <option value="committee">ติดตาม กมธ.</option>
         </select>
         <button className="mobile-chat-button" onClick={() => setChatOpen(true)}>ถามน้องเพนกวิน</button>
@@ -238,7 +240,7 @@ function App() {
           <div className="task-grid">
             <a href="#signals"><b>01</b><strong>หารายการที่ควรตรวจต่อ</strong><span>ค้นและจัดอันดับจากวงเงิน การโอน และผลเบิกจ่าย</span><i>เปิดรายการ →</i></a>
             <a href="#sso-it"><b>02</b><strong>เจาะงบ IT ประกันสังคม</strong><span>ดูโครงการ ผู้ชนะ คู่แข่ง สัญญา และโครงข่ายบริษัท</span><i>เปิดแฟ้มเฉพาะทาง →</i></a>
-            <a href="#archive"><b>03</b><strong>ค้นเอกสารและหลักฐาน</strong><span>ค้น 694 ไฟล์ อ่าน OCR และกลับไปเทียบต้นฉบับ</span><i>เปิดคลังหลักฐาน →</i></a>
+            <a href="#archive"><b>03</b><strong>ค้นงบในเอกสาร</strong><span>ดูตัวเลขจากตารางงบ กทม. และค้นหลักฐาน 694 ไฟล์</span><i>เปิดคลังหลักฐาน →</i></a>
             <a href="#committee"><b>04</b><strong>ติดตามคำถามของกรรมาธิการ</strong><span>ดูคำถาม เอกสารที่ขอ ผู้รับผิดชอบ และสถานะคำตอบ</span><i>เปิดตัวติดตาม →</i></a>
           </div>
         </section></>}
@@ -246,7 +248,7 @@ function App() {
         {workArea !== 'home' && <div className="area-context"><a href="#top">← กลับไปเลือกงาน</a><span>{workArea === 'overview' ? 'ภาพรวมงบประมาณ' : workArea === 'investigate' ? 'ตรวจรายการที่ควรติดตาม' : workArea === 'sso' ? 'ประกันสังคม' : workArea === 'evidence' ? 'ค้นหลักฐานและข้อมูล' : 'ติดตามกรรมาธิการ'}</span></div>}
         {workArea === 'investigate' && <nav className="area-subnav" aria-label="เครื่องมือตรวจรายการ"><a href="#signals" aria-current={activeHash !== '#workspace' ? 'page' : undefined}>รายการคัดกรอง</a><a href="#workspace" aria-current={activeHash === '#workspace' ? 'page' : undefined}>แฟ้มวิเคราะห์ 19 เรื่อง</a></nav>}
         {workArea === 'sso' && <nav className="area-subnav" aria-label="แฟ้มประกันสังคม"><a href="#sso-it" aria-current={activeHash !== '#sso-lab' ? 'page' : undefined}>โครงการ IT และผู้รับจ้าง</a><a href="#sso-lab" aria-current={activeHash === '#sso-lab' ? 'page' : undefined}>งบและผลใช้จ่าย</a></nav>}
-        {workArea === 'evidence' && <nav className="area-subnav" aria-label="คลังข้อมูลและหลักฐาน"><a href="#archive" aria-current={activeHash !== '#data-api' && activeHash !== '#method' ? 'page' : undefined}>ค้นเอกสาร</a><a href="#data-api" aria-current={activeHash === '#data-api' ? 'page' : undefined}>ตารางข้อมูล</a><a href="#method" aria-current={activeHash === '#method' ? 'page' : undefined}>วิธีวิเคราะห์</a></nav>}
+        {workArea === 'evidence' && <nav className="area-subnav" aria-label="คลังข้อมูลและหลักฐาน"><a href="#bma-budget" aria-current={activeHash === '#bma-budget' ? 'page' : undefined}>งบกรุงเทพฯ 2570</a><a href="#archive" aria-current={activeHash === '#archive' ? 'page' : undefined}>ค้นเอกสาร</a><a href="#data-api" aria-current={activeHash === '#data-api' ? 'page' : undefined}>ตารางข้อมูล</a><a href="#method" aria-current={activeHash === '#method' ? 'page' : undefined}>วิธีวิเคราะห์</a></nav>}
 
         {workArea === 'overview' && <Suspense fallback={<div className="area-loading" role="status">กำลังเปิดภาพรวมงบประมาณ...</div>}><BudgetDashboard history={history} />
 
@@ -478,23 +480,26 @@ function App() {
         </section>}
 
         {workArea === 'evidence' && activeHash === '#data-api' && <Suspense fallback={<div className="area-loading" role="status">กำลังเปิดตารางข้อมูล...</div>}><DataExplorer /></Suspense>}
+        {workArea === 'evidence' && activeHash === '#bma-budget' && <Suspense fallback={<div className="area-loading" role="status">กำลังเปิดตารางงบกรุงเทพฯ...</div>}><BmaBudgetExplorer /></Suspense>}
 
         {workArea === 'committee' && <Suspense fallback={<div className="area-loading" role="status">กำลังเปิดข้อมูลกรรมาธิการ...</div>}><CommitteeTracker /></Suspense>}
 
-        {workArea === 'evidence' && activeHash !== '#data-api' && activeHash !== '#method' && <section className="archive" id="archive">
+        {workArea === 'evidence' && activeHash === '#archive' && <section className="archive" id="archive">
           <div className="workspace-head">
-            <div><span className="section-no">06 / EVIDENCE ARCHIVE</span><h2>คลังหลักฐาน 694 ไฟล์</h2></div>
-            <p>ค้นจากชื่อไฟล์ เส้นทาง และหมวดข้อมูลได้ทันที ทุกผลลัพธ์เปิดกลับไปยังไฟล์ต้นทางใน Drive</p>
+            <div><span className="section-no">06 / EVIDENCE ARCHIVE</span><h2>ค้นงบจากเอกสาร 694 ไฟล์</h2></div>
+            <p>เลือกหน่วยงานหรือโครงการ ดูจำนวนเงินและหน้าอ้างอิง แล้วตรวจข้อความกับต้นฉบับได้ในหน้าเดียว</p>
           </div>
 
-          <div className="corpus-stats" role="group" aria-label="ภาพรวมคลังข้อมูล">
+          <a className="archive-budget-promo" href="#bma-budget"><strong>งบกรุงเทพฯ ปี 2570</strong><span>ค้น 25,197 แถวจากตารางงบต้นฉบับ 75 ไฟล์ พร้อมตัวเลขและตำแหน่งแถว</span><b>เปิดตารางงบ →</b></a>
+
+          <details className="archive-stats-disclosure"><summary>ขอบเขตคลังข้อมูล: 694 ไฟล์ใน 113 โฟลเดอร์</summary><div className="corpus-stats" role="group" aria-label="ภาพรวมคลังข้อมูล">
             <div><strong>694</strong><span>ไฟล์ทั้งหมด</span></div>
             <div><strong>113</strong><span>โฟลเดอร์ที่สำรวจ</span></div>
             <div><strong>560</strong><span>เอกสาร PDF</span></div>
             <div><strong>124</strong><span>workbook ที่อ่านได้</span></div>
             <div><strong>856</strong><span>ชีตที่ตรวจโครงสร้าง</span></div>
             <div><strong>6.67 GB</strong><span>ขนาดรวมทั้งคลัง</span></div>
-          </div>
+          </div></details>
 
           <Suspense fallback={<div className="area-loading" role="status">กำลังเปิดคลังเอกสาร...</div>}><CorpusReader /></Suspense>
 
@@ -585,7 +590,7 @@ function App() {
           {panel === 'law' && <>
             <span className="panel-kicker">LEGAL LENS</span><h2>ตัวบทสำหรับเดินจากงบไปถึงความรับผิดชอบ</h2>
             <p className="panel-intro">รวมตัวบทของมาตราที่อ้างไว้บนเว็บแบบครบถ้วนตามฉบับประกาศใช้จริง ส่วน “ใช้ตรวจเรื่อง” เป็นคำอธิบายของระบบและแยกออกจากตัวบทอย่างชัดเจน</p>
-            <div className="law-verification"><strong>ตรวจแหล่งแล้ว 27 กันยายน 2569</strong><p>ลิงก์ชี้ไปยังประกาศจริงในราชกิจจานุเบกษา ส่วน พ.ร.บ. ข้อมูลข่าวสารของราชการ ใช้สำเนาตัวบทจากศูนย์ข้อมูลข่าวสารของราชการ</p></div>
+            <div className="law-verification"><strong>ตรวจแหล่งแล้ว กันยายน 2569</strong><p>ลิงก์ชี้ไปยังประกาศจริงในราชกิจจานุเบกษา ส่วน พ.ร.บ. ข้อมูลข่าวสารของราชการ ใช้สำเนาตัวบทจากศูนย์ข้อมูลข่าวสารของราชการ</p></div>
             <div className="law-card-list">{lawCards.map((law, index) => <details className="law-provision" key={law.id} open={index === 0}>
               <summary><span>{String(index + 1).padStart(2, '0')}</span><div><small>{law.code}</small><strong>{law.title}</strong><p>{law.publication}</p></div><b>อ่านตัวบท</b></summary>
               <div className="law-analysis"><small>ใช้ตรวจเรื่อง</small><p>{law.analysis}</p><strong>เอกสารที่เชื่อมต่อ</strong><p>{law.documents.join(' • ')}</p></div>
@@ -597,7 +602,7 @@ function App() {
             <span className="panel-kicker">SOURCE LEDGER</span><h2>ทุกข้อสังเกตต้องย้อนกลับได้</h2>
             <p className="panel-intro">สำรวจ Drive ครบ 694 ไฟล์ เปิดอ่าน workbook ทั้ง 124 เล่ม และเก็บลิงก์ต้นทางไว้ในบัญชีค้นหา</p>
             <div className="source-list">{sourceNotes.map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={source.label}><small>{source.label}</small><strong>{source.value}</strong><p>{source.detail}</p><span>เปิดต้นทาง ↗</span></a>)}</div>
-            <div className="source-warning"><strong>เวอร์ชันข้อมูล</strong><p>บัญชีไฟล์และผลวิเคราะห์ชุดนี้จัดทำ ณ 20 กันยายน 2569 ตัวเลขแสดงความละเอียดเต็มในแฟ้มและปัดเฉพาะส่วนติดต่อผู้ใช้</p></div>
+            <div className="source-warning"><strong>เวอร์ชันข้อมูล</strong><p>บัญชีไฟล์และผลวิเคราะห์ชุดนี้จัดทำในเดือนกันยายน 2569 ตัวเลขแสดงความละเอียดเต็มในแฟ้มและปัดเฉพาะส่วนติดต่อผู้ใช้</p></div>
           </>}
         </aside>
       </div>}

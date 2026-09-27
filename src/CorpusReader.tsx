@@ -98,6 +98,7 @@ type CorpusAnalysis = {
   evidence_stages: { id: string; label: string; files: number; units: number }[]
   signal_counts: Record<string, number>
   signals: Record<string, CorpusSignal[]>
+  file_insights?: Record<string, { money_mentions: number; amounts: { value: number; locator_label: string; context: string; extraction: string }[] }>
 }
 
 const signalViews = [
@@ -107,7 +108,7 @@ const signalViews = [
   { id: 'round_amount', label: 'จำนวนเงินลงตัว', description: 'เปิดฐานคำนวณ ปริมาณ และราคาต่อหน่วยของกรอบวงเงินหรือค่าประมาณ' },
 ]
 
-const PAGE_SIZE = 100
+const PAGE_SIZE = 20
 
 const previewRecords = (file: CorpusFile, query: string) => {
   const needle = query.trim().toLocaleLowerCase('th')
@@ -233,9 +234,23 @@ const structureText = (file: CorpusFile) => {
   return parts.join(' / ') || `${formatCount(file.units)} หน่วยข้อมูล`
 }
 
+const readableOcrText = (record: CorpusRecord, raw: string) => {
+  if (record.method !== 'ocr') return raw
+  const normalized = raw.replace(/ํา/g, 'ำ')
+  if (record.page !== 1 || !normalized.includes('ข้อบัญญัติกรุงเทพมหานคร') || !normalized.includes('งบประมาณ')) return normalized
+  return normalized.split('\n')
+    .map((line) => line.trim().replace(/^เร[ืี]?อง(?=\s)/, 'เรื่อง').replace(/งบประมาณรายจาย/g, 'งบประมาณรายจ่าย').replace(/กรง\s+เทพมหานคร/g, 'กรุงเทพมหานคร'))
+    .filter((line) => {
+      const thai = (line.match(/[ก-๙]/g) || []).length
+      const latin = (line.match(/[A-Za-z]/g) || []).length
+      return thai >= 6 && thai / (thai + latin || 1) >= 0.72
+    })
+    .join('\n')
+}
+
 function RecordBody({ record, query }: { record: CorpusRecord; query: string }) {
   const [expanded, setExpanded] = useState(false)
-  const text = record.text || (record.cells || []).join(' | ') || 'ไม่มีข้อความในตำแหน่งนี้'
+  const text = readableOcrText(record, record.text || (record.cells || []).join(' | ') || 'ไม่มีข้อความในตำแหน่งนี้')
   const limit = 1800
   const needle = query.trim().toLocaleLowerCase('th')
   const match = needle ? text.toLocaleLowerCase('th').indexOf(needle) : -1
@@ -435,9 +450,9 @@ export default function CorpusReader() {
     <div className="corpus-reader">
       <div className="corpus-reader-head">
         <div>
-          <span className="panel-kicker">FULL TEXT CORPUS</span>
-          <h3>อ่านเนื้อหาที่จัดทำดัชนีบนเว็บ</h3>
-          <p>เลือกไฟล์แล้วอ่านต่อได้ทันที ระเบียนระบุตำแหน่งตามชนิดต้นฉบับ เช่น หน้า ชีต แถว ย่อหน้า สไลด์ ส่วนหัว เชิงอรรถ และกล่องข้อความ</p>
+          <span className="panel-kicker">ค้นงบจากเอกสาร</span>
+          <h3>ค้นรายการงบและหลักฐาน</h3>
+          <p>ค้นชื่อหน่วยงานหรือโครงการ ดูจำนวนเงินที่พบ แล้วเปิดหน้าเอกสารบนเว็บเพื่อตรวจต่อ</p>
         </div>
         <div className="corpus-coverage" aria-live="polite">
           <strong>{formatCount(completed)}<small> / {formatCount(meta?.inventory_files || 694)}</small></strong>
@@ -450,13 +465,14 @@ export default function CorpusReader() {
         <label><span>ชนิดข้อมูล</span><select value={kind} onChange={(event) => setKind(event.target.value)}><option value="all">ทุกชนิด</option><option>PDF</option><option>ตาราง</option><option>เอกสาร</option><option>สไลด์</option><option>ภาพ</option><option>ไฟล์</option></select></label>
         <label><span>หมวดหลัก</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="all">ทุกหมวด</option>{index?.categories.map((item) => <option key={item.category} value={item.category}>{item.category} ({formatCount(item.files)})</option>)}</select></label>
       </div>
+      <div className="corpus-quick-search" aria-label="ตัวอย่างการค้นงบ"><span>ลองค้น:</span>{['ประกันสังคม', 'กรุงเทพมหานคร', 'สำนักงานเขต', 'ครุภัณฑ์'].map((term) => <button key={term} type="button" onClick={() => { setQuery(term); setCategory('all'); setKind('all') }}>{term}</button>)}{query && <button type="button" onClick={() => setQuery('')}>ล้างคำค้น</button>}</div>
 
-      {meta && <div className="corpus-metrics" role="group" aria-label="ผลการอ่านเอกสารทั้งคลัง">
+      {meta && <details className="corpus-metrics-details"><summary>ดูรายละเอียดการจัดทำดัชนี</summary><div className="corpus-metrics" role="group" aria-label="ผลการอ่านเอกสารทั้งคลัง">
         <div><strong>{formatCount(meta.units)}</strong><span>หน้า แถว และส่วนเนื้อหา</span></div>
         <div><strong>{formatCount(meta.lines)}</strong><span>บรรทัดที่จัดทำดัชนี</span></div>
         <div><strong>{formatCount(meta.cells)}</strong><span>เซลล์ในตาราง</span></div>
         <div><strong>{formatCount(meta.ocr_units)}</strong><span>หน้าหรือภาพที่ OCR</span></div>
-      </div>}
+      </div></details>}
 
       {analysis && <details className="corpus-review-toggle"><summary><span>คิวตรวจจากข้อความและ OCR</span><strong>{formatCount(analysis.meta.analyzed_files)} แฟ้มที่พบประเด็น</strong><small>เปิดดูเหตุผลและตำแหน่งต้นทาง</small></summary><section className="corpus-analysis-panel" aria-labelledby="corpus-analysis-title">
         <header className="corpus-analysis-head">
@@ -483,22 +499,21 @@ export default function CorpusReader() {
               <header><span>{item.locator_label}{item.extraction === 'ocr' ? ' / OCR' : ''}</span>{item.amount ? <strong>{formatBaht(item.amount)}</strong> : null}</header>
               <h5>{item.title}</h5>
               <p>{item.explanation}</p>
-              <blockquote>{item.context}</blockquote>
-              <footer>{file?.status === 'complete' && file.corpus_url ? <button onClick={() => openFile(file, item.context)}>เปิดตำแหน่งในเว็บ</button> : <span>อยู่ระหว่างจัดทำฉบับอ่านบนเว็บ</span>}<a href={item.source_url} target="_blank" rel="noreferrer">เทียบต้นฉบับ</a></footer>
+              <footer>{file?.status === 'complete' && file.corpus_url ? <button onClick={() => openFile(file)}>อ่านเอกสารบนเว็บ</button> : <span>อยู่ระหว่างจัดทำฉบับอ่านบนเว็บ</span>}<a href={item.source_url} target="_blank" rel="noreferrer">เทียบต้นฉบับ</a></footer>
             </article>
           })}
         </div>
         <p className="corpus-analysis-note">{analysis.meta.interpretation}</p>
       </section></details>}
 
-      <div className="corpus-result-line"><strong>{formatCount(files.length)} ไฟล์</strong><span>ค้นจากชื่อ เส้นทาง ตัวอย่างข้อความ และบริบทตัวเลข</span></div>
+      <div className="corpus-result-line"><strong>{formatCount(files.length)} ไฟล์</strong><span>จำนวนเงินที่แสดงคือค่าที่พบในเอกสาร ไม่ใช่ยอดรวมของไฟล์</span></div>
       <div className="corpus-file-grid">
         {files.slice(0, limit).map((file) => <article className={selected?.id === file.id ? 'active' : ''} key={file.id}>
           <div className="corpus-file-top"><span>{fileKind(file)}</span><i className={`corpus-status ${file.status}`}>{file.status === 'complete' ? 'จัดทำดัชนีแล้ว' : file.status === 'error' ? 'ตรวจซ้ำ' : 'กำลังจัดทำดัชนี'}</i></div>
           <h4>{file.title}</h4>
-          <p>{file.path || file.category}</p>
+          <p>{file.category}</p>
           <div className="corpus-file-facts"><span>{formatBytes(file.size)}</span><span>{structureText(file)}</span>{file.lines > 0 && <span>{formatCount(file.lines)} บรรทัด</span>}</div>
-          {file.preview[0]?.text && <blockquote>{file.preview[0].text.slice(0, 240)}</blockquote>}
+          {analysis?.file_insights?.[file.id]?.amounts?.length ? <div className="corpus-money-preview"><span>{analysis.file_insights[file.id].amounts[0].extraction === 'ocr' ? 'ตัวเลขที่อ่านจากภาพ' : 'จำนวนเงินที่พบในตาราง'}</span><strong>{formatBaht(analysis.file_insights[file.id].amounts[0].value)}</strong><small>{analysis.file_insights[file.id].amounts[0].locator_label}{analysis.file_insights[file.id].amounts[0].extraction === 'ocr' ? ' · เทียบต้นฉบับก่อนใช้' : ''}</small></div> : <div className="corpus-money-preview muted"><span>เนื้อหาในไฟล์</span><strong>{file.status === 'complete' ? 'เปิดอ่านและค้นในเว็บได้' : 'กำลังจัดทำดัชนี'}</strong></div>}
           <div className="corpus-file-actions">
             <button disabled={file.status !== 'complete' || !file.corpus_url} onClick={() => openFile(file)}>{file.status === 'complete' ? 'อ่านในเว็บ' : 'อยู่ระหว่างประมวลผล'}</button>
             <a href={file.url} target="_blank" rel="noreferrer">ตรวจต้นฉบับ</a>
@@ -524,7 +539,8 @@ export default function CorpusReader() {
           <a href={selected.url} target="_blank" rel="noreferrer">เทียบกับต้นฉบับ</a>
         </div>
         {error && <div className="reader-error"><span>{error}</span><button type="button" onClick={() => void loadPage(selected, page, appliedInsideQuery)}>ลองโหลดฉบับเต็มอีกครั้ง</button></div>}
-        <div className="record-list">
+        <div className="corpus-document-summary"><strong>ภาพรวมเอกสาร</strong><p>{selected.category} · {structureText(selected)} จำนวนเงินด้านล่างเป็นตัวอย่างที่พบพร้อมตำแหน่ง ไม่ใช่ผลรวมงบประมาณ</p><div>{analysis?.file_insights?.[selected.id]?.amounts?.length ? analysis.file_insights[selected.id].amounts.map((item) => <span key={`${item.value}-${item.locator_label}`}><b>{formatBaht(item.value)}</b><small>{item.locator_label}{item.extraction === 'ocr' ? ' · OCR' : ''}</small></span>) : <span><b>ค้นเนื้อหาในเอกสาร</b><small>ยังไม่มีจำนวนเงินที่ผ่านตัวกรองบริบท</small></span>}</div></div>
+        <details className="corpus-raw-records" open={Boolean(appliedInsideQuery) || undefined}><summary>อ่านเนื้อหาและตารางจากไฟล์ <span>{appliedInsideQuery ? `ผลค้นหา “${appliedInsideQuery}”` : 'แสดงทีละ 20 ตำแหน่ง'}</span></summary><div className="record-list">
           {records.map((record, index) => <article key={`${page}-${index}-${locator(record)}`}>
             <header><strong>{locator(record)}</strong>{record.method === 'ocr' && <span>อ่านข้อความด้วย OCR</span>}</header>
             <RecordBody record={record} query={appliedInsideQuery} />
@@ -535,7 +551,7 @@ export default function CorpusReader() {
           <button disabled={page === 0} onClick={() => void loadPage(selected, page - 1, appliedInsideQuery)}>หน้าก่อน</button>
           <span>หน้าผลลัพธ์ {formatCount(page + 1)}</span>
           <button disabled={!hasMore} onClick={() => void loadPage(selected, page + 1, appliedInsideQuery)}>หน้าถัดไป</button>
-        </div>}
+        </div>}</details>
       </div>}
     </div>
   )

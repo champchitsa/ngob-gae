@@ -28,7 +28,7 @@ MONEY_CUES = (
 IDENTIFIER_CUES = (
     "เลขประจำตัวผู้เสียภาษี", "เลขประจําตัวผู้เสียภาษี", "รหัสประจำตัว", "รหัสประจําตัว",
     "หมายเลขประจำตัวผู้เสียภาษี", "หมายเลขประจําตัวผู้เสียภาษี", "เลขที่ผู้เสียภาษี",
-    "ทะเบียนการค้า", "ทะเบียนนิติบุคคล", "เลขทะเบียน", "โทรศัพท์", "เบอร์โทร", "มือถือ",
+    "ทะเบียนการค้า", "ทะเบียนนิติบุคคล", "เลขทะเบียน", "โทรศัพท์", "โทรศัพ", "โทรสาร", "เบอร์โทร", "มือถือ",
     "โทร.", "โทร ", "โพร", "แฟกซ์", "fax", "เลขที่สัญญา", "เลขหนังสือ", "ไปรษณีย์",
 )
 
@@ -89,8 +89,8 @@ def credible_amounts(text: str) -> list[dict]:
         digits = re.sub(r"\D", "", raw)
         start, end = max(0, match.start() - 110), min(len(normalized), match.end() + 110)
         context = clean(normalized[start:end])
-        near = normalized[max(0, match.start() - 55):min(len(normalized), match.end() + 55)].lower()
-        identifier_context = normalized[max(0, match.start() - 140):min(len(normalized), match.end() + 140)].lower()
+        near = normalized[max(0, match.start() - 90):min(len(normalized), match.end() + 90)].lower()
+        identifier_context = normalized[max(0, match.start() - 28):min(len(normalized), match.end() + 18)].lower()
         if not any(cue in near for cue in MONEY_CUES):
             continue
         suffix = normalized[match.end():match.end() + 16].lower()
@@ -160,6 +160,8 @@ def main() -> None:
     evidence_units = Counter()
     raw_signal_counts = Counter()
     category_files = Counter()
+    file_amounts: dict[str, dict[int, dict]] = defaultdict(dict)
+    file_money_mentions = Counter()
     amount_occurrences = Counter()
     amount_files: defaultdict[int, set[str]] = defaultdict(set)
     amount_examples: defaultdict[int, list[dict]] = defaultdict(list)
@@ -204,6 +206,7 @@ def main() -> None:
 
                 amounts = credible_amounts(text)
                 money_mentions += len(amounts)
+                file_money_mentions[file_id] += len(amounts)
                 unique_unit_amounts = {}
                 for entry in amounts:
                     integer_value = round(entry["value"])
@@ -220,6 +223,14 @@ def main() -> None:
                         "extraction": record.get("method") or ("structured" if record.get("type") in {"row", "table_row"} else record.get("type")),
                         "source_url": file.get("url"),
                     }
+                    # A document card shows located examples, never a sum of OCR mentions.
+                    top_in_file = file_amounts[file_id]
+                    if integer_value >= 10_000 and integer_value not in top_in_file:
+                        if len(top_in_file) < 3:
+                            top_in_file[integer_value] = example
+                        elif integer_value > min(top_in_file):
+                            del top_in_file[min(top_in_file)]
+                            top_in_file[integer_value] = example
                     if integer_value >= 1_000_000:
                         amount_occurrences[integer_value] += 1
                         amount_files[integer_value].add(file_id)
@@ -329,6 +340,13 @@ def main() -> None:
         "queue_counts": {key: len(value) for key, value in signals.items()},
         "signals": signals,
         "top_amounts": top_amount_rows,
+        "file_insights": {
+            file_id: {
+                "money_mentions": file_money_mentions[file_id],
+                "amounts": sorted(examples.values(), key=lambda row: row["value"], reverse=True)[:3],
+            }
+            for file_id, examples in file_amounts.items()
+        },
     }
     atomic_write_json(args.output, payload)
     print(json.dumps({**payload["meta"], "signal_counts": payload["signal_counts"]}, ensure_ascii=False))

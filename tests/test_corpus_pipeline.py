@@ -24,7 +24,17 @@ SCRIPTS = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from corpus_pipeline import atomic_write_json, collect_record_assets, sha256_file  # noqa: E402
-from extract_drive_corpus import FileStats, extract_docx, extract_pptx  # noqa: E402
+from analyze_drive_corpus import credible_amounts  # noqa: E402
+from extract_drive_corpus import FileStats, contiguous_page_batches, extract_docx, extract_pptx  # noqa: E402
+
+
+def test_pdf_ocr_fallback_never_renders_unrequested_pages() -> None:
+    assert contiguous_page_batches([2, 871, 872, 1000, 1001, 1002], max_pages=2) == [[2], [871, 872], [1000, 1001], [1002]]
+
+
+def test_ocr_phone_number_is_not_promoted_as_budget_amount() -> None:
+    text = "ราคากลาง 90 วัน โทรสาร 0-78205827 ติดต่อสำนักงาน งบประมาณ 38,439,800 บาท"
+    assert [item["value"] for item in credible_amounts(text)] == [38_439_800]
 from sync_corpus_release import compare_release_assets, comparison_passed, validation_gate  # noqa: E402
 
 

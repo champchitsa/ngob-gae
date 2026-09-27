@@ -6,6 +6,7 @@ import argparse
 import gzip
 import json
 import pathlib
+import re
 import time
 from collections import Counter, defaultdict
 
@@ -31,9 +32,9 @@ def compact_structure(structure: dict) -> dict:
 
 
 def preview_records(path: pathlib.Path, limit: int = 4) -> list[dict]:
-    records = []
+    candidates = []
     if not path.exists():
-        return records
+        return []
     with gzip.open(path, "rt", encoding="utf-8") as handle:
         for line in handle:
             record = json.loads(line)
@@ -42,14 +43,23 @@ def preview_records(path: pathlib.Path, limit: int = 4) -> list[dict]:
             text = " ".join(str(record.get("text", "")).split())
             if not text:
                 continue
+            thai = len(re.findall(r"[ก-๙]", text))
+            latin_fragments = len(re.findall(r"\b[A-Za-z]{1,3}\b", text))
+            useful = sum(term in text for term in ("งบประมาณ", "รายการ", "โครงการ", "บาท", "ราคากลาง", "สัญญา"))
+            # Cover art often yields plausible Thai mixed with stray Latin OCR.
+            # Keep the raw page in the corpus but do not promote it as a preview.
+            quality = (thai / max(1, len(text))) * 10 + useful * 2 + min(len(text), 350) / 350 - latin_fragments * 0.35
+            if record.get("type") in {"row", "table_row"}:
+                quality += 2
             locator = {}
             for key in ("page", "sheet", "row", "paragraph", "table", "slide", "image", "story", "part", "textbox", "comment_id", "note_id", "note", "shape_path"):
                 if key in record:
                     locator[key] = record[key]
-            records.append({"type": record.get("type"), **locator, "text": text[:700]})
-            if len(records) >= limit:
+            candidates.append((quality, len(candidates), {"type": record.get("type"), **locator, "text": text[:700]}))
+            if len(candidates) >= 32:
                 break
-    return records
+    selected = sorted(sorted(candidates, key=lambda item: item[0], reverse=True)[:limit], key=lambda item: item[1])
+    return [record for _, _, record in selected]
 
 
 def main() -> None:

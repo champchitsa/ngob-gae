@@ -226,8 +226,10 @@ def ocr_image(image_path: pathlib.Path, tesseract: pathlib.Path, tessdata: pathl
     try:
         with Image.open(image_path) as image:
             image = ImageOps.exif_transpose(image)
-            if max(image.size) > 1400:
-                scale = 1400 / max(image.size)
+            # Thai vowel marks disappear when full-page scans are reduced to 1400px.
+            # Keep near-200 DPI detail while bounding memory for large embedded scans.
+            if max(image.size) > 2600:
+                scale = 2600 / max(image.size)
                 image = image.resize((max(1, int(image.width * scale)), max(1, int(image.height * scale))), Image.Resampling.LANCZOS)
             image = ImageOps.autocontrast(image.convert("L"))
             image.save(prepared, format="PNG", optimize=True)
@@ -266,7 +268,7 @@ def extract_largest_page_image(page: object, directory: pathlib.Path) -> pathlib
 def render_pdf_pages(pdf_path: pathlib.Path, first_page: int, last_page: int, directory: pathlib.Path, pdftoppm: pathlib.Path) -> dict[int, pathlib.Path]:
     prefix = directory / "page"
     command = [
-        str(pdftoppm), "-f", str(first_page), "-l", str(last_page), "-r", "145",
+        str(pdftoppm), "-f", str(first_page), "-l", str(last_page), "-r", "220",
         "-png", str(pdf_path), str(prefix),
     ]
     result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=max(240, (last_page - first_page + 1) * 45))
@@ -280,6 +282,17 @@ def render_pdf_pages(pdf_path: pathlib.Path, first_page: int, last_page: int, di
     if not rendered:
         raise RuntimeError("pdftoppm did not create page images")
     return rendered
+
+
+def contiguous_page_batches(page_numbers: list[int], max_pages: int = 12) -> list[list[int]]:
+    """Never render skipped PDF pages between OCR fallback targets."""
+    batches: list[list[int]] = []
+    for page in sorted(set(page_numbers)):
+        if not batches or page != batches[-1][-1] + 1 or len(batches[-1]) >= max_pages:
+            batches.append([page])
+        else:
+            batches[-1].append(page)
+    return batches
 
 
 def extract_pdf(path: pathlib.Path, writer: JsonlWriter, stats: FileStats, tools: dict) -> dict:
@@ -315,8 +328,7 @@ def extract_pdf(path: pathlib.Path, writer: JsonlWriter, stats: FileStats, tools
                 page_errors.append({"page": page_number, "stage": "direct_image_ocr", "error": f"{type(error).__name__}: {error}"})
                 render_fallback.append(page_number)
 
-    for batch_start in range(0, len(render_fallback), 20):
-        batch_pages = render_fallback[batch_start:batch_start + 20]
+    for batch_pages in contiguous_page_batches(render_fallback):
         first_page, last_page = min(batch_pages), max(batch_pages)
         with tempfile.TemporaryDirectory(dir=tools["temp_root"]) as directory:
             try:
@@ -395,6 +407,22 @@ def extract_xls(path: pathlib.Path, writer: JsonlWriter, stats: FileStats) -> di
 
 
 def ocr_embedded_blob(blob: bytes, suffix: str, tools: dict) -> str:
+    if suffix.lower() in {".wdp", ".jxr", ".hdp"}:
+        # Microsoft Word can embed JPEG XR / HD Photo images, which Pillow
+        # cannot open directly. Decode the original bytes before Thai OCR.
+        import imagecodecs
+
+        with tempfile.TemporaryDirectory(dir=tools["temp_root"]) as directory:
+            converted = pathlib.Path(directory) / "embedded.png"
+            # Windows' WIC decoder handles Office HD Photo files even when the
+            # optional JPEG XR codec is absent from an imagecodecs wheel.
+            pixels = (
+                imagecodecs.wic_decode(blob)
+                if imagecodecs.WIC.available
+                else imagecodecs.jpegxr_decode(blob)
+            )
+            Image.fromarray(pixels).save(converted, format="PNG")
+            return ocr_image(converted, tools["tesseract"], tools["tessdata"])
     descriptor, file_name = tempfile.mkstemp(suffix=suffix, dir=tools["temp_root"])
     os.close(descriptor)
     image_path = pathlib.Path(file_name)
