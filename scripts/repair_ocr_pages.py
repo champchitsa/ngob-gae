@@ -35,11 +35,11 @@ from extract_drive_corpus import (
 def needs_repair(record: dict, *, cover: bool = False, retry_unresolved: bool = False) -> bool:
     if record.get("type") != "page" or record.get("method") not in {"ocr", "ocr_error", "embedded"}:
         return False
-    if record.get("ocr_repaired") and not (retry_unresolved and record.get("ocr_unresolved")):
+    text = str(record.get("text") or "")
+    if record.get("ocr_repaired") and not ((retry_unresolved and record.get("ocr_unresolved")) or (cover and weak_budget_cover(text))):
         return False
     if record.get("ocr_unresolved") and not retry_unresolved:
         return False
-    text = str(record.get("text") or "")
     if record.get("method") == "embedded":
         return broken_embedded_thai_text(text) or (cover and weak_budget_cover(text))
     return record.get("method") == "ocr_error" or poor_thai_ocr(text) or (cover and (ocr_quality_score(text) < 100 or weak_budget_cover(text)))
@@ -52,7 +52,7 @@ def read_records(path: pathlib.Path) -> list[dict]:
 
 def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools: dict) -> dict:
     records = read_records(asset)
-    cover = item.get("category", "").startswith(("ร่างข้อบัญญัติ 70", "เอกสารประกอบการพิจารณา 70"))
+    cover = item.get("category", "").startswith("เอกสารประกอบการพิจารณา 70")
     targets = [record for record in records if needs_repair(record, cover=cover and record.get("page") == 1, retry_unresolved=args.retry_unresolved)]
     if not targets:
         return {"id": item["id"], "title": item["title"], "targets": 0, "repaired": 0}

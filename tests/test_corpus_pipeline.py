@@ -68,6 +68,7 @@ def test_budget_cover_catches_thai_looking_gibberish() -> None:
     assert weak_budget_cover(noise)
     assert not weak_budget_cover(readable)
     assert needs_repair({"type": "page", "page": 1, "method": "ocr", "text": noise}, cover=True)
+    assert needs_repair({"type": "page", "page": 1, "method": "ocr", "text": noise, "ocr_repaired": True}, cover=True)
     assert suspect_reason({"method": "ocr", "text": noise}, cover=True) == "unreadable budget cover"
 
 

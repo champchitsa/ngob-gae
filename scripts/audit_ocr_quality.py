@@ -52,7 +52,7 @@ def main() -> None:
             continue
         category = item.get("category") or "ไม่ระบุหมวด"
         group = by_category.setdefault(category, Counter())
-        cover = category.startswith(("ร่างข้อบัญญัติ 70", "เอกสารประกอบการพิจารณา 70"))
+        cover = category.startswith("เอกสารประกอบการพิจารณา 70")
         with gzip.open(asset, "rt", encoding="utf-8") as handle:
             for line in handle:
                 record = json.loads(line)
