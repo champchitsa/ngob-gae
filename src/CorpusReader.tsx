@@ -89,6 +89,15 @@ type CorpusSignal = {
   extraction?: string
 }
 
+type FileInsight = {
+  money_mentions: number
+  amounts: { value: number; locator_label: string; context: string; extraction: string }[]
+  themes?: { id: string; label: string; count: number }[]
+  stages?: { id: string; label: string; count: number }[]
+  hotspots?: { label: string; count: number }[]
+  connections?: { amount: number; file_id: string; title: string; url: string; locator_label: string }[]
+}
+
 type CorpusAnalysis = {
   meta: {
     inventory_files: number
@@ -96,6 +105,7 @@ type CorpusAnalysis = {
     analyzed_units: number
     ocr_units: number
     money_mentions: number
+    source_scanned_at?: string
     method: string
     interpretation: string
   }
@@ -103,7 +113,7 @@ type CorpusAnalysis = {
   evidence_stages: { id: string; label: string; files: number; units: number }[]
   signal_counts: Record<string, number>
   signals: Record<string, CorpusSignal[]>
-  file_insights?: Record<string, { money_mentions: number; amounts: { value: number; locator_label: string; context: string; extraction: string }[] }>
+  file_insights?: Record<string, FileInsight>
 }
 
 const signalViews = [
@@ -194,6 +204,7 @@ const formatBytes = (value: number) => {
 }
 
 const formatCount = (value: number) => new Intl.NumberFormat('th-TH').format(value || 0)
+const formatSourceDate = (value: string) => value.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$3/$2/$1')
 const formatBaht = (value: number) => {
   if (value >= 1_000_000_000) return `${new Intl.NumberFormat('th-TH', { maximumFractionDigits: 3 }).format(value / 1_000_000_000)} พันล้านบาท`
   if (value >= 1_000_000) return `${new Intl.NumberFormat('th-TH', { maximumFractionDigits: 3 }).format(value / 1_000_000)} ล้านบาท`
@@ -240,6 +251,26 @@ const structureText = (file: CorpusFile) => {
   if (Number(structure.ocr_repaired_count)) parts.push(`ตรวจ OCR ซ้ำ ${formatCount(Number(structure.ocr_repaired_count))} หน้า`)
   if (Number(structure.ocr_unresolved_count)) parts.push(`OCR ต้องเทียบต้นฉบับ ${formatCount(Number(structure.ocr_unresolved_count))} หน้า`)
   return parts.join(' / ') || `${formatCount(file.units)} หน่วยข้อมูล`
+}
+const formatBahtExact = (value: number) => `${formatCount(value)} บาท`
+
+const reviewQuestions = (insight?: FileInsight) => {
+  if (!insight) return []
+  const questions: string[] = []
+  if (insight.amounts.length) {
+    const first = insight.amounts[0]
+    questions.push(`ยอด ${formatBaht(first.value)} ที่${first.locator_label} เป็นยอดรวม กรอบวงเงิน หรือรายการย่อย และมีฐานคำนวณใดรองรับ?`)
+  }
+  if (insight.connections?.length) {
+    questions.push(`ตัวเลข ${formatBaht(insight.connections[0].amount)} ที่พบในอีกแฟ้มเป็นยอดอ้างอิงเดียวกันหรือคนละรายการ? เทียบปี หน่วยงาน และหัวตาราง`)
+  }
+  if (questions.length < 2 && insight.hotspots?.[0] && insight.hotspots[0].count >= 5) {
+    questions.push(`${insight.hotspots[0].label} มีตัวเลขหลายค่า ควรแยกยอดรวมกับรายการย่อยก่อนเปรียบเทียบข้ามแฟ้ม`)
+  }
+  if (questions.length < 2 && insight.stages?.some((stage) => stage.id === 'procurement' && stage.count > 0)) {
+    questions.push('หากจะตามผลจัดซื้อ ควรเชื่อม TOR ราคากลาง ผู้ชนะ สัญญา ผลตรวจรับ และผลลัพธ์ของงาน')
+  }
+  return questions.slice(0, 2)
 }
 
 const readableOcrText = (record: CorpusRecord, raw: string, file: CorpusFile) => {
@@ -362,7 +393,6 @@ export default function CorpusReader() {
   const [readerSource, setReaderSource] = useState<'preview' | 'full'>('preview')
   const abortRef = useRef<AbortController | null>(null)
   const documentRef = useRef<HTMLDivElement>(null)
-  const insideSearchRef = useRef<HTMLInputElement>(null)
 
   const closeDocument = () => {
     abortRef.current?.abort()
@@ -371,7 +401,7 @@ export default function CorpusReader() {
     setError('')
   }
 
-  useModalAccessibility(Boolean(selected), documentRef, insideSearchRef, closeDocument)
+  useModalAccessibility(Boolean(selected), documentRef, documentRef, closeDocument)
 
   useEffect(() => {
     Promise.all([
@@ -412,11 +442,12 @@ export default function CorpusReader() {
       if (!terms.length) return true
       const preview = file.preview.map((item) => item.text || '').join(' ')
       const analysisContext = (analysisContextByFile.get(file.id) ?? []).join(' ')
+      const themeContext = (analysis?.file_insights?.[file.id]?.themes ?? []).map((item) => item.label).join(' ')
       const alias = Object.entries(categoryAliases).find(([label]) => file.category.startsWith(label))?.[1] ?? ''
-      const searchable = `${file.title} ${file.path} ${file.category} ${alias} ${preview} ${analysisContext}`.toLocaleLowerCase('th')
+      const searchable = `${file.title} ${file.path} ${file.category} ${alias} ${preview} ${analysisContext} ${themeContext}`.toLocaleLowerCase('th')
       return terms.every((term) => searchable.includes(term))
     })
-  }, [index, query, category, kind, analysisContextByFile])
+  }, [index, query, category, kind, analysis, analysisContextByFile])
 
   useEffect(() => setLimit(24), [query, category, kind])
 
@@ -464,6 +495,10 @@ export default function CorpusReader() {
   const completed = meta?.status?.complete || 0
   const activeSignalView = signalViews.find((item) => item.id === signalKind) ?? signalViews[0]
   const activeSignals = analysis?.signals[signalKind] ?? []
+  const selectedInsight = selected ? analysis?.file_insights?.[selected.id] : null
+  const selectedQuestions = reviewQuestions(selectedInsight ?? undefined)
+  const topThemes = [...(analysis?.themes ?? [])].sort((a, b) => b.units - a.units).slice(0, 5)
+  const themeScale = Math.max(1, ...topThemes.map((item) => item.units))
 
   return (
     <div className="corpus-reader">
@@ -486,6 +521,11 @@ export default function CorpusReader() {
       </div>
       <div className="corpus-quick-search" aria-label="ตัวอย่างการค้นงบ"><span>ลองค้น:</span>{['ประกันสังคม', 'กรุงเทพมหานคร', 'สำนักงานเขต', 'ครุภัณฑ์'].map((term) => <button key={term} type="button" onClick={() => { setQuery(term); setCategory('all'); setKind('all') }}>{term}</button>)}{query && <button type="button" onClick={() => setQuery('')}>ล้างคำค้น</button>}</div>
 
+      {analysis && <section className="corpus-overview" aria-label="ภาพรวมคลังหลักฐาน">
+        <div className="corpus-overview-intro"><span className="panel-kicker">ภาพรวมจากไฟล์ที่ประมวลผล</span><strong>{formatCount(analysis.meta.analyzed_files)} ไฟล์</strong><p>เลือกหัวข้อในกราฟเพื่อดูแฟ้มที่เกี่ยวข้อง แล้วค้นชื่อหน่วยงานหรือโครงการต่อได้</p></div>
+        <div className="corpus-overview-bars"><strong>หัวข้อที่กล่าวถึงบ่อย</strong>{topThemes.map((item) => <button key={item.id} type="button" aria-label={`${item.label} พบ ${formatCount(item.units)} ตำแหน่งใน ${formatCount(item.files)} ไฟล์ กดเพื่อค้นต่อ`} onClick={() => { setQuery(item.label); setCategory('all'); setKind('all') }}><span>{item.label}</span><i><b style={{ width: `${Math.max(3, item.units / themeScale * 100)}%` }} /></i><em>{formatCount(item.units)} จุด</em></button>)}</div>
+      </section>}
+
       {meta && <details className="corpus-metrics-details"><summary>ดูรายละเอียดการจัดทำดัชนี</summary><div className="corpus-metrics" role="group" aria-label="ผลการอ่านเอกสารทั้งคลัง">
         <div><strong>{formatCount(meta.units)}</strong><span>หน้า แถว และส่วนเนื้อหา</span></div>
         <div><strong>{formatCount(meta.lines)}</strong><span>บรรทัดที่จัดทำดัชนี</span></div>
@@ -495,7 +535,7 @@ export default function CorpusReader() {
         {meta.ocr_unresolved_pages !== undefined && <div><strong>{formatCount(meta.ocr_unresolved_pages)}</strong><span>หน้าที่ควรเทียบต้นฉบับ</span></div>}
       </div></details>}
 
-      {analysis && <details className="corpus-review-toggle"><summary><span>คิวตรวจจากข้อความและ OCR</span><strong>{formatCount(analysis.meta.analyzed_files)} แฟ้มที่พบประเด็น</strong><small>เปิดดูเหตุผลและตำแหน่งต้นทาง</small></summary><section className="corpus-analysis-panel" aria-labelledby="corpus-analysis-title">
+      {analysis && <details className="corpus-review-toggle"><summary><span>คิวตรวจจากข้อความและ OCR</span><strong>ตรวจค้น {formatCount(analysis.meta.analyzed_files)} แฟ้ม</strong><small>เปิดดูเหตุผลและตำแหน่งต้นทาง</small></summary><section className="corpus-analysis-panel" aria-labelledby="corpus-analysis-title">
         <header className="corpus-analysis-head">
           <div><span className="panel-kicker">EVIDENCE MAP / REVIEW QUEUE</span><h4 id="corpus-analysis-title">วิเคราะห์ข้อความที่จัดทำดัชนี แล้วจัดลำดับหลักฐานที่ควรตรวจสอบต่อ</h4></div>
           <div className="corpus-analysis-totals"><span><b>{formatCount(analysis.meta.analyzed_files)}</b> แฟ้ม</span><span><b>{formatCount(analysis.meta.analyzed_units)}</b> หน้าและแถว</span><span><b>{formatCount(analysis.meta.money_mentions)}</b> จุดที่กล่าวถึงเงิน</span></div>
@@ -534,7 +574,7 @@ export default function CorpusReader() {
           <h4>{file.title}</h4>
           <p>{file.category}</p>
           <div className="corpus-file-facts"><span>{formatBytes(file.size)}</span><span>{structureText(file)}</span>{file.lines > 0 && <span>{formatCount(file.lines)} บรรทัด</span>}</div>
-          {analysis?.file_insights?.[file.id]?.amounts?.length ? <div className="corpus-money-preview"><span>{analysis.file_insights[file.id].amounts[0].extraction === 'ocr' ? 'ตัวเลขที่อ่านจากภาพ' : 'จำนวนเงินที่พบในตาราง'}</span><strong>{formatBaht(analysis.file_insights[file.id].amounts[0].value)}</strong><small>{analysis.file_insights[file.id].amounts[0].locator_label}{analysis.file_insights[file.id].amounts[0].extraction === 'ocr' ? ' · เทียบต้นฉบับก่อนใช้' : ''}</small></div> : <div className="corpus-money-preview muted"><span>เนื้อหาในไฟล์</span><strong>{file.status === 'complete' ? 'เปิดอ่านและค้นในเว็บได้' : 'กำลังจัดทำดัชนี'}</strong></div>}
+          {file.category === 'PBO' ? <div className="corpus-money-preview muted"><span>ตารางงบรายปี</span><strong>ดูกราฟและค้นข้อมูลรายแถวได้</strong></div> : analysis?.file_insights?.[file.id]?.amounts?.length ? <div className="corpus-money-preview"><span>{analysis.file_insights[file.id].amounts[0].extraction === 'ocr' ? 'ตัวเลขที่อ่านจากภาพ' : 'จำนวนเงินที่พบในตาราง'}</span><strong>{formatBaht(analysis.file_insights[file.id].amounts[0].value)}</strong><small>{analysis.file_insights[file.id].amounts[0].locator_label}{analysis.file_insights[file.id].amounts[0].extraction === 'ocr' ? ' · เทียบต้นฉบับก่อนใช้' : ''}</small></div> : <div className="corpus-money-preview muted"><span>เนื้อหาในไฟล์</span><strong>{file.status === 'complete' ? 'เปิดอ่านและค้นในเว็บได้' : 'กำลังจัดทำดัชนี'}</strong></div>}
           <div className="corpus-file-actions">
             <button disabled={file.status !== 'complete' || !file.corpus_url} onClick={() => openFile(file)}>{file.status === 'complete' ? 'อ่านในเว็บ' : 'อยู่ระหว่างประมวลผล'}</button>
             <a href={file.url} target="_blank" rel="noreferrer">ตรวจต้นฉบับ</a>
@@ -551,7 +591,7 @@ export default function CorpusReader() {
           <button onClick={closeDocument} aria-label="ปิดตัวอ่าน">×</button>
         </div>
         <form className="inside-search" onSubmit={(event) => { event.preventDefault(); void loadPage(selected, 0, insideQuery) }}>
-          <label><span>ค้นภายในไฟล์นี้</span><input ref={insideSearchRef} value={insideQuery} onChange={(event) => setInsideQuery(event.target.value)} placeholder="พิมพ์ชื่อโครงการ รายการ หรือจำนวนเงิน" /></label>
+          <label><span>ค้นภายในไฟล์นี้</span><input value={insideQuery} onChange={(event) => setInsideQuery(event.target.value)} placeholder="พิมพ์ชื่อโครงการ รายการ หรือจำนวนเงิน" /></label>
           <button type="submit">ค้นเนื้อหาที่จัดทำดัชนี</button>
           {appliedInsideQuery && <button type="button" onClick={() => { setInsideQuery(''); void loadPage(selected, 0, '') }}>ล้างคำค้น</button>}
         </form>
@@ -560,8 +600,20 @@ export default function CorpusReader() {
           <a href={selected.url} target="_blank" rel="noreferrer">เทียบกับต้นฉบับ</a>
         </div>
         {error && <div className="reader-error"><span>{error}</span><button type="button" onClick={() => void loadPage(selected, page, appliedInsideQuery)}>ลองโหลดฉบับเต็มอีกครั้ง</button></div>}
-        <div className="corpus-document-summary"><strong>ภาพรวมเอกสาร</strong><p>{selected.category} · {structureText(selected)} จำนวนเงินด้านล่างเป็นตัวอย่างที่พบพร้อมตำแหน่ง ไม่ใช่ผลรวมงบประมาณ</p><div>{analysis?.file_insights?.[selected.id]?.amounts?.length ? analysis.file_insights[selected.id].amounts.map((item) => <span key={`${item.value}-${item.locator_label}`}><b>{formatBaht(item.value)}</b><small>{item.locator_label}{item.extraction === 'ocr' ? ' · OCR' : ''}</small></span>) : <span><b>ค้นเนื้อหาในเอกสาร</b><small>ยังไม่มีจำนวนเงินที่ผ่านตัวกรองบริบท</small></span>}</div></div>
-        <details className="corpus-raw-records" open><summary>อ่านเนื้อหาและตารางจากไฟล์ <span>{appliedInsideQuery ? `ผลค้นหา “${appliedInsideQuery}”` : 'แสดงทีละ 20 ตำแหน่ง'}</span></summary><div className="record-list">
+        <div className="corpus-document-summary">
+          <div className="corpus-summary-intro"><span className="panel-kicker">สรุปแฟ้ม</span><strong>{selected.category === 'PBO' ? 'ภาพรวมงบรายปี' : selectedInsight?.amounts?.length || selectedInsight?.themes?.length ? 'ตัวเลข เรื่องสำคัญ และจุดตรวจต่อ' : 'ค้นข้อมูลในแฟ้มนี้'}</strong><p>{selected.category} · {structureText(selected)}</p></div>
+          {selected.category === 'PBO' && <a className="corpus-dedicated-view" href="#budget-dashboard" onClick={closeDocument}><strong>ดูภาพรวมงบรายปีจากตารางชุดนี้</strong><span>มีกราฟ วงเงิน การเบิกจ่าย และรายการที่ค้นต่อได้โดยไม่ต้องไล่อ่านแถวในไฟล์</span><b>เปิดภาพรวมงบ →</b></a>}
+          {selected.category !== 'PBO' && <>
+          {(selectedInsight?.amounts?.length || selectedInsight?.themes?.length) ? <div className="corpus-summary-grid">
+            {selectedInsight?.amounts?.length ? <section><h4>จำนวนเงินที่พบ</h4><p>ค่าที่พบพร้อมตำแหน่งในต้นฉบับ ไม่ใช่ยอดรวมที่นำมาบวกกันได้</p><ol className="corpus-amount-list">{selectedInsight.amounts.map((item) => <li key={`${item.value}-${item.locator_label}`}><strong>{formatBahtExact(item.value)}</strong><small>{item.locator_label}{item.extraction === 'ocr' ? ' · อ่านจากภาพ' : ''}</small></li>)}</ol></section> : null}
+            {selectedInsight?.themes?.length ? <section><h4>เรื่องที่พบในแฟ้ม</h4><p>กราฟนับตำแหน่งข้อความที่กล่าวถึงแต่ละเรื่อง</p><div className="corpus-mini-bars">{selectedInsight.themes.slice(0, 5).map((item) => <div key={item.id}><span>{item.label}</span><i><b style={{ width: `${Math.max(3, item.count / Math.max(1, selectedInsight.themes?.[0]?.count ?? 1) * 100)}%` }} /></i><small>{formatCount(item.count)}</small></div>)}</div></section> : null}
+          </div> : <p className="corpus-summary-empty">ยังไม่มีตัวเลขหรือหัวข้อที่ผ่านตัวกรอง ลองค้นข้อความในแฟ้มด้านล่าง</p>}
+          {selectedQuestions.length > 0 && <div className="corpus-review-questions"><strong>ข้อสังเกตและคำถามตรวจต่อ</strong><ol>{selectedQuestions.map((question) => <li key={question}>{question}</li>)}</ol></div>}
+          {selectedInsight?.connections?.length ? <div className="corpus-connections"><strong>ตัวเลขจำนวนเดียวกันในแฟ้มอื่น</strong><p>ใช้เทียบปี หน่วยงาน และหัวตารางก่อนสรุปว่าเกี่ยวข้องกัน</p><div>{selectedInsight.connections.slice(0, 2).map((connection, connectionIndex) => { const related = index?.files.find((file) => file.id === connection.file_id); const content = <><b>{formatBahtExact(connection.amount)}</b><span>{connection.title}</span><small>{connection.locator_label} · {related?.status === 'complete' ? 'อ่านในเว็บ →' : 'เทียบต้นฉบับ ↗'}</small></>; return related?.status === 'complete' && related.corpus_url ? <button type="button" key={`${connection.file_id}-${connection.amount}-${connectionIndex}`} onClick={() => openFile(related)}>{content}</button> : <a key={`${connection.file_id}-${connection.amount}-${connectionIndex}`} href={connection.url} target="_blank" rel="noreferrer">{content}</a> })}</div></div> : null}
+          </>}
+          <details className="corpus-summary-details"><summary>ดูวิธีอ่านและจุดที่มีตัวเลขมาก</summary><p>แฟ้มนี้มี {formatCount(selected.units)} ตำแหน่ง อ่านจากไฟล์โดยตรง {formatCount(Math.max(0, selected.units - selected.ocr_units))} ตำแหน่ง และใช้ OCR {formatCount(selected.ocr_units)} หน้า/ภาพ พบจำนวนเงินที่ผ่านตัวกรอง {formatCount(selectedInsight?.money_mentions ?? 0)} จุด{analysis?.meta.source_scanned_at ? ` · สำรวจคลัง ${formatSourceDate(analysis.meta.source_scanned_at)}` : ''}</p>{selectedInsight?.hotspots?.length ? <div className="corpus-mini-bars">{selectedInsight.hotspots.slice(0, 5).map((item) => <div key={item.label}><span>{item.label}</span><i><b style={{ width: `${Math.max(3, item.count / Math.max(1, selectedInsight.hotspots?.[0]?.count ?? 1) * 100)}%` }} /></i><small>{formatCount(item.count)}</small></div>)}</div> : null}{selectedInsight?.stages?.some((stage) => stage.count > 0) && <div className="corpus-stage-strip"><strong>ช่วงหลักฐานที่กล่าวถึง</strong><div>{selectedInsight.stages.filter((stage) => stage.count > 0).map((stage) => <span key={stage.id} className="has-match">{stage.label}<small>{formatCount(stage.count)}</small></span>)}</div></div>}</details>
+        </div>
+        <details className="corpus-raw-records" open={Boolean(appliedInsideQuery) || undefined}><summary>เปิดอ่านข้อความและตารางรายหน้า <span>{appliedInsideQuery ? `ผลค้นหา “${appliedInsideQuery}”` : 'แสดงทีละ 20 ตำแหน่ง'}</span></summary><div className="record-list">
           {records.map((record, index) => <article key={`${page}-${index}-${locator(record)}`}>
             <header><strong>{locator(record)}</strong>{record.ocr_unresolved ? <span>OCR อ่านไม่ชัด · เทียบต้นฉบับ</span> : record.method === 'ocr' && <span>อ่านข้อความด้วย OCR</span>}</header>
             <RecordBody record={record} query={appliedInsideQuery} file={selected} />

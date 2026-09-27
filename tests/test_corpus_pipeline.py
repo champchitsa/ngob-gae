@@ -105,6 +105,10 @@ def test_osd_rotation_requires_confidence_and_uses_pillow_direction() -> None:
 def test_ocr_phone_number_is_not_promoted_as_budget_amount() -> None:
     text = "ราคากลาง 90 วัน โทรสาร 0-78205827 ติดต่อสำนักงาน งบประมาณ 38,439,800 บาท"
     assert [item["value"] for item in credible_amounts(text)] == [38_439_800]
+
+
+def test_spreadsheet_formula_divisor_is_not_promoted_as_budget_amount() -> None:
+    assert credible_amounts("งบประมาณ pre_budget/1000000 ล้านบาท") == []
 from sync_corpus_release import compare_release_assets, comparison_passed, validation_gate  # noqa: E402
 
 
@@ -335,6 +339,49 @@ class CorpusPipelineTests(unittest.TestCase):
             self.assertEqual(len(dense), 1)
             self.assertEqual(dense[0]["amount_count"], 7)
             self.assertIsNone(dense[0]["amount"])
+            insight = json.loads(output.read_text(encoding="utf-8"))["file_insights"]["alpha"]
+            self.assertEqual(insight["hotspots"], [{"label": "หน้า 1", "count": 7}])
+            self.assertEqual(insight["money_mentions"], 7)
+
+    def test_file_insights_keep_all_themes_for_search_even_when_chart_shows_five(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            corpus = root / "corpus"
+            write_asset(
+                corpus / "records" / "alpha.jsonl.gz",
+                "alpha",
+                text="คอมพิวเตอร์ ปัญญาประดิษฐ์ จัดซื้อ ก่อสร้าง ฝึกอบรม ประกันสังคม พลังงาน โรงพยาบาล โรงเรียน",
+            )
+            inventory = root / "inventory.json"
+            output = root / "analysis.json"
+            write_inventory(inventory, ["alpha"])
+            analyzed = subprocess.run(
+                [sys.executable, str(SCRIPTS / "analyze_drive_corpus.py"), str(inventory), str(output), str(corpus)],
+                capture_output=True, text=True, encoding="utf-8",
+            )
+            self.assertEqual(analyzed.returncode, 0, analyzed.stderr)
+            insight = json.loads(output.read_text(encoding="utf-8"))["file_insights"]["alpha"]
+            self.assertEqual(len(insight["themes"]), 9)
+
+    def test_analysis_links_equal_values_as_leads_with_source_locations(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            corpus = root / "corpus"
+            for file_id in ("alpha", "beta"):
+                write_asset(corpus / "records" / f"{file_id}.jsonl.gz", file_id, text="งบประมาณ 1,200,000 บาท")
+            inventory = root / "inventory.json"
+            output = root / "analysis.json"
+            write_inventory(inventory, ["alpha", "beta"])
+            analyzed = subprocess.run(
+                [sys.executable, str(SCRIPTS / "analyze_drive_corpus.py"), str(inventory), str(output), str(corpus)],
+                capture_output=True, text=True, encoding="utf-8",
+            )
+            self.assertEqual(analyzed.returncode, 0, analyzed.stderr)
+            insights = json.loads(output.read_text(encoding="utf-8"))["file_insights"]
+            self.assertEqual(insights["alpha"]["connections"][0]["file_id"], "beta")
+            self.assertEqual(insights["alpha"]["connections"][0]["amount"], 1_200_000)
+            self.assertEqual(insights["alpha"]["connections"][0]["locator_label"], "หน้า 1")
+            self.assertEqual(json.loads(output.read_text(encoding="utf-8"))["signals"]["repeated_amount"][0]["amount"], 1_200_000)
 
     def test_release_comparison_requires_names_sizes_digests_and_uploaded_state(self):
         expected = {"alpha.jsonl.gz": {"size": 12, "sha256": "a" * 64}}

@@ -704,6 +704,18 @@ main > section[id], #law-workbench { scroll-margin-top: 84px; }
 .corpus-quick-search { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 11px 16px; border-bottom: 1px solid var(--ink); background: #fffdf6; font-size: 12px; }
 .corpus-quick-search button { min-height: 34px; padding: 5px 11px; border: 1px solid #8a887e; border-radius: 18px; background: white; color: var(--ink); font-size: 12px; font-weight: 700; cursor: pointer; }
 .corpus-quick-search button:hover, .corpus-quick-search button:focus-visible { background: var(--yellow); border-color: var(--ink); }
+.corpus-overview { display: grid; grid-template-columns: minmax(190px, .7fr) minmax(270px, 1.3fr); border-bottom: 1px solid var(--ink); background: #fff; }
+.corpus-overview > div { min-width: 0; padding: 17px 19px; border-right: 1px solid var(--ink); }
+.corpus-overview > div:last-child { border-right: 0; }
+.corpus-overview-intro > strong { display: block; margin: 8px 0; font: 700 clamp(25px, 3vw, 37px) 'IBM Plex Mono', monospace; }
+.corpus-overview p { margin: 6px 0 0; color: #55554e; font-size: 12px; line-height: 1.55; }
+.corpus-overview-bars > strong { display: block; margin-bottom: 8px; font-size: 13px; }
+.corpus-overview-bars button { display: grid; grid-template-columns: minmax(95px, 1.1fr) minmax(60px, 1fr) auto; align-items: center; gap: 7px; width: 100%; min-height: 28px; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.corpus-overview-bars button:hover span { text-decoration: underline; }
+.corpus-overview-bars button span { font-size: 10px; line-height: 1.25; }
+.corpus-overview-bars button i, .corpus-mini-bars i { display: block; height: 8px; background: #ebe8df; }
+.corpus-overview-bars button i b, .corpus-mini-bars i b { display: block; height: 100%; background: var(--yellow); }
+.corpus-overview-bars button em { font: normal 700 10px 'IBM Plex Mono', monospace; white-space: nowrap; }
 .corpus-result-line { display: flex; justify-content: space-between; gap: 20px; padding: 10px 15px; border-bottom: 1px solid var(--ink); font: 500 10px 'IBM Plex Mono', monospace; }
 .corpus-result-line span { color: #666; }
 .corpus-file-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
@@ -755,13 +767,47 @@ main > section[id], #law-workbench { scroll-margin-top: 84px; }
 .reader-error { padding: 12px 16px; border-bottom: 1px solid var(--ink); background: #fff2b8; color: var(--ink); font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .reader-error button { border: 1px solid var(--ink); background: white; padding: 8px 12px; font-weight: 800; cursor: pointer; white-space: nowrap; }
 .corpus-document-summary { max-width: 1200px; margin: 18px auto; padding: 18px; background: white; border: 1px solid var(--ink); }
-.corpus-document-summary > strong { display: block; font-size: 22px; }
-.corpus-document-summary > p { margin: 6px 0 14px; color: #55554e; font-size: 13px; line-height: 1.5; }
-.corpus-document-summary > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
-.corpus-document-summary > div > span { min-width: 0; padding: 13px; background: #f5f2e8; border-left: 4px solid var(--yellow); }
-.corpus-document-summary b, .corpus-document-summary small { display: block; overflow-wrap: anywhere; }
-.corpus-document-summary b { font-size: 18px; }
-.corpus-document-summary small { margin-top: 4px; color: #666; font-size: 11px; }
+.corpus-summary-intro > strong { display: block; margin: 5px 0; font-size: clamp(21px, 3vw, 29px); line-height: 1.25; }
+.corpus-summary-intro p { margin: 0 0 14px; color: #55554e; font-size: 13px; line-height: 1.55; }
+.corpus-dedicated-view { display: grid; gap: 5px; padding: 18px; border: 1px solid var(--ink); background: var(--yellow); color: var(--ink); text-decoration: none; }
+.corpus-dedicated-view:hover { background: #ffe760; }
+.corpus-dedicated-view strong { font-size: 18px; }
+.corpus-dedicated-view span { max-width: 700px; font-size: 13px; line-height: 1.5; }
+.corpus-dedicated-view b { margin-top: 5px; font-size: 13px; }
+.corpus-summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.corpus-summary-grid section { min-width: 0; border: 1px solid #9e9b90; padding: 14px; }
+.corpus-summary-grid section:only-child { grid-column: 1 / -1; }
+.corpus-summary-grid h4 { margin: 0; font-size: 15px; }
+.corpus-summary-grid p, .corpus-connections p { margin: 5px 0 12px; color: #66635b; font-size: 12px; line-height: 1.5; }
+.corpus-summary-empty { padding: 10px; background: #f5f2e8; font-size: 12px; line-height: 1.5; }
+.corpus-amount-list { margin: 0; padding-left: 22px; }
+.corpus-amount-list li { padding: 7px 0; border-top: 1px solid #e5e0d3; }
+.corpus-amount-list strong, .corpus-amount-list small { display: block; }
+.corpus-amount-list strong { font-size: 16px; overflow-wrap: anywhere; }
+.corpus-amount-list small { color: #666; font-size: 10px; }
+.corpus-mini-bars > div { display: grid; grid-template-columns: minmax(80px, 1fr) minmax(60px, 1.1fr) auto; gap: 7px; align-items: center; padding: 5px 0; }
+.corpus-mini-bars span { font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+.corpus-mini-bars small { font: 600 10px 'IBM Plex Mono', monospace; }
+.corpus-stage-strip, .corpus-review-questions, .corpus-connections { margin-top: 12px; border-top: 1px solid #bcb8ad; padding-top: 13px; }
+.corpus-stage-strip > strong, .corpus-review-questions > strong, .corpus-connections > strong { display: block; margin-bottom: 9px; font-size: 14px; }
+.corpus-stage-strip > div { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.corpus-stage-strip span { min-width: 0; padding: 9px 6px; background: #eeece5; color: #77736a; font-size: 9px; line-height: 1.3; }
+.corpus-stage-strip span.has-match { background: var(--yellow); color: var(--ink); font-weight: 700; }
+.corpus-stage-strip small { display: block; margin-top: 5px; font: 700 12px 'IBM Plex Mono', monospace; }
+.corpus-review-questions ol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; counter-reset: question; }
+.corpus-review-questions li { min-width: 0; padding: 12px; background: #fff7d1; font-size: 12px; line-height: 1.55; counter-increment: question; }
+.corpus-review-questions li::before { content: '0' counter(question); display: block; margin-bottom: 7px; color: var(--orange-ink); font: 700 11px 'IBM Plex Mono', monospace; }
+.corpus-connections > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.corpus-connections a, .corpus-connections button { display: block; min-width: 0; padding: 10px 12px; border: 1px solid #aaa69d; background: #f6f3e8; color: var(--ink); text-align: left; text-decoration: none; cursor: pointer; }
+.corpus-connections a:hover, .corpus-connections button:hover { border-color: var(--ink); background: var(--yellow); }
+.corpus-connections b, .corpus-connections span, .corpus-connections small { display: block; overflow-wrap: anywhere; }
+.corpus-connections b { font-size: 15px; }
+.corpus-connections span { margin-top: 3px; font-size: 11px; }
+.corpus-connections small { color: #5e5a52; font-size: 10px; }
+.corpus-summary-details { margin-top: 14px; border-top: 1px solid #bcb8ad; padding-top: 12px; }
+.corpus-summary-details > summary { width: fit-content; cursor: pointer; font-size: 12px; font-weight: 800; }
+.corpus-summary-details > p { max-width: 740px; margin: 10px 0; color: #55554e; font-size: 12px; line-height: 1.55; }
+.corpus-summary-details > .corpus-mini-bars { max-width: 570px; }
 .corpus-raw-records > summary { max-width: 1200px; margin: 0 auto 16px; padding: 13px 17px; border: 1px solid var(--ink); background: var(--yellow); font-size: 14px; font-weight: 800; cursor: pointer; }
 .corpus-raw-records > summary span { float: right; font-size: 11px; font-weight: 600; }
 .record-list { max-width: 1200px; margin: 0 auto; padding: 20px; }
@@ -1279,7 +1325,12 @@ main > section[id], #law-workbench { scroll-margin-top: 84px; }
   .corpus-document-head > div { padding: 14px 12px; }
   .corpus-document-head h3 { font-size: 15px; }
   .corpus-document-summary { margin: 10px; padding: 13px; }
-  .corpus-document-summary > div { grid-template-columns: 1fr; }
+  .corpus-overview { grid-template-columns: 1fr; }
+  .corpus-overview > div { border-right: 0; border-bottom: 1px solid var(--ink); }
+  .corpus-overview > div:last-child { border-bottom: 0; }
+  .corpus-summary-grid { grid-template-columns: 1fr; }
+  .corpus-stage-strip > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .corpus-review-questions ol, .corpus-connections > div { grid-template-columns: 1fr; }
   .corpus-raw-records > summary { margin: 10px; }
   .corpus-raw-records > summary span { float: none; display: block; }
   .inside-search { grid-template-columns: 1fr 1fr; }

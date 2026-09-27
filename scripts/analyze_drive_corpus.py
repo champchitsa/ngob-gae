@@ -76,6 +76,16 @@ def locator_label(position: dict) -> str:
     return " / ".join(f"{labels[key]} {value}" for key, value in position.items()) or "เนื้อหาในไฟล์"
 
 
+def hotspot_label(position: dict) -> str:
+    for key, label in (("page", "หน้า"), ("sheet", "ชีต"), ("slide", "สไลด์"), ("table", "ตาราง")):
+        if position.get(key):
+            return f"{label} {position[key]}"
+    if position.get("paragraph"):
+        start = (int(position["paragraph"]) - 1) // 50 * 50 + 1
+        return f"ย่อหน้า {start}-{start + 49}"
+    return "ส่วนอื่นของไฟล์"
+
+
 def has_term(text: str, terms: tuple[str, ...]) -> bool:
     lowered = f" {text.lower()} "
     return any(term in lowered for term in terms)
@@ -86,6 +96,8 @@ def credible_amounts(text: str) -> list[dict]:
     amounts = []
     for match in NUMBER_RE.finditer(normalized):
         raw = match.group(0)
+        if re.search(r"[/=*]\s*$", normalized[max(0, match.start() - 8):match.start()]):
+            continue
         digits = re.sub(r"\D", "", raw)
         start, end = max(0, match.start() - 110), min(len(normalized), match.end() + 110)
         context = clean(normalized[start:end])
@@ -142,6 +154,7 @@ def main() -> None:
     parser.add_argument("output", type=pathlib.Path)
     parser.add_argument("corpus_dirs", nargs="+", type=pathlib.Path)
     parser.add_argument("--duplicate-precedence", choices=["first", "last"], default="first")
+    parser.add_argument("--include-index", type=pathlib.Path, help="analyze only files marked complete in an already published index")
     args = parser.parse_args()
 
     inventory = json.loads(args.inventory.read_text(encoding="utf-8"))
@@ -154,6 +167,13 @@ def main() -> None:
     unexpected_assets = sorted(file_id for file_id in assets if file_id not in files)
     if unexpected_assets:
         raise RuntimeError(f"corpus assets not present in inventory: {', '.join(unexpected_assets)}")
+    if args.include_index:
+        published = json.loads(args.include_index.read_text(encoding="utf-8"))
+        included_ids = {item["id"] for item in published["files"] if item.get("status") == "complete" and item.get("corpus_url")}
+        missing_published = included_ids - assets.keys()
+        if missing_published:
+            raise RuntimeError(f"published assets missing locally: {', '.join(sorted(missing_published))}")
+        assets = {file_id: path for file_id, path in assets.items() if file_id in included_ids}
     theme_files = Counter()
     theme_units = Counter()
     evidence_files = Counter()
@@ -162,6 +182,9 @@ def main() -> None:
     category_files = Counter()
     file_amounts: dict[str, dict[int, dict]] = defaultdict(dict)
     file_money_mentions = Counter()
+    file_theme_counts: dict[str, Counter[str]] = {}
+    file_stage_counts: dict[str, Counter[str]] = {}
+    file_hotspots: defaultdict[str, Counter[str]] = defaultdict(Counter)
     amount_occurrences = Counter()
     amount_files: defaultdict[int, set[str]] = defaultdict(set)
     amount_examples: defaultdict[int, list[dict]] = defaultdict(list)
@@ -181,6 +204,8 @@ def main() -> None:
         category_files[file.get("category") or "ไม่ระบุหมวด"] += 1
         file_themes = set()
         file_stages = set()
+        local_theme_counts: Counter[str] = Counter()
+        local_stage_counts: Counter[str] = Counter()
         with gzip.open(path, "rt", encoding="utf-8") as handle:
             for line in handle:
                 record = json.loads(line)
@@ -201,14 +226,18 @@ def main() -> None:
                         unit_themes.append(key)
                         file_themes.add(key)
                         theme_units[key] += 1
+                        local_theme_counts[key] += 1
                 for key, config in EVIDENCE_STAGES.items():
                     if has_term(text, config["terms"]):
                         file_stages.add(key)
                         evidence_units[key] += 1
+                        local_stage_counts[key] += 1
 
                 amounts = credible_amounts(text)
                 money_mentions += len(amounts)
                 file_money_mentions[file_id] += len(amounts)
+                if amounts:
+                    file_hotspots[file_id][hotspot_label(position)] += len(amounts)
                 unique_unit_amounts = {}
                 for entry in amounts:
                     integer_value = round(entry["value"])
@@ -236,7 +265,7 @@ def main() -> None:
                     if integer_value >= 1_000_000:
                         amount_occurrences[integer_value] += 1
                         amount_files[integer_value].add(file_id)
-                        if len(amount_examples[integer_value]) < 4:
+                        if len(amount_examples[integer_value]) < 8 and file_id not in {row["file_id"] for row in amount_examples[integer_value]}:
                             amount_examples[integer_value].append(example)
                     sequence += 1
                     heap_entry = (entry["value"], sequence, example)
@@ -265,13 +294,15 @@ def main() -> None:
             theme_files[key] += 1
         for key in file_stages:
             evidence_files[key] += 1
+        file_theme_counts[file_id] = local_theme_counts
+        file_stage_counts[file_id] = local_stage_counts
         if file_number % 10 == 0 or file_number == len(assets):
             print(f"[{file_number}/{len(assets)}] analyzed: {file['title']}", flush=True)
 
     repeated_signals = []
     repeated_values = sorted(
-        (value for value, file_ids in amount_files.items() if value >= 1_000_000 and len(file_ids) >= 3),
-        key=lambda value: (len(amount_files[value]), amount_occurrences[value], value),
+        (value for value, file_ids in amount_files.items() if value >= 1_000_000 and 2 <= len(file_ids) <= 6 and value % 1_000_000 != 0),
+        key=lambda value: (len(amount_files[value]), value, amount_occurrences[value]),
         reverse=True,
     )
     for value in repeated_values[:200]:
@@ -286,6 +317,23 @@ def main() -> None:
             "occurrences": amount_occurrences[value],
             "examples": amount_examples[value],
         })
+
+    file_connections: defaultdict[str, list[dict]] = defaultdict(list)
+    for value, connected_ids in amount_files.items():
+        if value < 1_000_000 or not 2 <= len(connected_ids) <= 6:
+            continue
+        for file_id in connected_ids:
+            for other_id in connected_ids - {file_id}:
+                other = files[other_id]
+                other_example = next((row for row in amount_examples[value] if row["file_id"] == other_id), None)
+                file_connections[file_id].append({
+                    "amount": value,
+                    "file_id": other_id,
+                    "title": other["title"],
+                    "url": other.get("url"),
+                    "locator_label": other_example["locator_label"] if other_example else "ค้นจำนวนเงินในแฟ้ม",
+                    "file_count": len(connected_ids),
+                })
 
     def unique_ranked(items: list[dict], limit: int) -> list[dict]:
         seen = set()
@@ -321,6 +369,7 @@ def main() -> None:
     payload = {
         "meta": {
             "inventory_files": len(files),
+            "source_scanned_at": inventory.get("scannedAt"),
             "analyzed_files": len(assets),
             "analyzed_units": analyzed_units,
             "ocr_units": ocr_units,
@@ -346,9 +395,13 @@ def main() -> None:
         "file_insights": {
             file_id: {
                 "money_mentions": file_money_mentions[file_id],
-                "amounts": sorted(examples.values(), key=lambda row: row["value"], reverse=True)[:3],
+                "amounts": sorted(file_amounts[file_id].values(), key=lambda row: row["value"], reverse=True)[:3],
+                "themes": [{"id": key, "label": THEMES[key]["label"], "count": count} for key, count in file_theme_counts[file_id].most_common()],
+                "stages": [{"id": key, "label": EVIDENCE_STAGES[key]["label"], "count": file_stage_counts[file_id][key]} for key in EVIDENCE_STAGES],
+                "hotspots": [{"label": label, "count": count} for label, count in file_hotspots[file_id].most_common(8)],
+                "connections": sorted(file_connections[file_id], key=lambda row: (row["amount"] % 1_000_000 == 0, row["file_count"], -row["amount"], row["title"]))[:4],
             }
-            for file_id, examples in file_amounts.items()
+            for file_id in assets
         },
     }
     atomic_write_json(args.output, payload)
