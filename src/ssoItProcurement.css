@@ -36,12 +36,35 @@
 .itlab-quick-select > button { height: 44px; border: 1px solid var(--it-black); background: var(--it-black); color: white; padding: 0 16px; font-weight: 800; cursor: pointer; }
 .itlab-quick-select > button:hover { background: var(--it-blue); }
 
-.itlab-tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--it-black); background: white; }
+.itlab-tabs { display: grid; grid-template-columns: repeat(5, 1fr); border-bottom: 1px solid var(--it-black); background: white; }
 .itlab-tabs button { min-height: 56px; padding: 12px; border: 0; border-right: 1px solid var(--it-black); background: transparent; color: var(--it-black); font-size: 13px; font-weight: 800; cursor: pointer; }
 .itlab-tabs button:last-child { border-right: 0; }
 .itlab-tabs button.active { background: var(--it-blue); color: white; }
 .itlab-tabs button:hover:not(.active) { background: #ebe7dc; }
 .itlab-view { padding: clamp(22px, 4vw, 54px); }
+.itlab-catalogue-callout { width: 100%; min-height: 108px; margin-bottom: 22px; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; gap: 16px; border: 1px solid var(--it-black); background: var(--it-yellow); color: var(--it-black); text-align: left; cursor: pointer; }
+.itlab-catalogue-callout span { display: grid; gap: 3px; }
+.itlab-catalogue-callout b { font-size: 11px; }
+.itlab-catalogue-callout strong { font-size: clamp(20px, 2.8vw, 32px); line-height: 1.15; }
+.itlab-catalogue-callout small { font-size: 11px; line-height: 1.45; }
+.itlab-catalogue-callout em { flex: 0 0 auto; font-size: 12px; font-weight: 800; font-style: normal; }
+.itlab-catalogue-callout:hover { background: #ffe92f; }
+.itlab-catalogue-summary { margin: 20px 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--it-black); background: white; }
+.itlab-catalogue-summary > div { min-width: 0; min-height: 135px; padding: 18px; display: flex; flex-direction: column; gap: 5px; border-right: 1px solid var(--it-black); }
+.itlab-catalogue-summary > div:last-child { border-right: 0; }
+.itlab-catalogue-summary span { font-size: 11px; font-weight: 800; }
+.itlab-catalogue-summary strong { font: 800 clamp(25px, 2.7vw, 38px)/1.15 'IBM Plex Mono', monospace; overflow-wrap: anywhere; }
+.itlab-catalogue-summary small { margin-top: auto; color: #5c5a53; font-size: 10px; line-height: 1.5; }
+.itlab-catalogue-breakdown { margin: -1px 0 18px; padding: 14px 18px; border: 1px solid var(--it-black); background: #fff; }
+.itlab-catalogue-breakdown p { margin: 3px 0; font-size: 11px; line-height: 1.6; }
+.itlab-catalogue-note { margin: 0 0 18px; padding: 17px 19px; border-left: 4px solid var(--it-blue); background: white; }
+.itlab-catalogue-note strong { font-size: 12px; }
+.itlab-catalogue-note p { max-width: 1100px; margin: 5px 0 0; color: #494740; font-size: 11px; line-height: 1.6; }
+.itlab-result-count { margin: 0 0 10px; font-size: 12px; font-weight: 800; }
+.itlab-catalogue-sources { margin-top: 17px; display: flex; flex-wrap: wrap; align-items: center; gap: 9px; font-size: 11px; }
+.itlab-catalogue-sources strong { margin-right: 5px; }
+.itlab-catalogue-sources a { padding: 6px 8px; border: 1px solid var(--it-black); color: var(--it-blue); font-weight: 800; text-decoration: none; }
+.itlab-catalogue-sources small { margin-left: auto; color: #666; }
 
 .itlab-metrics { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--it-black); background: white; }
 .itlab-metrics article { min-height: 190px; padding: 22px; display: flex; flex-direction: column; border-right: 1px solid var(--it-black); }
@@ -238,8 +261,22 @@
   .itlab-tabs { grid-template-columns: repeat(2, 1fr); }
   .itlab-tabs button { border-bottom: 1px solid var(--it-black); }
   .itlab-tabs button:nth-child(2) { border-right: 0; }
-  .itlab-tabs button:nth-last-child(-n + 2) { border-bottom: 0; }
+  .itlab-tabs button:nth-child(4) { border-right: 0; }
+  .itlab-tabs button:last-child { border-bottom: 0; }
   .itlab-view { padding: 20px 14px; }
+  .itlab-catalogue-callout { flex-direction: column; align-items: flex-start; padding: 18px; }
+  .itlab-catalogue-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .itlab-catalogue-summary > div:nth-child(2) { border-right: 0; }
+  .itlab-catalogue-summary > div:nth-child(-n + 2) { border-bottom: 1px solid var(--it-black); }
+  .itlab-catalogue-table { overflow: visible; border: 0; background: transparent; }
+  .itlab-catalogue-table table, .itlab-catalogue-table tbody, .itlab-catalogue-table tr, .itlab-catalogue-table td { display: block; width: 100%; min-width: 0; }
+  .itlab-catalogue-table thead { display: none; }
+  .itlab-catalogue-table caption { display: block; border: 1px solid var(--it-black); background: white; }
+  .itlab-catalogue-table tr { margin-top: 10px; border: 1px solid var(--it-black); background: white; }
+  .itlab-catalogue-table td { display: block; padding: 10px 12px; border-right: 0; overflow-wrap: anywhere; }
+  .itlab-catalogue-table td::before { content: attr(data-label); display: block; margin-bottom: 3px; color: #555149; font-size: 10px; font-weight: 800; }
+  .itlab-catalogue-table td:first-child { white-space: normal; }
+  .itlab-catalogue-table td:last-child { border-bottom: 0; }
   .itlab-metrics { grid-template-columns: 1fr; }
   .itlab-metrics article { min-height: 154px; border-right: 0; border-bottom: 1px solid var(--it-black); }
   .itlab-metrics article:nth-child(2) { border-bottom: 1px solid var(--it-black); }
@@ -277,6 +314,9 @@
 }
 
 @media (max-width: 390px) {
+  .itlab-catalogue-summary { grid-template-columns: 1fr; }
+  .itlab-catalogue-summary > div { min-height: 100px; border-right: 0; border-bottom: 1px solid var(--it-black); }
+  .itlab-catalogue-summary > div:last-child { border-bottom: 0; }
   .itlab-actions { display: grid; }
   .itlab-actions button, .itlab-actions a { width: 100%; text-align: center; }
   .itlab-project-numbers { grid-template-columns: 1fr; }

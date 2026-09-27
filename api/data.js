@@ -16,6 +16,7 @@ function loadData() {
     legal: read('legal-provisions.json'),
     committee: read('committee-meetings.json'),
     structure: read('government-structure.json'),
+    ssoEgpIt: read('sso-egp-it.json'),
   }
   return cache
 }
@@ -32,6 +33,7 @@ const datasetLabels = {
   laws: 'ตัวบทกฎหมายฉบับประกาศใช้จริง',
   committee: 'ดัชนีวาระและสรุปหลังประชุมของคณะกรรมาธิการ',
   structure: 'โครงสร้างรัฐเชื่อมงบประมาณ PBO ปี 2568',
+  sso_it: 'ทะเบียนโครงการ IT สำนักงานประกันสังคมจากบัญชีสัญญาภาครัฐ',
 }
 
 function scalarValues(value) {
@@ -166,6 +168,13 @@ function selectDataset(name, source) {
     source: source.structure.meta.structureSourceUrl,
     columns: ['ministry', 'department', 'description', 'type', 'divisionCount', 'adjusted', 'committed', 'rate', 'candidateCount', 'sourceUrl'],
   }
+  if (name === 'sso_it') return {
+    rows: source.ssoEgpIt.projects,
+    filterField: 'method',
+    source: 'https://data.go.th/',
+    processedAt: source.ssoEgpIt.meta.accessedAt,
+    columns: ['id', 'year', 'title', 'department', 'method', 'budget', 'referencePrice', 'contractPrice', 'winnerInCsv', 'verifiedWinner', 'verifiedMode', 'documentChecked', 'winnerDocumentUrl', 'sourceUrl', 'projectUrl'],
+  }
   return null
 }
 
@@ -203,6 +212,7 @@ export default function handler(request, response) {
   if (dataset === 'laws') rows = [...rows].sort((a, b) => a.code.localeCompare(b.code, 'th'))
   if (dataset === 'committee') rows = [...rows].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || (b.round ?? 0) - (a.round ?? 0))
   if (dataset === 'structure') rows = [...rows].sort((a, b) => (b.adjusted ?? -1) - (a.adjusted ?? -1) || b.candidateCount - a.candidateCount || a.department.localeCompare(b.department, 'th'))
+  if (dataset === 'sso_it') rows = [...rows].sort((a, b) => b.contractPrice - a.contractPrice || a.id.localeCompare(b.id))
 
   const payload = {
     meta: {
@@ -214,8 +224,8 @@ export default function handler(request, response) {
       offset,
       columns: selected.columns,
       source: selected.source,
-      dataCut: '2569-09-20',
-      processedAt: '2569-09-20',
+      dataCut: dataset === 'sso_it' ? '2569-09-27' : '2569-09-20',
+      processedAt: selected.processedAt ?? '2569-09-20',
       sourcePeriod: 'ตามปีและวันที่ที่ระบุในเอกสารต้นทาง',
       units: { money: 'ล้านบาท', size: 'ไบต์' },
     },

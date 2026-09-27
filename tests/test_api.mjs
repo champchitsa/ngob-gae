@@ -92,3 +92,42 @@ test('data export contains every filtered row, not only the first page', () => {
   assert.equal(result.body.rows.length, result.body.meta.filtered)
   assert.ok(result.body.rows.length > 1000)
 })
+
+test('SSO IT register keeps original winner evidence separate from CSV labels', () => {
+  const result = response()
+  data({ method: 'GET', url: '/api/data?dataset=sso_it&download=1', headers: { host: 'ngob-gae.vercel.app' } }, result)
+  assert.equal(result.statusCode, 200)
+  assert.equal(result.body.rows.length, 37)
+  const consortium = result.body.rows.find((row) => row.id === '64057333869')
+  assert.equal(consortium.verifiedMode, 'consortium')
+  assert.match(consortium.winnerInCsv, /แอ็ดวานซ์/)
+  assert.match(consortium.verifiedWinner, /คอนซอเตียม/)
+  assert.match(consortium.winnerDocumentUrl, /DocumentEGP/)
+  const newDirect = result.body.rows.find((row) => row.id === '62037218036')
+  assert.equal(newDirect.verifiedMode, 'direct')
+  assert.equal(newDirect.documentChecked, false)
+  assert.match(newDirect.winnerDocumentUrl, /DocumentEGP/)
+})
+
+test('SSO IT answer uses the expanded official register and distinguishes verification levels', async () => {
+  const originalKey = process.env.PATHUMMA_API_KEY
+  process.env.PATHUMMA_API_KEY = 'test-key'
+  try {
+    const portfolio = response()
+    await chat({ method: 'POST', headers: { host: 'ngob-gae.vercel.app', 'content-type': 'application/json' }, body: { question: 'AIT ได้งาน IT ประกันสังคมทั้งหมดกี่โครงการ' }, socket: { remoteAddress: 'test-sso-it-portfolio' } }, portfolio)
+    assert.equal(portfolio.statusCode, 200)
+    assert.match(portfolio.body.answer, /11 โครงการ/)
+    assert.match(portfolio.body.answer, /1,986\.852 ล้านบาท/)
+    assert.match(portfolio.body.answer, /กิจการร่วมค้า/)
+    assert.ok(portfolio.body.sources.some((source) => source.url === '/data/sso-egp-it.json'))
+
+    const project = response()
+    await chat({ method: 'POST', headers: { host: 'ngob-gae.vercel.app', 'content-type': 'application/json' }, body: { question: 'โครงการ 62037218036 คืออะไร' }, socket: { remoteAddress: 'test-sso-it-new-project' } }, project)
+    assert.equal(project.statusCode, 200)
+    assert.match(project.body.answer, /16\.5 ล้านบาท/)
+    assert.ok(project.body.sources.some((source) => source.url.includes('DocumentEGP/62037218036/')))
+  } finally {
+    if (originalKey === undefined) delete process.env.PATHUMMA_API_KEY
+    else process.env.PATHUMMA_API_KEY = originalKey
+  }
+})
