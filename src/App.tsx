@@ -183,7 +183,7 @@ function App() {
           <a href="#committee" aria-current={workArea === 'committee' ? 'page' : undefined}>ติดตาม กมธ.</a>
           <button className="nav-chat" onClick={() => setChatOpen(true)}>ถามน้องเพนกวิน</button>
         </nav>
-        <div className="data-stamp"><i /> ประมวลผล 20.09.69</div>
+        <div className="data-stamp"><i /> ข้อมูลล่าสุด 27.09.69</div>
         <select className="mobile-section-nav" value={workArea === 'home' ? 'top' : workArea === 'overview' ? 'budget-dashboard' : workArea === 'investigate' ? 'signals' : workArea === 'sso' ? 'sso-it' : workArea === 'evidence' ? 'archive' : 'committee'} aria-label="ไปยังส่วนต่างๆ ของเว็บ" onChange={(event) => openArea(`#${event.currentTarget.value}`)}>
           <option value="top">เริ่มต้น</option>
           <option value="budget-dashboard">ภาพรวมงบ</option>

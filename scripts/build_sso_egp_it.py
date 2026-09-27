@@ -45,6 +45,21 @@ WINNER_NOTICES = {
     "63127391626": ("ประกาศรายชื่อผู้ชนะการเสนอราคา_63127391626_23022564_chkProjectW2A02.html", 83_200_000),
 }
 
+# Consortium names and members read from the linked e-GP winner notices.
+# A blank member list means the notice names the consortium but not its members.
+OTHER_CONSORTIA = {
+    "65057511711": ("กิจการร่วมค้า เอ็นทีดี", ["บริษัท เน็กซ์เทค เอเชีย จำกัด", "บริษัท ทิพากร จำกัด", "บริษัท ธาดา ครีเอเตอร์ จำกัด"]),
+    "65057084748": ("ทีซี คอนซอเตียม", ["บริษัท ทีซีเอ็ม เทคโนโลยี จำกัด", "บริษัท คอร์เทค คอร์ปอเรชั่น จำกัด"]),
+    "63127469392": ("เอสซีซีเอสโอซี คอนซอร์เตียม", ["บริษัท ซีเคียวอินโฟ จำกัด", "บริษัท ไชยกาญจน์ คอนเซาท์ติ้ง จำกัด"]),
+    "63017220407": ("ธุรกิจค้าร่วม เอสซีเอ็ม", []),
+    "64117055991": ("ธุรกิจค้าร่วม เอสซีเอ็ม", ["บริษัท ไชยกาญจน์ คอนเซาท์ติ้ง จำกัด", "บริษัท สตรีม ไอ.ที. คอนซัลติ้ง จำกัด"]),
+    "64127424858": ("ธุรกิจค้าร่วม เอสซีซี", ["บริษัท ไชยกาญจน์ คอนเซาท์ติ้ง จำกัด", "บริษัท สตรีม ไอ.ที. คอนซัลติ้ง จำกัด"]),
+    "63127486265": ("กิจการร่วมค้า เอ็นพี", ["บริษัท เน็กซ์เทค เอเชีย จำกัด", "บริษัท พี.ซีอีที จำกัด"]),
+    "64077322384": ("กิจการร่วมค้า เอ็นพี", ["บริษัท เน็กซ์เทค เอเชีย จำกัด", "บริษัท พี.ซีอีที จำกัด"]),
+    "64027067610": ("ธุรกิจค้าร่วม เอสซี", ["บริษัท สตรีม ไอ.ที. คอนซัลติ้ง จำกัด", "บริษัท ไชยกาญจน์ คอนเซาท์ติ้ง จำกัด"]),
+    "65047428886": ("ธุรกิจค้าร่วม เอไอเอสที", ["บริษัท เอเชี่ยน อินเทลลีเจนท์ อินฟอร์เมชั่น เทคโนโลยี จำกัด", "บริษัท สตรีม ไอ.ที. คอนซัลติ้ง จำกัด"]),
+}
+
 
 def amount(value: object) -> Decimal | None:
     try:
@@ -59,10 +74,19 @@ def main() -> None:
     parser.add_argument("raw_dir", type=pathlib.Path)
     parser.add_argument("output", type=pathlib.Path)
     parser.add_argument("--curated", type=pathlib.Path, default=pathlib.Path("public/data/sso-it-procurement.json"))
+    parser.add_argument("--notice-links", type=pathlib.Path, default=pathlib.Path("scripts/data/sso-it-winner-notices.json"))
     args = parser.parse_args()
 
     curated = json.loads(args.curated.read_text(encoding="utf-8"))
     detailed = {project["id"]: project for project in curated["projects"]}
+    notice_links = json.loads(args.notice_links.read_text(encoding="utf-8"))
+    for project_id, notice_link in notice_links.items():
+        url = notice_link["url"]
+        if not re.fullmatch(r"\d{11}", project_id) or not url.startswith(f"https://storage.googleapis.com/act-egp-documents/DocumentEGP/{project_id}/"):
+            raise ValueError(f"Invalid archived notice link: {project_id}")
+        price = notice_link["announcedPrice"]
+        if price is not None and (not isinstance(price, int) or price <= 0):
+            raise ValueError(f"Invalid archived notice price: {project_id}")
     rows: list[dict] = []
     source_years: list[dict] = []
     for year in range(2560, 2569):
@@ -99,12 +123,15 @@ def main() -> None:
             winner = str(source.get("ชื่อผู้ชนะ") or "").strip() if year <= 2567 else ""
             detail = detailed.get(project_id)
             notice = WINNER_NOTICES.get(project_id)
+            other_consortium = OTHER_CONSORTIA.get(project_id)
+            if other_consortium and project_id not in notice_links:
+                raise ValueError(f"Consortium missing original e-GP notice: {project_id}")
             if notice and (int(agreed) != notice[1] or "แอ็ดวานซ์" not in winner):
                 raise ValueError(f"Winner notice/CSV mismatch: {project_id}")
             winner_document_url = (
                 next((document["url"] for document in detail["documents"] if "ประกาศรายชื่อผู้ชนะ" in document["label"]), None)
                 if detail else
-                f"https://storage.googleapis.com/act-egp-documents/DocumentEGP/{project_id}/{quote(notice[0])}" if notice else None
+                notice_links.get(project_id, {}).get("url") or (f"https://storage.googleapis.com/act-egp-documents/DocumentEGP/{project_id}/{quote(notice[0])}" if notice else None)
             )
             rows.append({
                 "id": project_id,
@@ -116,9 +143,11 @@ def main() -> None:
                 "budget": int(budget),
                 "referencePrice": int(reference) if reference is not None else None,
                 "contractPrice": int(agreed),
+                "announcedWinnerPrice": notice_links.get(project_id, {}).get("announcedPrice"),
                 "winnerInCsv": winner or None,
-                "verifiedWinner": detail["winner"] if detail else winner if notice else None,
-                "verifiedMode": detail["mode"] if detail else "direct" if notice else None,
+                "verifiedWinner": detail["winner"] if detail else other_consortium[0] if other_consortium else winner if notice else None,
+                "verifiedMode": detail["mode"] if detail else "other-consortium" if other_consortium else "direct" if notice else None,
+                "verifiedMembers": detail["members"] if detail else other_consortium[1] if other_consortium else [],
                 "documentChecked": bool(detail),
                 "winnerDocumentUrl": winner_document_url,
                 "sourceUrl": source["_source_resource"],
@@ -135,6 +164,8 @@ def main() -> None:
         raise ValueError(f"Detailed projects absent from DGA table: {set(detailed) - set(by_id)}")
     if not set(REVIEWED_ADDITIONS).issubset(by_id):
         raise ValueError(f"Reviewed projects absent from DGA table: {set(REVIEWED_ADDITIONS) - set(by_id)}")
+    if not set(notice_links).issubset(by_id):
+        raise ValueError(f"Archived winner notices absent from DGA table: {set(notice_links) - set(by_id)}")
     rows.sort(key=lambda row: (-row["contractPrice"], row["id"]))
     winner_groups: dict[str, dict] = defaultdict(lambda: {"projects": 0, "contractPrice": 0})
     for row in rows:
@@ -172,7 +203,11 @@ def main() -> None:
             "aitDirectContractPrice": sum(row["contractPrice"] for row in direct_verified),
             "aitConsortiumProjects": len(consortium_verified),
             "aitConsortiumContractPrice": sum(row["contractPrice"] for row in consortium_verified),
+            "otherConsortiumProjects": sum(row["verifiedMode"] == "other-consortium" for row in rows),
             "documentCheckedProjects": sum(row["documentChecked"] for row in rows),
+            "winnerNoticeProjects": sum(bool(row["winnerDocumentUrl"]) for row in rows),
+            "winnerPriceComparedProjects": sum(row["announcedWinnerPrice"] is not None for row in rows),
+            "winnerPriceDiscrepancyProjects": sum(row["announcedWinnerPrice"] is not None and row["announcedWinnerPrice"] != row["contractPrice"] for row in rows),
             "winnerGroups": len(winners),
             "withinOnePercentOfReference": sum(
                 row["referencePrice"] is not None

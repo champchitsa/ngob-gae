@@ -60,6 +60,16 @@
 .itlab-catalogue-note { margin: 0 0 18px; padding: 17px 19px; border-left: 4px solid var(--it-blue); background: white; }
 .itlab-catalogue-note strong { font-size: 12px; }
 .itlab-catalogue-note p { max-width: 1100px; margin: 5px 0 0; color: #494740; font-size: 11px; line-height: 1.6; }
+.itlab-catalogue-note summary { cursor: pointer; font-size: 12px; font-weight: 800; }
+.itlab-catalogue-note summary:focus-visible, .itlab-focus button:focus-visible, .itlab-more:focus-visible { outline: 3px solid var(--it-blue); outline-offset: 2px; }
+.itlab-focus { margin: 0 0 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+.itlab-focus button { min-height: 42px; padding: 8px 12px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--it-black); background: #fff; color: var(--it-black); font-size: 12px; font-weight: 800; cursor: pointer; }
+.itlab-focus button[aria-pressed="true"] { background: var(--it-black); color: #fff; }
+.itlab-focus b { min-width: 24px; padding: 3px 5px; background: var(--it-yellow); color: var(--it-black); text-align: center; font-size: 11px; }
+.itlab-more { width: 100%; margin-top: 12px; min-height: 48px; border: 1px solid var(--it-black); background: #fff; color: var(--it-black); font-size: 13px; font-weight: 800; cursor: pointer; }
+.itlab-more:hover { background: var(--it-yellow); }
+.itlab-clear { margin: 0 0 12px; padding: 7px 0; border: 0; background: transparent; color: var(--it-blue); font-size: 12px; font-weight: 800; text-decoration: underline; cursor: pointer; }
+.itlab-empty { margin: 12px 0; padding: 18px; border: 1px solid var(--it-black); background: #fff; font-size: 13px; }
 .itlab-result-count { margin: 0 0 10px; font-size: 12px; font-weight: 800; }
 .itlab-catalogue-sources { margin-top: 17px; display: flex; flex-wrap: wrap; align-items: center; gap: 9px; font-size: 11px; }
 .itlab-catalogue-sources strong { margin-right: 5px; }
@@ -116,6 +126,9 @@
 .itlab-table-wrap td small { display: block; margin-top: 4px; color: #66645d; font: 500 9px 'IBM Plex Mono', monospace; }
 .itlab-table-wrap td button { border: 0; background: transparent; padding: 0; color: var(--it-blue); text-align: left; font-weight: 800; cursor: pointer; }
 .itlab-table-wrap td a { color: var(--it-blue); font-weight: 800; }
+.itlab-members { margin-top: 5px; }
+.itlab-members summary { color: var(--it-blue); font-size: 10px; font-weight: 800; cursor: pointer; }
+.itlab-members p { max-width: 260px; margin: 5px 0; color: #4d4b45; font-size: 10px; line-height: 1.5; }
 
 .itlab-project-focus { margin-top: 22px; border: 1px solid var(--it-black); background: white; scroll-margin-top: 16px; }
 .itlab-project-title { padding: 22px; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; background: var(--it-black); color: white; }
