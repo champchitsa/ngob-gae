@@ -242,9 +242,11 @@ const structureText = (file: CorpusFile) => {
 }
 
 const readableOcrText = (record: CorpusRecord, raw: string, file: CorpusFile) => {
+  if (record.ocr_unresolved) return 'ข้อความหน้านี้ยังอ่านได้ไม่ชัด กรุณาเทียบกับเอกสารต้นฉบับก่อนนำไปใช้อ้างอิง'
   if (record.method !== 'ocr') return raw
   const normalized = raw.replace(/ํา/g, 'ำ')
-  if (record.page === 1 && /^ลำดับ\s*\d+/.test(file.title) && (file.category.includes('ข้อบัญญัติ') || file.category.includes('เอกสารประกอบการพิจารณา 70'))) {
+  const budgetCover = file.category.includes('เอกสารประกอบการพิจารณา 70') || /^ร่าง(?:ข้อ|เทศ)บัญญัติงบ/.test(file.title)
+  if (record.page === 1 && budgetCover) {
     return `หน้าปกเอกสาร\n${file.title.replace(/\.pdf$/i, '')}\n\nข้อความข้างต้นเรียบเรียงจากชื่อไฟล์ในคลังเอกสาร`
   }
   return normalized
@@ -271,7 +273,7 @@ function RecordBody({ record, query, file }: { record: CorpusRecord; query: stri
   const match = needle ? text.toLocaleLowerCase('th').indexOf(needle) : -1
   const start = !expanded && text.length > limit && match > limit ? Math.max(0, match - 300) : 0
   const visible = expanded ? text : text.slice(start, start + limit)
-  return <div className="record-body"><pre>{start > 0 ? '…' : ''}{visible}{!expanded && start + limit < text.length ? '…' : ''}</pre>{text.length > limit && <button type="button" onClick={() => setExpanded((value) => !value)}>{expanded ? 'ย่อข้อความ' : `แสดงข้อความครบ ${formatCount(text.length)} ตัวอักษร`}</button>}{record.method === 'ocr' && readable.startsWith('หน้าปกเอกสาร\n') && <button type="button" onClick={() => { setShowRaw((value) => !value); setExpanded(false) }}>{showRaw ? 'กลับไปอ่านแบบจัดรูป' : 'ดูข้อความ OCR ดิบ'}</button>}</div>
+  return <div className="record-body"><pre>{start > 0 ? '…' : ''}{visible}{!expanded && start + limit < text.length ? '…' : ''}</pre>{text.length > limit && <button type="button" onClick={() => setExpanded((value) => !value)}>{expanded ? 'ย่อข้อความ' : `แสดงข้อความครบ ${formatCount(text.length)} ตัวอักษร`}</button>}{(record.ocr_unresolved || readable.startsWith('หน้าปกเอกสาร\n')) && <button type="button" onClick={() => { setShowRaw((value) => !value); setExpanded(false) }}>{showRaw ? 'กลับไปอ่านแบบจัดรูป' : 'ดูข้อความ OCR ดิบ'}</button>}</div>
 }
 
 async function scanCorpus(
