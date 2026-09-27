@@ -107,12 +107,12 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
                         image = render_pdf_pages(source, page, page, folder, tools["pdftoppm"]).get(page)
                     if image is None:
                         raise RuntimeError("page image unavailable")
-                    candidate = ocr_image(image, tools["tesseract"], tools["tessdata"], recover_orientation=True, primary_psm=11)
+                    candidate = ocr_image(image, tools["tesseract"], tools["tessdata"], recover_orientation=True, primary_psm=11, preferred_rotation=args.preferred_rotation)
                     original = str(record.get("text") or "")
                     if used_embedded_image and (poor_thai_ocr(candidate) or quality(candidate) < quality(original) + 10):
                         rendered = render_pdf_pages(source, page, page, folder, tools["pdftoppm"]).get(page)
                         if rendered:
-                            alternate = ocr_image(rendered, tools["tesseract"], tools["tessdata"], recover_orientation=True, primary_psm=11)
+                            alternate = ocr_image(rendered, tools["tesseract"], tools["tessdata"], recover_orientation=True, primary_psm=11, preferred_rotation=args.preferred_rotation)
                             if quality(alternate) > quality(candidate):
                                 candidate = alternate
                 original = str(record.get("text") or "")
@@ -162,6 +162,7 @@ def main() -> None:
     parser.add_argument("--revisit-repaired-below", type=float, help="try improved OCR for repaired pages with lower text score without degrading the existing result")
     parser.add_argument("--machine-dir", type=pathlib.Path, default=pathlib.Path(".workdata/drive-machine"))
     parser.add_argument("--tessdata-dir", type=pathlib.Path, default=pathlib.Path.home() / ".cache/ngob-gae-tessdata")
+    parser.add_argument("--preferred-rotation", type=int, choices=(90, 180, 270), help="try a known scan orientation first, then fall back to automatic detection")
     parser.add_argument("--temp-dir", type=pathlib.Path, default=pathlib.Path.home() / ".cache/ngob-gae-ocr-repair")
     parser.add_argument("--report", type=pathlib.Path)
     args = parser.parse_args()

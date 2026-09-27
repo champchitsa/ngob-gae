@@ -303,7 +303,7 @@ def osd_pillow_rotation(output: str) -> int | None:
     return angle if angle in {90, 180, 270} else None
 
 
-def ocr_image(image_path: pathlib.Path, tesseract: pathlib.Path, tessdata: pathlib.Path, *, recover_orientation: bool = False, primary_psm: int = 6) -> str:
+def ocr_image(image_path: pathlib.Path, tesseract: pathlib.Path, tessdata: pathlib.Path, *, recover_orientation: bool = False, primary_psm: int = 6, preferred_rotation: int | None = None) -> str:
     descriptor, prepared_name = tempfile.mkstemp(suffix=".png", dir=tessdata.parent)
     os.close(descriptor)
     prepared = pathlib.Path(prepared_name)
@@ -342,6 +342,16 @@ def ocr_image(image_path: pathlib.Path, tesseract: pathlib.Path, tessdata: pathl
                 capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60, env=tesseract_env,
             )
             return osd_pillow_rotation(result.stdout) if result.returncode == 0 else None
+
+        if recover_orientation and preferred_rotation in {90, 180, 270}:
+            with contextlib.suppress(Exception):
+                rotated = oriented_image(preferred_rotation)
+                try:
+                    candidate = recognize(rotated, primary_psm)
+                    if ocr_quality_score(candidate) >= 60 and not poor_thai_ocr(candidate):
+                        return candidate
+                finally:
+                    rotated.unlink(missing_ok=True)
 
         if recover_orientation:
             with contextlib.suppress(Exception):
