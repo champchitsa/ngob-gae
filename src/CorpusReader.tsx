@@ -140,6 +140,15 @@ const categoryAliases: Record<string, string> = {
   'กมธ.ติดตามงบ': 'กรรมาธิการ ติดตามการบริหารงบประมาณ',
 }
 
+const categoryLabel = (category: string) => {
+  if (category.startsWith('เอกสารประกอบการพิจารณา 70')) return 'เอกสารประกอบงบ กทม. 2570'
+  if (category.startsWith('ร่างข้อบัญญัติ 70')) return 'ร่างงบ กทม. 2570'
+  if (category.startsWith('กมธ.ติดตามงบ')) return 'เอกสารกรรมาธิการ'
+  if (category === 'OPEN SSO') return 'สำนักงานประกันสังคม'
+  if (category === 'PBO') return 'งบประเทศรายปี'
+  return category
+}
+
 const corpusAssetName = (file: CorpusFile) => {
   if (!file.corpus_url) return null
   const asset = file.corpus_url.split('/').pop()
@@ -242,8 +251,7 @@ const structureText = (file: CorpusFile) => {
   if (Number(structure.paragraphs)) parts.push(`${formatCount(Number(structure.paragraphs))} ย่อหน้า`)
   if (Number(structure.table_rows)) parts.push(`${formatCount(Number(structure.table_rows))} แถวในตาราง`)
   if (Number(structure.images)) parts.push(`${formatCount(Number(structure.images))} ภาพ`)
-  if (Number(structure.ocr_repaired_count)) parts.push(`ตรวจ OCR ซ้ำ ${formatCount(Number(structure.ocr_repaired_count))} หน้า`)
-  if (Number(structure.ocr_unresolved_count)) parts.push(`OCR ต้องเทียบต้นฉบับ ${formatCount(Number(structure.ocr_unresolved_count))} หน้า`)
+  if (Number(structure.ocr_unresolved_count)) parts.push(`มีหน้าอ่านไม่ชัด ${formatCount(Number(structure.ocr_unresolved_count))} หน้า`)
   return parts.join(' / ') || `${formatCount(file.units)} หน่วยข้อมูล`
 }
 const formatBahtExact = (value: number) => `${formatCount(value)} บาท`
@@ -430,17 +438,24 @@ export default function CorpusReader() {
   const files = useMemo(() => {
     if (!index) return []
     const terms = query.trim().toLocaleLowerCase('th').split(/\s+/).filter(Boolean)
-    return index.files.filter((file) => {
+    const candidates = index.files.filter((file) => {
       if (category !== 'all' && file.category !== category) return false
       if (kind !== 'all' && fileKind(file) !== kind) return false
-      if (!terms.length) return true
+      return true
+    })
+    if (!terms.length) return candidates.sort((a, b) => Number(b.status === 'complete') - Number(a.status === 'complete'))
+    return candidates.map((file) => {
       const preview = file.preview.map((item) => item.text || '').join(' ')
       const analysisContext = (analysisContextByFile.get(file.id) ?? []).join(' ')
       const themeContext = (analysis?.file_insights?.[file.id]?.themes ?? []).map((item) => item.label).join(' ')
       const alias = Object.entries(categoryAliases).find(([label]) => file.category.startsWith(label))?.[1] ?? ''
-      const searchable = `${file.title} ${file.path} ${file.category} ${alias} ${preview} ${analysisContext} ${themeContext}`.toLocaleLowerCase('th')
-      return terms.every((term) => searchable.includes(term))
-    }).sort((a, b) => Number(b.status === 'complete') - Number(a.status === 'complete'))
+      const fields = [file.title, file.path, file.category, alias, themeContext, analysisContext, preview].map((value) => value.toLocaleLowerCase('th'))
+      const matched = terms.every((term) => fields.some((value) => value.includes(term)))
+      const score = terms.reduce((total, term) => total + fields.reduce((best, value, index) => value.includes(term) ? Math.max(best, [12, 8, 7, 6, 3, 2, 1][index]) : best, 0), 0)
+      return { file, matched, score }
+    }).filter((item) => item.matched)
+      .sort((a, b) => Number(b.file.status === 'complete') - Number(a.file.status === 'complete') || b.score - a.score)
+      .map((item) => item.file)
   }, [index, query, category, kind, analysis, analysisContextByFile])
 
   useEffect(() => setLimit(12), [query, category, kind])
@@ -567,7 +582,7 @@ export default function CorpusReader() {
         {files.slice(0, limit).map((file) => <article className={selected?.id === file.id ? 'active' : ''} key={file.id}>
           <div className="corpus-file-top"><span>{fileKind(file)}</span><i className={`corpus-status ${file.status}`}>{file.status === 'complete' ? 'จัดทำดัชนีแล้ว' : file.status === 'error' ? 'ตรวจซ้ำ' : 'กำลังจัดทำดัชนี'}</i></div>
           <h4>{file.title}</h4>
-          <p>{file.category}</p>
+          <p>{categoryLabel(file.category)}</p>
           <div className="corpus-file-facts"><span>{structureText(file)}</span></div>
           {file.category === 'PBO' ? <div className="corpus-money-preview muted"><span>ตารางงบรายปี</span><strong>ดูกราฟและค้นข้อมูลรายแถวได้</strong></div> : analysis?.file_insights?.[file.id]?.amounts?.length ? <div className="corpus-money-preview"><span>{analysis.file_insights[file.id].amounts[0].extraction === 'ocr' ? 'ตัวเลขที่อ่านจากภาพ' : 'จำนวนเงินที่พบในเอกสาร'}</span><strong>{formatBaht(analysis.file_insights[file.id].amounts[0].value)}</strong><small>{analysis.file_insights[file.id].amounts[0].locator_label}{analysis.file_insights[file.id].amounts[0].extraction === 'ocr' ? ' · เทียบต้นฉบับก่อนใช้' : ''}</small></div> : <div className="corpus-money-preview muted"><span>เนื้อหาในไฟล์</span><strong>{file.status === 'complete' ? 'เปิดอ่านและค้นในเว็บได้' : 'กำลังจัดทำดัชนี'}</strong></div>}
           <div className="corpus-file-actions">
@@ -596,7 +611,7 @@ export default function CorpusReader() {
         </div>
         {error && <div className="reader-error"><span>{error}</span><button type="button" onClick={() => void loadPage(selected, page, appliedInsideQuery)}>ลองโหลดฉบับเต็มอีกครั้ง</button></div>}
         <div className="corpus-document-summary">
-          <div className="corpus-summary-intro"><span className="panel-kicker">สรุปแฟ้ม</span><strong>{selected.category === 'PBO' ? 'ภาพรวมงบรายปี' : selectedInsight?.amounts?.length || selectedInsight?.themes?.length ? 'ตัวเลข เรื่องสำคัญ และจุดตรวจต่อ' : 'ค้นข้อมูลในแฟ้มนี้'}</strong><p>{selected.category} · {structureText(selected)}</p></div>
+          <div className="corpus-summary-intro"><span className="panel-kicker">สรุปแฟ้ม</span><strong>{selected.category === 'PBO' ? 'ภาพรวมงบรายปี' : selectedInsight?.amounts?.length || selectedInsight?.themes?.length ? 'ตัวเลข เรื่องสำคัญ และจุดตรวจต่อ' : 'ค้นข้อมูลในแฟ้มนี้'}</strong><p>{categoryLabel(selected.category)} · {structureText(selected)}</p></div>
           {selected.category === 'PBO' && <a className="corpus-dedicated-view" href="#budget-dashboard" onClick={closeDocument}><strong>ดูภาพรวมงบรายปีจากตารางชุดนี้</strong><span>มีกราฟ วงเงิน การเบิกจ่าย และรายการที่ค้นต่อได้โดยไม่ต้องไล่อ่านแถวในไฟล์</span><b>เปิดภาพรวมงบ →</b></a>}
           {selected.category !== 'PBO' && <>
           {(selectedInsight?.amounts?.length || selectedInsight?.themes?.length) ? <div className="corpus-summary-grid">
