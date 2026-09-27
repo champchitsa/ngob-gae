@@ -185,9 +185,10 @@ export default function handler(request, response) {
   const filter = (url.searchParams.get('filter') ?? '').trim()
   const requestedLimit = Number.parseInt(url.searchParams.get('limit') ?? '25', 10)
   const requestedOffset = Number.parseInt(url.searchParams.get('offset') ?? '0', 10)
-  const limit = Number.isFinite(requestedLimit) ? Math.min(1000, Math.max(1, requestedLimit)) : 25
-  const offset = Number.isFinite(requestedOffset) ? Math.max(0, requestedOffset) : 0
   const allRows = selected.rows
+  const isDownload = url.searchParams.get('download') === '1'
+  const limit = isDownload ? allRows.length : Number.isFinite(requestedLimit) ? Math.min(1000, Math.max(1, requestedLimit)) : 25
+  const offset = isDownload ? 0 : Number.isFinite(requestedOffset) ? Math.max(0, requestedOffset) : 0
   const facets = selected.filterField ? facetCounts(allRows, selected.filterField) : []
   let rows = allRows.filter((row) => !query || textOf(row).includes(query))
   if (filter && selected.filterField) rows = rows.filter((row) => Array.isArray(row[selected.filterField]) ? row[selected.filterField].includes(filter) : row[selected.filterField] === filter)
@@ -221,6 +222,6 @@ export default function handler(request, response) {
     facets,
     rows: rows.slice(offset, offset + limit),
   }
-  if (url.searchParams.get('download') === '1') response.setHeader('Content-Disposition', `attachment; filename="ngob-gae-${dataset}.json"`)
+  if (isDownload) response.setHeader('Content-Disposition', `attachment; filename="ngob-gae-${dataset}.json"`)
   return response.status(200).json(payload)
 }

@@ -17,12 +17,19 @@ export default async function handler(request, response) {
   const upstreamUrl = `https://github.com/champchitsa/ngob-gae/releases/download/corpus-v1/${asset}`
 
   try {
-    const upstream = await fetch(upstreamUrl, { headers: { Range: `bytes=${offset}-${end}` } })
+    const upstream = await fetch(upstreamUrl, { headers: { Range: `bytes=${offset}-${end}` }, signal: AbortSignal.timeout(20000) })
     if (upstream.status !== 206 && !upstream.ok) {
       return response.status(upstream.status).json({ error: 'ยังเปิดข้อมูลช่วงนี้ไม่ได้' })
     }
 
+    const reportedLength = Number(upstream.headers.get('content-length') ?? 0)
+    if (upstream.status !== 206 && (offset !== 0 || !reportedLength || reportedLength > CHUNK_BYTES)) {
+      await upstream.body?.cancel()
+      return response.status(502).json({ error: 'แหล่งไฟล์ไม่รองรับการอ่านเป็นช่วง' })
+    }
+
     const bytes = Buffer.from(await upstream.arrayBuffer())
+    if (bytes.length > CHUNK_BYTES) return response.status(502).json({ error: 'ช่วงข้อมูลมีขนาดเกินกำหนด' })
     const range = upstream.headers.get('content-range')
     const total = range?.match(/\/(\d+)$/)?.[1] || upstream.headers.get('content-length') || String(bytes.length)
 

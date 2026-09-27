@@ -1,6 +1,7 @@
 import { createServer } from 'node:http'
 import { createServer as createViteServer } from 'vite'
 import chatHandler from '../api/chat.js'
+import corpusHandler from '../api/corpus.js'
 import dataHandler from '../api/data.js'
 
 const port = Number(process.env.PORT || 4317)
@@ -20,6 +21,10 @@ function addResponseHelpers(response) {
     response.end(JSON.stringify(payload))
     return response
   }
+  response.send = (payload) => {
+    response.end(payload)
+    return response
+  }
 }
 
 async function readJson(request) {
@@ -37,8 +42,13 @@ async function readJson(request) {
 const server = createServer(async (request, response) => {
   addResponseHelpers(response)
   try {
-    const pathname = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`).pathname
+    const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`)
+    const pathname = url.pathname
     if (pathname === '/api/data') return await dataHandler(request, response)
+    if (pathname === '/api/corpus') {
+      request.query = Object.fromEntries(url.searchParams)
+      return await corpusHandler(request, response)
+    }
     if (pathname === '/api/chat') {
       request.body = await readJson(request)
       return await chatHandler(request, response)

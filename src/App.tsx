@@ -1,19 +1,30 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { cases, lawCards, methodology, sourceNotes, themes, type CaseFile, type ThemeId } from './data'
 import { bigData, investigationPath, legalActionMap, signalLawMap, signalQuestions, type AnomalyItem, type SignalId } from './bigData'
 import BudgetChat from './BudgetChat'
-import BudgetDashboard from './BudgetDashboard'
-import DataExplorer from './DataExplorer'
-import CorpusReader from './CorpusReader'
-import CommitteeTracker from './CommitteeTracker'
-import GovernmentMap from './GovernmentMap'
-import SsoBudgetLab from './SsoBudgetLab'
-import SsoItProcurementLab from './SsoItProcurementLab'
 import { useModalAccessibility } from './useModalAccessibility'
+
+const BudgetDashboard = lazy(() => import('./BudgetDashboard'))
+const DataExplorer = lazy(() => import('./DataExplorer'))
+const CorpusReader = lazy(() => import('./CorpusReader'))
+const CommitteeTracker = lazy(() => import('./CommitteeTracker'))
+const GovernmentMap = lazy(() => import('./GovernmentMap'))
+const SsoBudgetLab = lazy(() => import('./SsoBudgetLab'))
+const SsoItProcurementLab = lazy(() => import('./SsoItProcurementLab'))
 
 type PboYear = { year: number; rows: number; act: number; adjusted: number; paid: number; paid_rate: number | null }
 type PboHistory = { years: number; row_count: number; series: PboYear[] }
 type SignalSort = 'score' | 'amount' | 'movement' | 'execution'
+type WorkArea = 'home' | 'overview' | 'investigate' | 'sso' | 'evidence' | 'committee'
+
+const areaForHash = (hash: string): WorkArea => {
+  if (['#budget-dashboard', '#state-map'].includes(hash)) return 'overview'
+  if (['#signals', '#workspace', '#law-workbench'].includes(hash)) return 'investigate'
+  if (['#sso-it', '#sso-lab'].includes(hash)) return 'sso'
+  if (['#archive', '#data-api', '#method'].includes(hash)) return 'evidence'
+  if (hash === '#committee') return 'committee'
+  return 'home'
+}
 
 const formatMoney = (value: number) =>
   new Intl.NumberFormat('th-TH', { maximumFractionDigits: value < 100 ? 1 : 0 }).format(value)
@@ -27,6 +38,8 @@ const statusIcon: Record<CaseFile['status'], string> = {
 }
 
 function App() {
+  const [workArea, setWorkArea] = useState<WorkArea>(() => areaForHash(window.location.hash))
+  const [activeHash, setActiveHash] = useState(window.location.hash || '#top')
   const [activeTheme, setActiveTheme] = useState<ThemeId>('all')
   const [activeSignal, setActiveSignal] = useState<SignalId>('all')
   const [activeAnomalyId, setActiveAnomalyId] = useState(bigData.items[0].id)
@@ -38,7 +51,7 @@ function App() {
   const [fullAnomalies, setFullAnomalies] = useState<AnomalyItem[]>([])
   const [anomalyQuery, setAnomalyQuery] = useState('')
   const [anomalySort, setAnomalySort] = useState<SignalSort>('score')
-  const [anomalyLimit, setAnomalyLimit] = useState(100)
+  const [anomalyLimit, setAnomalyLimit] = useState(20)
   const [anomalyCopied, setAnomalyCopied] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -47,6 +60,26 @@ function App() {
   const infoPanelCloseRef = useRef<HTMLButtonElement>(null)
 
   useModalAccessibility(Boolean(panel), infoPanelRef, infoPanelCloseRef, () => setPanel(null))
+
+  useEffect(() => {
+    const onHashChange = () => {
+      setActiveHash(window.location.hash || '#top')
+      setWorkArea(areaForHash(window.location.hash))
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+        document.getElementById(window.location.hash.slice(1) || 'top')?.scrollIntoView()
+      }))
+    }
+    window.addEventListener('hashchange', onHashChange)
+    if (window.location.hash) onHashChange()
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
+  const openArea = (hash: string) => {
+    setActiveHash(hash)
+    setWorkArea(areaForHash(hash))
+    if (window.location.hash !== hash) window.location.hash = hash
+    else window.requestAnimationFrame(() => document.getElementById(hash.slice(1))?.scrollIntoView())
+  }
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -95,7 +128,7 @@ function App() {
   }, [activeSignal, analysisItems, anomalyQuery, anomalySort])
 
   useEffect(() => {
-    setAnomalyLimit(100)
+    setAnomalyLimit(20)
   }, [activeSignal, anomalyQuery, anomalySort])
 
   const visibleAnomalyItems = anomalyItems.slice(0, anomalyLimit)
@@ -143,20 +176,16 @@ function App() {
           <span className="brand-mark">งบ</span><span>แกะ</span>
         </a>
         <nav className="topnav" aria-label="เมนูหลัก">
-          <button onClick={() => document.getElementById('budget-dashboard')?.scrollIntoView()}>ภาพรวม</button>
-          <button onClick={() => document.getElementById('signals')?.scrollIntoView()}>ตรวจรายการ</button>
-          <button onClick={() => document.getElementById('sso-it')?.scrollIntoView()}>ประกันสังคม</button>
-          <button onClick={() => document.getElementById('archive')?.scrollIntoView()}>ค้นหลักฐาน</button>
-          <button onClick={() => document.getElementById('committee')?.scrollIntoView()}>ติดตาม กมธ.</button>
+          <a href="#budget-dashboard" aria-current={workArea === 'overview' ? 'page' : undefined}>ภาพรวม</a>
+          <a href="#signals" aria-current={workArea === 'investigate' ? 'page' : undefined}>ตรวจรายการ</a>
+          <a href="#sso-it" aria-current={workArea === 'sso' ? 'page' : undefined}>ประกันสังคม</a>
+          <a href="#archive" aria-current={workArea === 'evidence' ? 'page' : undefined}>ค้นหลักฐาน</a>
+          <a href="#committee" aria-current={workArea === 'committee' ? 'page' : undefined}>ติดตาม กมธ.</a>
           <button className="nav-chat" onClick={() => setChatOpen(true)}>ถามน้องเพนกวิน</button>
         </nav>
         <div className="data-stamp"><i /> ประมวลผล 20.09.69</div>
-        <select className="mobile-section-nav" defaultValue="" aria-label="ไปยังส่วนต่างๆ ของเว็บ" onChange={(event) => {
-          const targetId = event.currentTarget.value
-          document.getElementById(targetId)?.scrollIntoView()
-          event.currentTarget.value = ''
-        }}>
-          <option value="" disabled>เลือกส่วน</option>
+        <select className="mobile-section-nav" value={workArea === 'home' ? 'top' : workArea === 'overview' ? 'budget-dashboard' : workArea === 'investigate' ? 'signals' : workArea === 'sso' ? 'sso-it' : workArea === 'evidence' ? 'archive' : 'committee'} aria-label="ไปยังส่วนต่างๆ ของเว็บ" onChange={(event) => openArea(`#${event.currentTarget.value}`)}>
+          <option value="top">เริ่มต้น</option>
           <option value="budget-dashboard">ภาพรวมงบ</option>
           <option value="signals">ตรวจรายการ</option>
           <option value="sso-it">ประกันสังคม</option>
@@ -167,7 +196,7 @@ function App() {
       </header>
 
       <main id="top">
-        <section className="masthead">
+        {workArea === 'home' && <><section className="masthead">
           <div className="mast-copy">
             <div className="kicker"><span>PUBLIC BUDGET WORKBENCH</span><span>ทดลองใช้</span></div>
             <h1><span>งบก้อนนี้</span><mark>ใช้ทำอะไร</mark><span>ได้ผลแค่ไหน</span></h1>
@@ -212,23 +241,29 @@ function App() {
             <a href="#archive"><b>03</b><strong>ค้นเอกสารและหลักฐาน</strong><span>ค้น 694 ไฟล์ อ่าน OCR และกลับไปเทียบต้นฉบับ</span><i>เปิดคลังหลักฐาน →</i></a>
             <a href="#committee"><b>04</b><strong>ติดตามคำถามของกรรมาธิการ</strong><span>ดูคำถาม เอกสารที่ขอ ผู้รับผิดชอบ และสถานะคำตอบ</span><i>เปิดตัวติดตาม →</i></a>
           </div>
-        </section>
+        </section></>}
 
-        <BudgetDashboard history={history} />
+        {workArea !== 'home' && <div className="area-context"><a href="#top">← กลับไปเลือกงาน</a><span>{workArea === 'overview' ? 'ภาพรวมงบประมาณ' : workArea === 'investigate' ? 'ตรวจรายการที่ควรติดตาม' : workArea === 'sso' ? 'ประกันสังคม' : workArea === 'evidence' ? 'ค้นหลักฐานและข้อมูล' : 'ติดตามกรรมาธิการ'}</span></div>}
+        {workArea === 'investigate' && <nav className="area-subnav" aria-label="เครื่องมือตรวจรายการ"><a href="#signals" aria-current={activeHash !== '#workspace' ? 'page' : undefined}>รายการคัดกรอง</a><a href="#workspace" aria-current={activeHash === '#workspace' ? 'page' : undefined}>แฟ้มวิเคราะห์ 19 เรื่อง</a></nav>}
+        {workArea === 'sso' && <nav className="area-subnav" aria-label="แฟ้มประกันสังคม"><a href="#sso-it" aria-current={activeHash !== '#sso-lab' ? 'page' : undefined}>โครงการ IT และผู้รับจ้าง</a><a href="#sso-lab" aria-current={activeHash === '#sso-lab' ? 'page' : undefined}>งบและผลใช้จ่าย</a></nav>}
+        {workArea === 'evidence' && <nav className="area-subnav" aria-label="คลังข้อมูลและหลักฐาน"><a href="#archive" aria-current={activeHash !== '#data-api' && activeHash !== '#method' ? 'page' : undefined}>ค้นเอกสาร</a><a href="#data-api" aria-current={activeHash === '#data-api' ? 'page' : undefined}>ตารางข้อมูล</a><a href="#method" aria-current={activeHash === '#method' ? 'page' : undefined}>วิธีวิเคราะห์</a></nav>}
+
+        {workArea === 'overview' && <Suspense fallback={<div className="area-loading" role="status">กำลังเปิดภาพรวมงบประมาณ...</div>}><BudgetDashboard history={history} />
 
         <GovernmentMap onInspectMinistry={(ministry) => {
           setActiveSignal('all')
           setAnomalyQuery(ministry)
+          openArea('#signals')
           window.setTimeout(() => {
             document.getElementById('signals')?.scrollIntoView()
             anomalySearchRef.current?.focus()
           }, 50)
-        }} />
+        }} /></Suspense>}
 
-        <SsoItProcurementLab onAsk={() => setChatOpen(true)} />
-        <SsoBudgetLab onAsk={() => setChatOpen(true)} />
+        {workArea === 'sso' && activeHash !== '#sso-lab' && <Suspense fallback={<div className="area-loading" role="status">กำลังเปิดโครงการ IT...</div>}><SsoItProcurementLab onAsk={() => setChatOpen(true)} /></Suspense>}
+        {workArea === 'sso' && activeHash === '#sso-lab' && <Suspense fallback={<div className="area-loading" role="status">กำลังเปิดงบประกันสังคม...</div>}><SsoBudgetLab onAsk={() => setChatOpen(true)} /></Suspense>}
 
-        <section className="signal-lab" id="signals">
+        {workArea === 'investigate' && activeHash !== '#workspace' && <section className="signal-lab" id="signals">
           <div className="workspace-head inverse">
             <div>
               <span className="section-no">02 / BIG DATA SIGNALS</span>
@@ -275,7 +310,7 @@ function App() {
                 <span className="anomaly-copy"><strong>{item.item}</strong><small>{item.agency}</small></span>
                 <span className="anomaly-money">{formatMoney(item.adjusted)}<small>ล้าน</small></span>
               </button>)}
-              {visibleAnomalyItems.length < anomalyItems.length && <button className="anomaly-more" onClick={() => setAnomalyLimit((value) => value + 100)}>แสดงเพิ่มอีก {Math.min(100, anomalyItems.length - visibleAnomalyItems.length).toLocaleString('th-TH')} รายการ</button>}
+              {visibleAnomalyItems.length < anomalyItems.length && <button className="anomaly-more" onClick={() => setAnomalyLimit((value) => value + 20)}>แสดงเพิ่มอีก {Math.min(20, anomalyItems.length - visibleAnomalyItems.length).toLocaleString('th-TH')} รายการ</button>}
               {anomalyItems.length === 0 && <div className="anomaly-empty"><strong>ไม่พบรายการที่ตรงกัน</strong><button onClick={() => { setAnomalyQuery(''); setActiveSignal('all') }}>ล้างคำค้นและเงื่อนไข</button></div>}
             </aside>
 
@@ -336,9 +371,9 @@ function App() {
             <div className="legal-head"><div><span className="panel-kicker">LAW TO ACTION</span><h3 id="law-workbench-title">กฎหมายที่เปลี่ยนข้อสงสัยเป็นรายการเอกสาร</h3></div><p>เลือกตัวบทตามลักษณะสัญญาณ แล้วขอหลักฐานที่ทำให้หน่วยงานตอบได้เป็นข้อ ไม่หยุดแค่คำอธิบายกว้างๆ</p></div>
             <div className="legal-grid">{legalActionMap.map((law, index) => <article key={law.code}><span>{String(index + 1).padStart(2, '0')}</span><h4>{law.code}</h4><strong>{law.title}</strong><div><b>ใช้เมื่อ</b><p>{law.trigger}</p></div><div><b>เอกสารที่ควรขอ</b><p>{law.request}</p></div><a href={law.url} target="_blank" rel="noreferrer">เปิดตัวบทจากหน่วยงานทางการ ↗</a></article>)}</div>
           </section>
-        </section>
+        </section>}
 
-        <section className="workspace" id="workspace">
+        {workArea === 'investigate' && activeHash === '#workspace' && <section className="workspace" id="workspace">
           <div className="workspace-head">
             <div>
               <span className="section-no">03 / CASE DESK</span>
@@ -440,13 +475,13 @@ function App() {
               </footer>
             </article>
           </div>
-        </section>
+        </section>}
 
-        <DataExplorer />
+        {workArea === 'evidence' && activeHash === '#data-api' && <Suspense fallback={<div className="area-loading" role="status">กำลังเปิดตารางข้อมูล...</div>}><DataExplorer /></Suspense>}
 
-        <CommitteeTracker />
+        {workArea === 'committee' && <Suspense fallback={<div className="area-loading" role="status">กำลังเปิดข้อมูลกรรมาธิการ...</div>}><CommitteeTracker /></Suspense>}
 
-        <section className="archive" id="archive">
+        {workArea === 'evidence' && activeHash !== '#data-api' && activeHash !== '#method' && <section className="archive" id="archive">
           <div className="workspace-head">
             <div><span className="section-no">06 / EVIDENCE ARCHIVE</span><h2>คลังหลักฐาน 694 ไฟล์</h2></div>
             <p>ค้นจากชื่อไฟล์ เส้นทาง และหมวดข้อมูลได้ทันที ทุกผลลัพธ์เปิดกลับไปยังไฟล์ต้นทางใน Drive</p>
@@ -461,7 +496,7 @@ function App() {
             <div><strong>6.67 GB</strong><span>ขนาดรวมทั้งคลัง</span></div>
           </div>
 
-          <CorpusReader />
+          <Suspense fallback={<div className="area-loading" role="status">กำลังเปิดคลังเอกสาร...</div>}><CorpusReader /></Suspense>
 
           <div className="archive-layout archive-insights-layout">
             <aside className="archive-analysis">
@@ -492,22 +527,22 @@ function App() {
               </div>
             </aside>
           </div>
-        </section>
+        </section>}
 
-        <section className="method-preview">
+        {workArea === 'evidence' && activeHash === '#method' && <section className="method-preview" id="method">
           <div className="workspace-head inverse">
             <div><span className="section-no">07 / METHOD</span><h2>กฎต้องอธิบายได้</h2></div>
             <p>เปิดสูตรคัดกรอง นิยามข้อมูล และทางกลับไปยังต้นฉบับทุกขั้น</p>
           </div>
           <div className="method-grid">{methodology.map((item) => <div key={item.step}><span>{item.step}</span><h3>{item.title}</h3><p>{item.text}</p></div>)}</div>
           <button className="outline-action" onClick={() => setPanel('method')}>ดูสูตรและข้อจำกัดทั้งหมด</button>
-        </section>
+        </section>}
 
-        <section className="closing">
+        {workArea === 'home' && <section className="closing">
           <p>งบประมาณไม่ควรจบที่ไฟล์ดาวน์โหลด</p>
           <h2>มันควรพาเราไปถึง<br />คนตัดสินใจ สัญญา และผลลัพธ์</h2>
-          <div className="closing-links"><a href="#workspace">กลับไปเลือกแฟ้ม ↑</a><button onClick={() => setPanel('sources')}>เปิดบัญชีแหล่งข้อมูล</button></div>
-        </section>
+          <div className="closing-links"><a href="#signals">เริ่มตรวจรายการ ↑</a><button onClick={() => setPanel('sources')}>เปิดบัญชีแหล่งข้อมูล</button></div>
+        </section>}
       </main>
 
       <footer className="site-footer">
@@ -530,6 +565,7 @@ function App() {
           setActiveSignal('all')
           setAnomalyQuery('')
           setActiveAnomalyId(id)
+          openArea('#signals')
         }}
       />
 
