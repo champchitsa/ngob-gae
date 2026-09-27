@@ -183,7 +183,10 @@ def main() -> None:
                 temporary = args.report.with_suffix(args.report.suffix + ".part")
                 temporary.write_text(json.dumps({"elapsed_seconds": round(time.time() - started, 1), "files_checked": len(results), "results": results}, ensure_ascii=False, indent=2), encoding="utf-8")
                 temporary.replace(args.report)
-    print(json.dumps({"files_checked": len(results), "pages_repaired": sum(result.get("repaired", 0) for result in results), "pages_unresolved": sum(result.get("unresolved_pages", 0) for result in results), "errors": sum(bool(result.get("error")) for result in results)}, ensure_ascii=False), flush=True)
+    errors = sum(bool(result.get("error")) for result in results)
+    print(json.dumps({"files_checked": len(results), "pages_repaired": sum(result.get("repaired", 0) for result in results), "pages_unresolved": sum(result.get("unresolved_pages", 0) for result in results), "errors": errors}, ensure_ascii=False), flush=True)
+    if errors:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
