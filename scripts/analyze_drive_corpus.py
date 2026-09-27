@@ -255,8 +255,9 @@ def main() -> None:
                         round_signals.append(signal("round_amount", "จำนวนเงินลงตัว", "จำนวนเงินลงตัวอาจเป็นกรอบวงเงินหรือค่าประมาณ ควรเปิดที่มาของปริมาณและราคาต่อหน่วย", file, position, entry["context"], integer_value, record.get("method")))
                 if len(unique_unit_amounts) >= 7 and len(dense_signals) < 400:
                     raw_signal_counts["amount_dense"] += 1
-                    total = sum(unique_unit_amounts)
-                    dense_signals.append(signal("amount_dense", "ตัวเลขงบหนาแน่น", f"ตำแหน่งนี้มีจำนวนเงินที่ผ่านตัวกรอง {len(unique_unit_amounts)} ค่า เหมาะสำหรับตรวจยอดรวมและรายการย่อย", file, position, text, total, record.get("method")))
+                    dense = signal("amount_dense", "ตัวเลขงบหนาแน่น", f"ตำแหน่งนี้มีจำนวนเงินที่ผ่านตัวกรอง {len(unique_unit_amounts)} ค่า เหมาะสำหรับตรวจยอดรวมและรายการย่อย", file, position, text, None, record.get("method"))
+                    dense["amount_count"] = len(unique_unit_amounts)
+                    dense_signals.append(dense)
                 elif len(unique_unit_amounts) >= 7:
                     raw_signal_counts["amount_dense"] += 1
 
@@ -289,7 +290,7 @@ def main() -> None:
     def unique_ranked(items: list[dict], limit: int) -> list[dict]:
         seen = set()
         ranked = []
-        for item in sorted(items, key=lambda row: row.get("amount") or 0, reverse=True):
+        for item in sorted(items, key=lambda row: row.get("amount_count") or row.get("amount") or 0, reverse=True):
             key = (item["kind"], item["file_id"], json.dumps(item["locator"], sort_keys=True), item.get("amount"))
             if key in seen:
                 continue

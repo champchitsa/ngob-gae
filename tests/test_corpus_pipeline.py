@@ -317,6 +317,25 @@ class CorpusPipelineTests(unittest.TestCase):
             self.assertEqual(json.loads(analysis_output.read_text(encoding="utf-8"))["meta"]["analyzed_files"], 1)
             self.assertEqual(list(root.glob("*.part")), [])
 
+    def test_dense_amounts_are_counted_without_summing_subtotals(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            corpus = root / "corpus"
+            amounts = ["10,000", "20,000", "30,000", "40,000", "50,000", "60,000", "70,000"]
+            write_asset(corpus / "records" / "alpha.jsonl.gz", "alpha", text="งบประมาณ " + " ".join(f"{amount} บาท" for amount in amounts))
+            inventory = root / "inventory.json"
+            output = root / "analysis.json"
+            write_inventory(inventory, ["alpha"])
+            analyzed = subprocess.run(
+                [sys.executable, str(SCRIPTS / "analyze_drive_corpus.py"), str(inventory), str(output), str(corpus)],
+                capture_output=True, text=True, encoding="utf-8",
+            )
+            self.assertEqual(analyzed.returncode, 0, analyzed.stderr)
+            dense = json.loads(output.read_text(encoding="utf-8"))["signals"]["amount_dense"]
+            self.assertEqual(len(dense), 1)
+            self.assertEqual(dense[0]["amount_count"], 7)
+            self.assertIsNone(dense[0]["amount"])
+
     def test_release_comparison_requires_names_sizes_digests_and_uploaded_state(self):
         expected = {"alpha.jsonl.gz": {"size": 12, "sha256": "a" * 64}}
         good = [{"name": "alpha.jsonl.gz", "size": 12, "digest": f"sha256:{'a' * 64}", "state": "uploaded"}]

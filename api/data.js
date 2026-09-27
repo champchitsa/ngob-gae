@@ -124,6 +124,7 @@ function selectDataset(name, source) {
   if (name === 'evidence') return {
     rows: Object.values(source.corpusAnalysis.signals).flat().map((item) => ({
       ...item,
+      amount: item.kind === 'amount_dense' ? null : item.amount,
       sourceUrl: item.source_url,
       locatorLabel: item.locator_label,
     })),

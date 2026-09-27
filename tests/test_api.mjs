@@ -153,6 +153,14 @@ test('data export contains every filtered row, not only the first page', () => {
   assert.ok(result.body.rows.length > 1000)
 })
 
+test('dense budget figures are not presented as a summed amount', () => {
+  const result = response()
+  data({ method: 'GET', url: '/api/data?dataset=evidence&download=1', headers: { host: 'ngob-gae.vercel.app' } }, result)
+  const dense = result.body.rows.filter((row) => row.kind === 'amount_dense')
+  assert.ok(dense.length > 0)
+  assert.ok(dense.every((row) => row.amount === null))
+})
+
 test('SSO IT register keeps original winner evidence separate from CSV labels', () => {
   const result = response()
   data({ method: 'GET', url: '/api/data?dataset=sso_it&download=1', headers: { host: 'ngob-gae.vercel.app' } }, result)

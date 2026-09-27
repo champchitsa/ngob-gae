@@ -82,6 +82,7 @@ type CorpusSignal = {
   locator_label: string
   context: string
   amount?: number | null
+  amount_count?: number
   file_count?: number
   occurrences?: number
   source_url: string
@@ -516,7 +517,7 @@ export default function CorpusReader() {
           {activeSignals.slice(0, 12).map((item, signalIndex) => {
             const file = index?.files.find((candidate) => candidate.id === item.file_id)
             return <article key={`${item.kind}-${item.file_id}-${item.locator_label}-${signalIndex}`}>
-              <header><span>{item.locator_label}{item.extraction === 'ocr' ? ' / OCR' : ''}</span>{item.amount ? <strong>{formatBaht(item.amount)}</strong> : null}</header>
+              <header><span>{item.locator_label}{item.extraction === 'ocr' ? ' / OCR' : ''}</span>{item.kind === 'amount_dense' ? <strong>{item.amount_count ? `${formatCount(item.amount_count)} จำนวน` : 'ตรวจยอดรวมและรายการย่อย'}</strong> : item.amount ? <strong>{formatBaht(item.amount)}</strong> : null}</header>
               <h5>{item.title}</h5>
               <p>{item.explanation}</p>
               <footer>{file?.status === 'complete' && file.corpus_url ? <button onClick={() => openFile(file)}>อ่านเอกสารบนเว็บ</button> : <span>อยู่ระหว่างจัดทำฉบับอ่านบนเว็บ</span>}<a href={item.source_url} target="_blank" rel="noreferrer">เทียบต้นฉบับ</a></footer>
