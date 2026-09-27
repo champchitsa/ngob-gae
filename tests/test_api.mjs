@@ -140,6 +140,18 @@ test('SSO IT answer uses the expanded official register and distinguishes verifi
     assert.equal(project.statusCode, 200)
     assert.match(project.body.answer, /16\.5 ล้านบาท/)
     assert.ok(project.body.sources.some((source) => source.url.includes('DocumentEGP/62037218036/')))
+
+    const difference = response()
+    await chat({ method: 'POST', headers: { host: 'ngob-gae.vercel.app', 'content-type': 'application/json' }, body: { question: 'ยอดประกาศกับ CSV ต่างกันกี่โครงการ' }, socket: { remoteAddress: 'test-sso-it-price-gap' } }, difference)
+    assert.equal(difference.statusCode, 200)
+    assert.match(difference.body.answer, /ต่างกัน 5 จาก 37 โครงการ/)
+    assert.match(difference.body.answer, /63127469392/)
+    assert.ok(difference.body.sources.some((source) => source.url.includes('DocumentEGP/63127469392/')))
+
+    const laterYear = response()
+    await chat({ method: 'POST', headers: { host: 'ngob-gae.vercel.app', 'content-type': 'application/json' }, body: { question: 'โครงการ 68019346280 ใครชนะ' }, socket: { remoteAddress: 'test-sso-it-2568' } }, laterYear)
+    assert.equal(laterYear.statusCode, 200)
+    assert.match(laterYear.body.answer, /ผู้ชนะ ไม่พบ/)
   } finally {
     if (originalKey === undefined) delete process.env.PATHUMMA_API_KEY
     else process.env.PATHUMMA_API_KEY = originalKey
