@@ -373,7 +373,7 @@ export default function CorpusReader() {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('all')
   const [kind, setKind] = useState('all')
-  const [limit, setLimit] = useState(24)
+  const [limit, setLimit] = useState(12)
   const [selected, setSelected] = useState<CorpusFile | null>(null)
   const [records, setRecords] = useState<CorpusRecord[]>([])
   const [insideQuery, setInsideQuery] = useState('')
@@ -443,7 +443,7 @@ export default function CorpusReader() {
     }).sort((a, b) => Number(b.status === 'complete') - Number(a.status === 'complete'))
   }, [index, query, category, kind, analysis, analysisContextByFile])
 
-  useEffect(() => setLimit(24), [query, category, kind])
+  useEffect(() => setLimit(12), [query, category, kind])
 
   const loadPage = async (file: CorpusFile, nextPage: number, nextQuery: string) => {
     abortRef.current?.abort()
@@ -578,7 +578,7 @@ export default function CorpusReader() {
       </div>
       {!index && !error && <div className="corpus-empty">กำลังเปิดดัชนีเนื้อหา...</div>}
       {index && files.length === 0 && <div className="corpus-empty">ไม่พบไฟล์ที่ตรงกับเงื่อนไข</div>}
-      {limit < files.length && <button className="load-more" onClick={() => setLimit((value) => value + 24)}>แสดงอีก 24 ไฟล์</button>}
+      {limit < files.length && <button className="load-more" onClick={() => setLimit((value) => value + 12)}>แสดงอีก 12 ไฟล์</button>}
 
       {selected && <div ref={documentRef} className="corpus-document" role="dialog" aria-modal="true" aria-label={`เนื้อหา ${selected.title}`} tabIndex={-1}>
         <div className="corpus-document-head">
