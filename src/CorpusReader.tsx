@@ -254,7 +254,7 @@ function RecordBody({ record, query, file }: { record: CorpusRecord; query: stri
   const match = needle ? text.toLocaleLowerCase('th').indexOf(needle) : -1
   const start = !expanded && text.length > limit && match > limit ? Math.max(0, match - 300) : 0
   const visible = expanded ? text : text.slice(start, start + limit)
-  return <div className="record-body"><pre>{start > 0 ? '…' : ''}{visible}{!expanded && start + limit < text.length ? '…' : ''}</pre>{text.length > limit && <button type="button" onClick={() => setExpanded((value) => !value)}>{expanded ? 'ย่อข้อความ' : `แสดงข้อความครบ ${formatCount(text.length)} ตัวอักษร`}</button>}{record.method === 'ocr' && readable !== raw && <button type="button" onClick={() => { setShowRaw((value) => !value); setExpanded(false) }}>{showRaw ? 'กลับไปอ่านแบบจัดรูป' : 'ดูข้อความ OCR ดิบ'}</button>}</div>
+  return <div className="record-body"><pre>{start > 0 ? '…' : ''}{visible}{!expanded && start + limit < text.length ? '…' : ''}</pre>{text.length > limit && <button type="button" onClick={() => setExpanded((value) => !value)}>{expanded ? 'ย่อข้อความ' : `แสดงข้อความครบ ${formatCount(text.length)} ตัวอักษร`}</button>}{record.method === 'ocr' && readable.startsWith('หน้าปกเอกสาร\n') && <button type="button" onClick={() => { setShowRaw((value) => !value); setExpanded(false) }}>{showRaw ? 'กลับไปอ่านแบบจัดรูป' : 'ดูข้อความ OCR ดิบ'}</button>}</div>
 }
 
 async function scanCorpus(
