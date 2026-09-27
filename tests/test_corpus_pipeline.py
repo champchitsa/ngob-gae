@@ -3,6 +3,7 @@ from __future__ import annotations
 import gzip
 import hashlib
 import json
+import os
 import pathlib
 import shutil
 import subprocess
@@ -93,6 +94,21 @@ class CaptureWriter:
 
 
 class CorpusPipelineTests(unittest.TestCase):
+    def test_index_recovers_completed_asset_when_manifest_is_stale(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            corpus = root / "corpus"
+            write_asset(corpus / "records" / "alpha.jsonl.gz", "alpha")
+            inventory = root / "inventory.json"
+            output = root / "index.json"
+            write_inventory(inventory, ["alpha"])
+            manifest = corpus / "manifest.json"
+            manifest.write_text(json.dumps({"items": {"alpha": {"status": "pending"}}}), encoding="utf-8")
+            os.utime(manifest, (1, 1))
+            built = subprocess.run([sys.executable, str(SCRIPTS / "build_corpus_index.py"), str(inventory), str(output), str(corpus)], capture_output=True, text=True, encoding="utf-8")
+            self.assertEqual(built.returncode, 0, built.stderr)
+            self.assertEqual(json.loads(output.read_text(encoding="utf-8"))["files"][0]["status"], "complete")
+
     def test_atomic_write_json_replaces_complete_document(self):
         with tempfile.TemporaryDirectory() as directory:
             target = pathlib.Path(directory) / "result.json"

@@ -19,6 +19,16 @@ def read_manifest(path: pathlib.Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def read_asset_summary(path: pathlib.Path) -> dict:
+    """Recover completed-file metadata when a long-running manifest lags assets."""
+    with gzip.open(path, "rt", encoding="utf-8") as handle:
+        for line in handle:
+            record = json.loads(line)
+            if record.get("type") == "summary":
+                return record
+    return {}
+
+
 def compact_structure(structure: dict) -> dict:
     result = {}
     for key, value in structure.items():
@@ -92,6 +102,10 @@ def main() -> None:
         record_path = record_paths.get(source["id"])
         selected_dir = record_path.parent.parent.resolve() if record_path else None
         summary = summaries_by_dir.get(selected_dir, {}).get(source["id"], {}) if selected_dir else {}
+        manifest_path = selected_dir / "manifest.json" if selected_dir else None
+        manifest_mtime = manifest_path.stat().st_mtime if manifest_path and manifest_path.exists() else 0
+        if record_path and (not summary or record_path.stat().st_mtime > manifest_mtime):
+            summary = read_asset_summary(record_path)
         manifest_status = summary.get("status", "pending")
         status = "complete" if record_path and manifest_status in {"complete", "cached"} else manifest_status
         if status == "cached":
