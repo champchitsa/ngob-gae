@@ -86,12 +86,13 @@ def hotspot_label(position: dict) -> str:
     return "ส่วนอื่นของไฟล์"
 
 
-def has_term(text: str, terms: tuple[str, ...]) -> bool:
-    lowered = f" {text.lower()} "
+def has_term(lowered: str, terms: tuple[str, ...]) -> bool:
     return any(term in lowered for term in terms)
 
 
 def credible_amounts(text: str) -> list[dict]:
+    if not any(cue in text for cue in MONEY_CUES):
+        return []
     normalized = text.translate(THAI_DIGITS)
     amounts = []
     for match in NUMBER_RE.finditer(normalized):
@@ -220,15 +221,16 @@ def main() -> None:
                 if not text:
                     continue
                 position = locator(record)
+                lowered = f" {text.lower()} "
                 unit_themes = []
                 for key, config in THEMES.items():
-                    if has_term(text, config["terms"]):
+                    if has_term(lowered, config["terms"]):
                         unit_themes.append(key)
                         file_themes.add(key)
                         theme_units[key] += 1
                         local_theme_counts[key] += 1
                 for key, config in EVIDENCE_STAGES.items():
-                    if has_term(text, config["terms"]):
+                    if has_term(lowered, config["terms"]):
                         file_stages.add(key)
                         evidence_units[key] += 1
                         local_stage_counts[key] += 1
