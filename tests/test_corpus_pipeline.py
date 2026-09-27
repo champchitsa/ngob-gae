@@ -4,11 +4,14 @@ import gzip
 import hashlib
 import json
 import os
+import argparse
 import pathlib
 import shutil
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 import unittest
 import zipfile
 from unittest import mock
@@ -27,7 +30,7 @@ sys.path.insert(0, str(SCRIPTS))
 from corpus_pipeline import atomic_write_json, collect_record_assets, sha256_file  # noqa: E402
 from analyze_drive_corpus import credible_amounts  # noqa: E402
 from extract_drive_corpus import FileStats, broken_embedded_thai_text, contiguous_page_batches, extract_docx, extract_pptx, ocr_quality_score, osd_pillow_rotation, pdf_text_needs_ocr, poor_thai_ocr, weak_budget_cover  # noqa: E402
-from repair_ocr_pages import needs_repair  # noqa: E402
+from repair_ocr_pages import needs_repair, repair_one  # noqa: E402
 from audit_ocr_quality import suspect_reason  # noqa: E402
 from validate_corpus import validate_asset  # noqa: E402
 from reuse_verified_duplicate_pdf_ocr import budget_pairs, copy_identical_pages  # noqa: E402
@@ -35,6 +38,59 @@ from reuse_verified_duplicate_pdf_ocr import budget_pairs, copy_identical_pages 
 
 def test_pdf_ocr_fallback_never_renders_unrequested_pages() -> None:
     assert contiguous_page_batches([2, 871, 872, 1000, 1001, 1002], max_pages=2) == [[2], [871, 872], [1000, 1001], [1002]]
+
+
+def test_parallel_page_repair_updates_one_asset_without_sharing_pdf_reader(tmp_path: pathlib.Path) -> None:
+    file_id = "parallel-test"
+    machine = tmp_path / "machine"
+    machine.mkdir()
+    (machine / f"{file_id}.pdf").write_bytes(b"cached public PDF")
+    asset = tmp_path / f"{file_id}.jsonl.gz"
+    records = [
+        {"type": "file", "id": file_id},
+        *({"type": "page", "page": page, "text": "", "method": "ocr_error"} for page in range(1, 5)),
+        {"type": "summary", "id": file_id, "structure": {"page_errors": []}},
+    ]
+    with gzip.open(asset, "wt", encoding="utf-8") as handle:
+        for record in records:
+            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    class FakeReader:
+        is_encrypted = False
+
+        @property
+        def pages(self):
+            raise AssertionError("parallel repair must render pages directly")
+
+    seen_threads: set[int] = set()
+    lock = threading.Lock()
+
+    def fake_ocr(*_args, **_kwargs):
+        with lock:
+            seen_threads.add(threading.get_ident())
+        time.sleep(0.03)
+        return "รายการงบประมาณสำนักงานประกันสังคม จำนวนเงินหนึ่งล้านบาท"
+
+    args = argparse.Namespace(
+        machine_dir=machine,
+        temp_dir=tmp_path,
+        page_workers=3,
+        preferred_rotation=None,
+        retry_unresolved=False,
+        revisit_repaired_below=None,
+    )
+    with mock.patch("repair_ocr_pages.PdfReader", return_value=FakeReader()), \
+         mock.patch("repair_ocr_pages.render_pdf_pages", side_effect=lambda _source, start, _end, folder, _tool: {start: folder / "render.png"}), \
+         mock.patch("repair_ocr_pages.ocr_image", side_effect=fake_ocr):
+        result = repair_one({"id": file_id, "title": "parallel-test.pdf", "category": "OPEN SSO"}, asset, args, {"pdftoppm": pathlib.Path("poppler"), "tesseract": pathlib.Path("tesseract"), "tessdata": tmp_path})
+
+    with gzip.open(asset, "rt", encoding="utf-8") as handle:
+        repaired = [json.loads(line) for line in handle]
+    pages = [item for item in repaired if item.get("type") == "page"]
+    assert result["targets"] == result["repaired"] == 4
+    assert len(seen_threads) >= 2
+    assert all(item.get("ocr_repaired") and not item.get("ocr_unresolved") for item in pages)
+    assert repaired[-1]["structure"]["ocr_repaired_pages"] == [1, 2, 3, 4]
 
 
 def test_ocr_quality_detects_rotated_thai_page_and_prefers_readable_text() -> None:

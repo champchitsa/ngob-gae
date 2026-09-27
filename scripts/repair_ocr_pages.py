@@ -91,60 +91,85 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
         if owns_source:
             download_file(item, source)
         reader = PdfReader(str(source), strict=False)
+        effective_page_workers = max(1, min(args.page_workers, 4)) if not reader.is_encrypted else 1
         if reader.is_encrypted:
             reader.decrypt("")
-        for index, record in enumerate(targets, start=1):
+        def scan_target(record: dict) -> str:
+            page = int(record["page"])
+            is_cover = cover and page == 1
+            def quality(text: str) -> float:
+                return ocr_quality_score(text) + (500 if is_cover and not weak_budget_cover(text) else 0)
+            with tempfile.TemporaryDirectory(dir=args.temp_dir) as directory:
+                folder = pathlib.Path(directory)
+                image = None
+                if effective_page_workers == 1 and record.get("method") != "embedded":
+                    # PdfReader's page objects are used only by the sequential
+                    # path. Parallel page repair renders the source directly.
+                    with contextlib.suppress(Exception):
+                        image = extract_largest_page_image(reader.pages[page - 1], folder)
+                used_embedded_image = image is not None
+                if image is None:
+                    image = render_pdf_pages(source, page, page, folder, tools["pdftoppm"]).get(page)
+                if image is None:
+                    raise RuntimeError("page image unavailable")
+                candidate = ocr_image(image, tools["tesseract"], tools["tessdata"], recover_orientation=True, primary_psm=11, preferred_rotation=args.preferred_rotation)
+                original = str(record.get("text") or "")
+                if used_embedded_image and (poor_thai_ocr(candidate) or quality(candidate) < quality(original) + 10):
+                    rendered = render_pdf_pages(source, page, page, folder, tools["pdftoppm"]).get(page)
+                    if rendered:
+                        alternate = ocr_image(rendered, tools["tesseract"], tools["tessdata"], recover_orientation=True, primary_psm=11, preferred_rotation=args.preferred_rotation)
+                        if quality(alternate) > quality(candidate):
+                            candidate = alternate
+            return candidate
+
+        def apply_result(record: dict, candidate: str | None, error: Exception | None) -> None:
             page = int(record["page"])
             is_cover = cover and page == 1
             enhancement_only = record.get("ocr_repaired") and not record.get("ocr_unresolved") and not needs_repair(record, cover=is_cover)
             def quality(text: str) -> float:
                 return ocr_quality_score(text) + (500 if is_cover and not weak_budget_cover(text) else 0)
-            try:
-                with tempfile.TemporaryDirectory(dir=args.temp_dir) as directory:
-                    folder = pathlib.Path(directory)
-                    image = None
-                    if record.get("method") != "embedded":
-                        # Some scanned PDFs use JBIG2 images. pypdf raises while
-                        # enumerating them when jbig2dec is absent, but Poppler
-                        # can still render the original page for OCR.
-                        with contextlib.suppress(Exception):
-                            image = extract_largest_page_image(reader.pages[page - 1], folder)
-                    used_embedded_image = image is not None
-                    if image is None:
-                        image = render_pdf_pages(source, page, page, folder, tools["pdftoppm"]).get(page)
-                    if image is None:
-                        raise RuntimeError("page image unavailable")
-                    candidate = ocr_image(image, tools["tesseract"], tools["tessdata"], recover_orientation=True, primary_psm=11, preferred_rotation=args.preferred_rotation)
-                    original = str(record.get("text") or "")
-                    if used_embedded_image and (poor_thai_ocr(candidate) or quality(candidate) < quality(original) + 10):
-                        rendered = render_pdf_pages(source, page, page, folder, tools["pdftoppm"]).get(page)
-                        if rendered:
-                            alternate = ocr_image(rendered, tools["tesseract"], tools["tessdata"], recover_orientation=True, primary_psm=11, preferred_rotation=args.preferred_rotation)
-                            if quality(alternate) > quality(candidate):
-                                candidate = alternate
-                original = str(record.get("text") or "")
-                candidate_readable = not poor_thai_ocr(candidate) and not (is_cover and weak_budget_cover(candidate))
-                if candidate and (candidate_readable or not enhancement_only) and quality(candidate) >= quality(original) + 10:
-                    record.update({"text": candidate, "line_count": len(candidate.splitlines()), "method": "ocr", "ocr_repaired": True})
-                    repaired_pages.append(page)
-                    if poor_thai_ocr(candidate) or (is_cover and weak_budget_cover(candidate)):
-                        record["ocr_unresolved"] = True
-                        unresolved_pages.append(page)
-                        unresolved.append({"page": page, "reason": "readability remains low after OCR"})
-                    else:
-                        record.pop("ocr_unresolved", None)
-                else:
-                    if not enhancement_only:
-                        record["ocr_unresolved"] = True
-                        unresolved_pages.append(page)
-                        unresolved.append({"page": page, "reason": "no readability improvement"})
-            except Exception as error:
+            if error is not None:
                 if not enhancement_only:
                     record["ocr_unresolved"] = True
                     unresolved_pages.append(page)
                     unresolved.append({"page": page, "reason": f"{type(error).__name__}: {error}"})
-            if index % 20 == 0:
-                persist_progress()
+                return
+            original = str(record.get("text") or "")
+            candidate = candidate or ""
+            candidate_readable = not poor_thai_ocr(candidate) and not (is_cover and weak_budget_cover(candidate))
+            if candidate and (candidate_readable or not enhancement_only) and quality(candidate) >= quality(original) + 10:
+                record.update({"text": candidate, "line_count": len(candidate.splitlines()), "method": "ocr", "ocr_repaired": True})
+                repaired_pages.append(page)
+                if poor_thai_ocr(candidate) or (is_cover and weak_budget_cover(candidate)):
+                    record["ocr_unresolved"] = True
+                    unresolved_pages.append(page)
+                    unresolved.append({"page": page, "reason": "readability remains low after OCR"})
+                else:
+                    record.pop("ocr_unresolved", None)
+            elif not enhancement_only:
+                record["ocr_unresolved"] = True
+                unresolved_pages.append(page)
+                unresolved.append({"page": page, "reason": "no readability improvement"})
+
+        if effective_page_workers == 1:
+            for index, record in enumerate(targets, start=1):
+                try:
+                    apply_result(record, scan_target(record), None)
+                except Exception as error:
+                    apply_result(record, None, error)
+                if index % 20 == 0:
+                    persist_progress()
+        else:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=effective_page_workers) as page_pool:
+                futures = {page_pool.submit(scan_target, record): record for record in targets}
+                for index, future in enumerate(concurrent.futures.as_completed(futures), start=1):
+                    record = futures[future]
+                    try:
+                        apply_result(record, future.result(), None)
+                    except Exception as error:
+                        apply_result(record, None, error)
+                    if index % 20 == 0:
+                        persist_progress()
 
         persist_progress()
         return {"id": item["id"], "title": item["title"], "targets": len(targets), "repaired": len(repaired_pages), "pages": repaired_pages, "unresolved_pages": len(unresolved_pages), "unresolved": unresolved}
@@ -165,6 +190,7 @@ def main() -> None:
     parser.add_argument("--exclude-id", action="append", dest="excluded_ids", help="skip files already being repaired in another process")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--workers", type=int, default=3)
+    parser.add_argument("--page-workers", type=int, default=1, help="parallel pages per file, capped at 4; uses PDF rendering instead of shared PdfReader image extraction")
     parser.add_argument("--retry-unresolved", action="store_true", help="recheck pages previously marked hard to read")
     parser.add_argument("--revisit-repaired-below", type=float, help="try improved OCR for repaired pages with lower text score without degrading the existing result")
     parser.add_argument("--machine-dir", type=pathlib.Path, default=pathlib.Path(".workdata/drive-machine"))
