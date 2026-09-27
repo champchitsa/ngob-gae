@@ -269,12 +269,12 @@ function SsoItProcurementLab({ onAsk }: { onAsk: () => void }) {
         <span><b>เปิดทะเบียนโครงการ</b><strong>{catalogue.metrics.projects} โครงการ IT และบริการข้อมูลดิจิทัล</strong><small>งบตั้งแต่ 10 ล้านบาท คัดจากตารางรัฐปี 2560 ถึง 2568 • มูลค่าสัญญาที่พบ {money(catalogue.metrics.contractPrice)} ล้านบาท</small></span>
         <em>ค้นและกรองรายชื่อ →</em>
       </button>}
-      <p className="itlab-overview-scope">ตัวเลขและกราฟด้านล่างมาจากแฟ้มประมูลที่อ่านละเอียด 8 โครงการ ส่วนยอด 11 สัญญาด้านบนมาจากประกาศผู้ชนะในทะเบียนโครงการ</p>
+      <p className="itlab-overview-scope">ยอดรับงานตรงและกิจการร่วมค้าอ้างจากประกาศผู้ชนะ 11 สัญญา ส่วนกราฟและรูปแบบการแข่งขันอ้างจากแฟ้มที่อ่านละเอียด 8 โครงการ</p>
       <div className="itlab-metrics">
-        <article><span>AIT รับงานตรง</span><strong>{money(data.metrics.directContract)}</strong><b>ล้านบาท</b><small>{data.metrics.directProjects} โครงการ</small></article>
-        <article><span>สัญญากิจการร่วมค้า</span><strong>{money(data.metrics.consortiumContract)}</strong><b>ล้านบาท</b><small>{data.metrics.consortiumProjects} โครงการ มูลค่านี้ไม่ใช่รายได้ AIT ทั้งหมด</small></article>
-        <article><span>ประกวดราคาอิเล็กทรอนิกส์</span><strong>{data.metrics.eBiddingProjects}</strong><b>โครงการ</b><small>อีก 1 โครงการใช้วิธีเฉพาะเจาะจง</small></article>
-        <article><span>AIT ร่วมไชยกาญจน์</span><strong>{data.metrics.chaiyakarnProjects}</strong><b>โครงการ</b><small>ต้องนับสมาชิก แม้ชื่อกิจการร่วมค้าต่างกัน</small></article>
+        <article><span>AIT รับงานตรง</span><strong>{money(catalogue?.metrics.aitDirectContractPrice ?? data.metrics.directContract)}</strong><b>ล้านบาท</b><small>{catalogue?.metrics.aitDirectProjects ?? data.metrics.directProjects} สัญญาที่พบประกาศผู้ชนะ</small></article>
+        <article><span>สัญญากิจการร่วมค้า</span><strong>{money(catalogue?.metrics.aitConsortiumContractPrice ?? data.metrics.consortiumContract)}</strong><b>ล้านบาท</b><small>{catalogue?.metrics.aitConsortiumProjects ?? data.metrics.consortiumProjects} สัญญา มูลค่านี้ไม่ใช่รายได้ AIT ทั้งหมด</small></article>
+        <article><span>ประกวดราคาอิเล็กทรอนิกส์</span><strong>{data.metrics.eBiddingProjects}</strong><b>โครงการ</b><small>จาก 8 แฟ้มละเอียด อีก 1 โครงการใช้วิธีเฉพาะเจาะจง</small></article>
+        <article><span>AIT ร่วมไชยกาญจน์</span><strong>{data.metrics.chaiyakarnProjects}</strong><b>โครงการ</b><small>จาก 8 แฟ้มละเอียด ต้องนับสมาชิกแม้ชื่อกิจการร่วมค้าต่างกัน</small></article>
       </div>
       <div className="itlab-chart-panel">
         <div className="itlab-panel-head"><div><span>CONTRACT VALUE / BID FUNNEL</span><h3>มูลค่าและจำนวนผู้ยื่นข้อเสนอ</h3></div><p>ความกว้างคือราคากลาง ตัวเลขด้านขวาคือผู้ซื้อเอกสารต่อผู้ยื่นข้อเสนอ</p></div>
