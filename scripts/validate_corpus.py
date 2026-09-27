@@ -50,6 +50,7 @@ def validate_asset(file_id: str, path: pathlib.Path) -> dict:
     last_page = 0
     parse_errors = []
     text_digest = hashlib.sha256()
+    recovered_pages: set[int] = set()
     try:
         with gzip.open(path, "rt", encoding="utf-8") as handle:
             for line_number, line in enumerate(handle, start=1):
@@ -70,6 +71,8 @@ def validate_asset(file_id: str, path: pathlib.Path) -> dict:
                     text_digest.update(str(record.get("text") or "").encode("utf-8", errors="replace"))
                 if record_type == "page":
                     page = int(record.get("page") or 0)
+                    if record.get("method") == "ocr" and str(record.get("text") or "").strip() and not record.get("ocr_unresolved"):
+                        recovered_pages.add(page)
                     if page != last_page + 1:
                         parse_errors.append(f"page order: expected {last_page + 1}, found {page}")
                     last_page = page
@@ -95,7 +98,9 @@ def validate_asset(file_id: str, path: pathlib.Path) -> dict:
             errors.append("text sha256 does not match the extracted records")
 
     structure = (summary or {}).get("structure") or {}
-    page_errors = structure.get("page_errors") or []
+    recorded_page_errors = structure.get("page_errors") or []
+    recovered_page_errors = [error for error in recorded_page_errors if error.get("stage") == "direct_image_ocr" and error.get("page") in recovered_pages]
+    page_errors = [error for error in recorded_page_errors if error not in recovered_page_errors]
     image_errors = structure.get("image_errors") or []
     fingerprint = warning_fingerprint(page_errors, image_errors) if page_errors or image_errors else None
 
@@ -107,6 +112,7 @@ def validate_asset(file_id: str, path: pathlib.Path) -> dict:
         "records": sum(counts.values()),
         "record_types": dict(counts),
         "page_errors": page_errors,
+        "recovered_page_errors": recovered_page_errors,
         "image_errors": image_errors,
         "warning_count": len(page_errors) + len(image_errors),
         "warning_fingerprint": fingerprint,

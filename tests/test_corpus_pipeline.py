@@ -29,6 +29,7 @@ from analyze_drive_corpus import credible_amounts  # noqa: E402
 from extract_drive_corpus import FileStats, broken_embedded_thai_text, contiguous_page_batches, extract_docx, extract_pptx, ocr_quality_score, osd_pillow_rotation, pdf_text_needs_ocr, poor_thai_ocr, weak_budget_cover  # noqa: E402
 from repair_ocr_pages import needs_repair  # noqa: E402
 from audit_ocr_quality import suspect_reason  # noqa: E402
+from validate_corpus import validate_asset  # noqa: E402
 
 
 def test_pdf_ocr_fallback_never_renders_unrequested_pages() -> None:
@@ -149,6 +150,20 @@ class CaptureWriter:
 
 
 class CorpusPipelineTests(unittest.TestCase):
+    def test_validator_treats_successful_render_fallback_as_recovered(self):
+        with tempfile.TemporaryDirectory() as directory:
+            asset = pathlib.Path(directory) / "alpha.jsonl.gz"
+            write_asset(asset, "alpha", page_errors=[{"page": 1, "stage": "direct_image_ocr", "error": "decoder unavailable"}])
+            with gzip.open(asset, "rt", encoding="utf-8") as handle:
+                records = [json.loads(line) for line in handle]
+            records[1]["method"] = "ocr"
+            with gzip.open(asset, "wt", encoding="utf-8") as handle:
+                for record in records:
+                    handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+            result = validate_asset("alpha", asset)
+            self.assertEqual(result["warning_count"], 0)
+            self.assertEqual(len(result["recovered_page_errors"]), 1)
+
     def test_index_recovers_completed_asset_when_manifest_is_stale(self):
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)

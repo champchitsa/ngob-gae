@@ -489,6 +489,10 @@ def extract_pdf(path: pathlib.Path, writer: JsonlWriter, stats: FileStats, tools
                     page_errors.append({"page": page_number, "stage": "ocr", "error": f"{type(error).__name__}: {error}"})
                     entry["method"] = "embedded" if entry["text"] else "ocr_error"
 
+    page_errors = [
+        error for error in page_errors
+        if not (error.get("stage") == "direct_image_ocr" and pages[int(error["page"]) - 1]["method"] == "ocr")
+    ]
     for entry in pages:
         page_number, text, method = entry["page"], entry["text"], entry["method"]
         stats.add(text, method)
