@@ -103,6 +103,8 @@ def repair_one(item: dict, asset: pathlib.Path, args: argparse.Namespace, tools:
                     unresolved_pages.append(page)
                     unresolved.append({"page": page, "reason": "no readability improvement"})
             except Exception as error:
+                record["ocr_unresolved"] = True
+                unresolved_pages.append(page)
                 unresolved.append({"page": page, "reason": f"{type(error).__name__}: {error}"})
 
         if repaired_pages or unresolved_pages:
@@ -150,7 +152,7 @@ def main() -> None:
     args = parser.parse_args()
     args.temp_dir.mkdir(parents=True, exist_ok=True)
     inventory = json.loads(args.inventory.read_text(encoding="utf-8"))["files"]
-    items = [item for item in inventory if pathlib.Path(item["title"]).suffix.lower() == ".pdf"]
+    items = [item for item in inventory if item.get("type") == "application/pdf" or pathlib.Path(item["title"]).suffix.lower() == ".pdf"]
     if args.category:
         items = [item for item in items if args.category in item.get("category", "")]
     if args.ids:

@@ -38,7 +38,7 @@ def main() -> None:
 
     inventory = json.loads(args.inventory.read_text(encoding="utf-8"))["files"]
     assets, _, conflicts = collect_record_assets(args.corpus_dirs)
-    pdfs = [item for item in inventory if pathlib.Path(item["title"]).suffix.lower() == ".pdf"]
+    pdfs = [item for item in inventory if item.get("type") == "application/pdf" or pathlib.Path(item["title"]).suffix.lower() == ".pdf"]
     counts: Counter[str] = Counter()
     by_category: dict[str, Counter[str]] = {}
     missing = []
