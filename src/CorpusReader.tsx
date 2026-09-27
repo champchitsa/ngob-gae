@@ -231,6 +231,7 @@ const structureText = (file: CorpusFile) => {
   if (Number(structure.paragraphs)) parts.push(`${formatCount(Number(structure.paragraphs))} ย่อหน้า`)
   if (Number(structure.table_rows)) parts.push(`${formatCount(Number(structure.table_rows))} แถวในตาราง`)
   if (Number(structure.images)) parts.push(`${formatCount(Number(structure.images))} ภาพ`)
+  if (Number(structure.ocr_repaired_count)) parts.push(`ตรวจ OCR ซ้ำ ${formatCount(Number(structure.ocr_repaired_count))} หน้า`)
   return parts.join(' / ') || `${formatCount(file.units)} หน่วยข้อมูล`
 }
 
