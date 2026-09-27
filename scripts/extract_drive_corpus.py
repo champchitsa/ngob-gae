@@ -272,6 +272,10 @@ def broken_embedded_thai_text(text: str) -> bool:
     return broken >= 20 and broken > thai * 0.1
 
 
+def pdf_text_needs_ocr(text: str) -> bool:
+    return not text_is_sufficient(text) or broken_embedded_thai_text(text)
+
+
 def osd_pillow_rotation(output: str) -> int | None:
     """Convert Tesseract's clockwise rotation to Pillow's counterclockwise angle."""
     rotate = re.search(r"^Rotate:\s*(\d+)", output, re.MULTILINE)
@@ -429,10 +433,13 @@ def extract_pdf(path: pathlib.Path, writer: JsonlWriter, stats: FileStats, tools
             page_errors.append({"page": page_number, "stage": "text", "error": f"{type(error).__name__}: {error}"})
         pages.append({"page": page_number, "text": text, "method": "embedded"})
 
-    missing = [entry["page"] for entry in pages if not text_is_sufficient(entry["text"])]
+    missing = [entry["page"] for entry in pages if pdf_text_needs_ocr(entry["text"])]
     render_fallback = []
     for page_number in missing:
         entry = pages[page_number - 1]
+        if broken_embedded_thai_text(entry["text"]):
+            render_fallback.append(page_number)
+            continue
         with tempfile.TemporaryDirectory(dir=tools["temp_root"]) as directory:
             try:
                 image_path = extract_largest_page_image(reader.pages[page_number - 1], pathlib.Path(directory))
@@ -462,8 +469,10 @@ def extract_pdf(path: pathlib.Path, writer: JsonlWriter, stats: FileStats, tools
                     image_path = rendered.get(page_number)
                     if not image_path:
                         raise RuntimeError("rendered page image was not found")
-                    ocr_text = ocr_image(image_path, tools["tesseract"], tools["tessdata"])
-                    if len(ocr_text) >= len(entry["text"]):
+                    broken_font = broken_embedded_thai_text(entry["text"])
+                    ocr_text = ocr_image(image_path, tools["tesseract"], tools["tessdata"], primary_psm=11 if broken_font else 6)
+                    improved = (ocr_quality_score(ocr_text) >= ocr_quality_score(entry["text"]) + 10) if broken_font else len(ocr_text) >= len(entry["text"])
+                    if improved:
                         entry["text"] = ocr_text
                         entry["method"] = "ocr"
                 except Exception as error:
