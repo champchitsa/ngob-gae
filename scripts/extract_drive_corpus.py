@@ -231,8 +231,14 @@ def ocr_quality_score(text: str) -> float:
 
 def poor_thai_ocr(text: str) -> bool:
     thai = len(re.findall(r"[ก-๙]", text))
-    latin = len(re.findall(r"[A-Za-z]", text))
-    return 12 <= thai < 200 and latin > max(20, thai * 0.28)
+    latin_tokens = re.findall(r"[A-Za-z]+", text)
+    latin = sum(len(token) for token in latin_tokens)
+    short_latin = sum(len(token) for token in latin_tokens if len(token) <= 2)
+    if thai < 12:
+        return latin > 80 and short_latin > latin * 0.4
+    if thai < 200:
+        return latin > max(20, thai * 0.28)
+    return latin > max(150, thai) and short_latin > latin * 0.4
 
 
 def osd_pillow_rotation(output: str) -> int | None:

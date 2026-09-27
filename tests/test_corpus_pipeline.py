@@ -42,6 +42,15 @@ def test_ocr_quality_detects_rotated_thai_page_and_prefers_readable_text() -> No
     assert ocr_quality_score(readable) > ocr_quality_score(rotated)
 
 
+def test_ocr_quality_catches_heavily_garbled_scans_without_flagging_bilingual_text() -> None:
+    garbled = ("ก ง ส ร " * 55) + ("a i e o " * 90)
+    bilingual = ("สำนักงานประกันสังคม " * 20) + ("Information technology procurement system " * 20)
+    almost_no_thai = "ก " + ("a i e o " * 40)
+    assert poor_thai_ocr(garbled)
+    assert poor_thai_ocr(almost_no_thai)
+    assert not poor_thai_ocr(bilingual)
+
+
 def test_ocr_repair_only_rechecks_suspect_pages() -> None:
     noisy = {"type": "page", "page": 12, "method": "ocr", "text": "ร ว 5 Ee aor BEE ก รุงเทพ ช ซ ภา ae 1 2 gg fee are bey con bee ale"}
     assert needs_repair(noisy)
