@@ -370,13 +370,39 @@ function retrieve(question, focusId) {
   return { context, sources, selectedCases: selectedCases.map(({ item }) => item), selectedItems: selected.map(({ item }) => item), relevantFacts, relevantLaws, relevantFiles, relevantHistory, relevantEvidence, relevantMeetings, relevantStructure, matchedSignal, asksSsoIt, ssoIt, ssoEgpIt, asksSso, sso, asksBma, bmaRows, bmaPdfRows, bma }
 }
 
+const RATE_WINDOW_MS = 120000
+const RATE_LIMIT = 8
+const MAX_TRACKED_CLIENTS = 10000
+
+// A warm Fluid Compute instance keeps this Map alive across requests. Without a
+// sweep, every distinct client address adds an entry that is never removed, so
+// the map grows for the lifetime of the instance. Drop expired clients when the
+// map reaches its cap, and reset it outright if every tracked client is still
+// active: this limiter is a coarse abuse control, not a precise quota.
+function makeRoom(now) {
+  if (requestLog.size < MAX_TRACKED_CLIENTS) return
+  for (const [key, times] of requestLog) {
+    if (!times.length || now - times[times.length - 1] >= RATE_WINDOW_MS) requestLog.delete(key)
+  }
+  if (requestLog.size >= MAX_TRACKED_CLIENTS) requestLog.clear()
+}
+
 function rateLimited(request) {
-  const ip = String(request.headers['x-forwarded-for'] ?? request.socket?.remoteAddress ?? 'unknown').split(',')[0].trim()
+  const ip = String(request.headers['x-real-ip'] ?? request.headers['x-forwarded-for'] ?? request.socket?.remoteAddress ?? 'unknown').split(',')[0].trim()
   const now = Date.now()
-  const recent = (requestLog.get(ip) ?? []).filter((time) => now - time < 120000)
+  if (!requestLog.has(ip)) makeRoom(now)
+  const recent = (requestLog.get(ip) ?? []).filter((time) => now - time < RATE_WINDOW_MS)
   recent.push(now)
-  requestLog.set(ip, recent)
-  return recent.length > 8
+  requestLog.set(ip, recent.slice(-(RATE_LIMIT + 1)))
+  return recent.length > RATE_LIMIT
+}
+
+function sanitizeHistory(raw) {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((message) => message && typeof message === 'object' && typeof message.content === 'string' && message.content.trim())
+    .slice(-6)
+    .map((message) => ({ role: message.role === 'assistant' ? 'assistant' : 'user', content: message.content.slice(0, 2500) }))
 }
 
 function cleanAnswer(value) {
@@ -602,7 +628,7 @@ export default async function handler(request, response) {
   if (!apiKey) return response.status(503).json({ error: 'ระบบถามตอบยังรอการเชื่อมต่อ Pathumma API' })
 
   const { context, sources, selectedCases, selectedItems, relevantFacts, relevantLaws, relevantFiles, relevantHistory, relevantMeetings, relevantStructure, matchedSignal, asksSsoIt, ssoIt, ssoEgpIt, asksSso, sso, asksBma, bmaRows, bmaPdfRows, bma } = retrieve(question, String(request.body?.focusId ?? ''))
-  const history = Array.isArray(request.body?.history) ? request.body.history.slice(-6).map((message) => ({ role: message.role === 'assistant' ? 'assistant' : 'user', content: String(message.content ?? '').slice(0, 2500) })) : []
+  const history = sanitizeHistory(request.body?.history)
   const asksAboutFocus = /(รายการนี้|โครงการนี้|หน้านี้|ที่กำลังเปิด|แฟ้มนี้)/.test(question)
   const asksLegalQuestion = /มาตรา\s*[\d๐-๙]+|กฎหมาย|รัฐธรรมนูญ|พ\.ร\.บ\.\s*(การจัดซื้อ|วินัย|วิธีการงบประมาณ|ข้อมูลข่าวสาร)/.test(question)
   if (asksLegalQuestion) {
