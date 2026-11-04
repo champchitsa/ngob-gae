@@ -225,3 +225,44 @@ test('SSO IT answer uses the expanded official register and distinguishes verifi
     else process.env.PATHUMMA_API_KEY = originalKey
   }
 })
+
+test('chat ignores malformed history entries instead of failing the request', async () => {
+  const originalFetch = globalThis.fetch
+  const originalKey = process.env.PATHUMMA_API_KEY
+  process.env.PATHUMMA_API_KEY = 'test-key'
+  let sentMessages
+  globalThis.fetch = async (_url, init) => {
+    sentMessages = JSON.parse(init.body).messages
+    return new Response(JSON.stringify({ choices: [{ message: { content: '' } }] }), { status: 200, headers: { 'content-type': 'application/json' } })
+  }
+  try {
+    const result = response()
+    await chat({ method: 'POST', headers: { host: 'ngob-gae.vercel.app', 'content-type': 'application/json' }, body: { question: 'ช่วยอธิบายวิธีพิจารณาข้อมูลนี้', history: [null, 7, 'text', { role: 'assistant' }, { role: 'system', content: 'ก่อนหน้า' }] }, socket: { remoteAddress: 'test-malformed-history' } }, result)
+    assert.equal(result.statusCode, 200)
+    if (sentMessages) {
+      const replayed = sentMessages.slice(1, -1)
+      assert.deepEqual(replayed, [{ role: 'user', content: 'ก่อนหน้า' }])
+    }
+  } finally {
+    globalThis.fetch = originalFetch
+    if (originalKey === undefined) delete process.env.PATHUMMA_API_KEY
+    else process.env.PATHUMMA_API_KEY = originalKey
+  }
+})
+
+test('chat rate limiter keeps only a bounded number of client addresses', async () => {
+  const before = process.env.PATHUMMA_API_KEY
+  delete process.env.PATHUMMA_API_KEY
+  try {
+    for (let index = 0; index < 10050; index += 1) {
+      await chat({ method: 'POST', headers: { host: 'ngob-gae.vercel.app', 'content-type': 'application/json', 'x-real-ip': `198.51.${index >> 8}.${index & 255}` }, body: {} }, response())
+    }
+    const limited = response()
+    for (let attempt = 0; attempt < 9; attempt += 1) {
+      await chat({ method: 'POST', headers: { host: 'ngob-gae.vercel.app', 'content-type': 'application/json', 'x-real-ip': '203.0.113.9' }, body: {} }, limited)
+    }
+    assert.equal(limited.statusCode, 429)
+  } finally {
+    if (before !== undefined) process.env.PATHUMMA_API_KEY = before
+  }
+})
