@@ -196,7 +196,11 @@ function DataExplorer() {
   }
 
   const maxPage = Math.max(1, Math.ceil((data?.meta.filtered ?? 0) / limit))
-  const downloadUrl = `/api/data?dataset=${dataset}${query.trim() ? `&q=${encodeURIComponent(query.trim())}` : ''}${filter ? `&filter=${encodeURIComponent(filter)}` : ''}&download=1`
+  const downloadParams = new URLSearchParams({ dataset })
+  if (query.trim()) downloadParams.set('q', query.trim())
+  if (filter) downloadParams.set('filter', filter)
+  downloadParams.set('download', '1')
+  const downloadUrl = `/api/data?${downloadParams}`
   const resultStatus = !isNear
     ? ''
     : loading
@@ -211,7 +215,7 @@ function DataExplorer() {
       <p>ค้นและอ่านตารางที่ผ่านการจัดโครงสร้างแล้วในหน้านี้ ดาวน์โหลดผลกรอง หรือเรียก API ชุดเดียวกับที่ผู้ช่วย AI ใช้</p>
     </div>
 
-    <label className="dataset-mobile-picker"><span>เลือกชุดข้อมูล</span><select value={dataset} onChange={(event) => changeDataset(event.target.value as DatasetId)}>{datasets.map((item) => <option value={item.id} key={item.id}>{item.label} ({item.count})</option>)}</select><small>{datasets.find((item) => item.id === dataset)?.detail}</small></label>
+    <label className="dataset-mobile-picker"><span>เลือกชุดข้อมูล</span><select value={dataset} onChange={(event) => { const next = datasets.find((item) => item.id === event.target.value); if (next) changeDataset(next.id) }}>{datasets.map((item) => <option value={item.id} key={item.id}>{item.label} ({item.count})</option>)}</select><small>{datasets.find((item) => item.id === dataset)?.detail}</small></label>
     <div className="dataset-tabs" role="group" aria-label="ชุดข้อมูลเปิด">
       {datasets.map((item) => <button key={item.id} aria-pressed={dataset === item.id} className={dataset === item.id ? 'active' : ''} onClick={() => changeDataset(item.id)}>
         <span>{item.label}</span><strong>{item.count}</strong><small>{item.detail}</small>
